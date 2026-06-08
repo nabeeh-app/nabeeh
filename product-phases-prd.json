@@ -1,0 +1,163 @@
+[
+  {
+    "category": "phase1-mvp",
+    "description": "Add feature flags (env-based) and wire them to frontend navigation + route guards.",
+    "steps": [
+      "Define feature flags in frontend config (e.g., FEATURE_GRADES, FEATURE_REPORTS, FEATURE_MESSAGING, FEATURE_COURSES, FEATURE_MONITOR).",
+      "Hide sidebar/nav entries when flags are off.",
+      "Block direct route access with a simple 'Coming soon' or redirect when a flag is off."
+    ],
+    "passes": true
+  },
+  {
+    "category": "phase1-mvp",
+    "description": "Enforce hard business rules: students must belong to groups; attendance is group-scoped; grades are group-scoped.",
+    "steps": [
+      "Student create/edit UI requires group selection and sends group_id to API.",
+      "Attendance marking requires group filter and uses group_id in payload.",
+      "Grades create/edit requires group context and API payload includes group_id.",
+      "Backend validates required group_id and rejects missing values."
+    ],
+    "passes": false
+  },
+  {
+    "category": "phase1-mvp",
+    "description": "Dashboard KPIs use real data (no mock counts).",
+    "steps": [
+      "Wire dashboard KPI cards to GET /teachers/dashboard.",
+      "Remove hardcoded KPI numbers.",
+      "UI still loads even if API is empty (safe empty state)."
+    ],
+    "passes": true
+  },
+  {
+    "category": "phase1-mvp",
+    "description": "WhatsApp setup + status screen is production-ready.",
+    "steps": [
+      "Show pairing/status, QR, and connected state clearly.",
+      "Provide actionable error states (no session, disconnected, retry).",
+      "Block other features if WhatsApp is not paired (guardrail)."
+    ],
+    "passes": true
+  },
+  {
+    "category": "phase1-mvp",
+    "description": "Onboarding guardrails: require at least one group before attendance/grades; require WhatsApp setup before messaging/broadcast.",
+    "steps": [
+      "If no groups exist, redirect to group setup and show a clear banner.",
+      "If WhatsApp not paired, block messaging/broadcast actions and show setup CTA.",
+      "Guardrails work for both admin and teacher roles."
+    ],
+    "passes": true
+  },
+  {
+    "category": "phase1-mvp",
+    "description": "Parent WhatsApp replies: simple intent handling for attendance + group queries.",
+    "steps": [
+      "Implement minimal intent detection for: 'Did my son attend?' and 'Which group is he in?'.",
+      "Return accurate replies based on attendance + group enrollment.",
+      "Fallback response for unknown intents."
+    ],
+    "passes": false
+  },
+  {
+    "category": "phase1-mvp",
+    "description": "Broadcast messages to parents by group.",
+    "steps": [
+      "Backend endpoint to send message to all parents in a group.",
+      "Frontend action to trigger broadcast from group context.",
+      "Basic success/fail feedback in UI."
+    ],
+    "passes": false
+  },
+  {
+    "category": "phase1-mvp",
+    "description": "Kill demo debt in production surfaces (hide or remove static demo pages).",
+    "steps": [
+      "Courses/Schedule/Reports/Monitor/Messaging pages are hidden behind flags or show 'Coming soon'.",
+      "No demo charts or placeholder KPIs shown to real users.",
+      "README updated to reflect MVP scope."
+    ],
+    "passes": false
+  },
+  {
+    "category": "phase2-retention",
+    "description": "Fix grades UI/API mismatch (denormalized expectations).",
+    "steps": [
+      "Align frontend grades UI with API response shape or extend API to return needed fields.",
+      "Grades create/edit works end-to-end.",
+      "Parents can query grade info via WhatsApp (if enabled)."
+    ],
+    "passes": false
+  },
+  {
+    "category": "phase2-retention",
+    "description": "Messaging UI connects to real conversations.",
+    "steps": [
+      "Wire conversations list to /whatsapp/conversations.",
+      "Wire messages view to /messages/conversations/:id.",
+      "Remove mock data from messaging UI."
+    ],
+    "passes": true
+  },
+  {
+    "category": "phase2-retention",
+    "description": "Dashboard KPIs expanded with real metrics (attendance %, counts, message stats).",
+    "steps": [
+      "Use /teachers/dashboard and /messages/stats where relevant.",
+      "Display KPI cards with real values.",
+      "No charts required."
+    ],
+    "passes": false
+  },
+  {
+    "category": "phase2-retention",
+    "description": "Basic reports (no analytics).",
+    "steps": [
+      "Enable reports page behind a flag.",
+      "Show minimal summaries (attendance by group, grade averages).",
+      "Export not required yet."
+    ],
+    "passes": false
+  },
+  {
+    "category": "phase3-scale",
+    "description": "Multi-teacher center mode (permissions + UX).",
+    "steps": [
+      "Define multi-teacher access rules.",
+      "Add UI to switch between teachers/centers.",
+      "Update queries to respect selected scope."
+    ],
+    "passes": false
+  },
+  {
+    "category": "phase3-scale",
+    "description": "Analytics dashboards and advanced stats aggregation.",
+    "steps": [
+      "Aggregate stats across groups and teachers.",
+      "Show analytics dashboard (charts optional).",
+      "Document metrics definitions."
+    ],
+    "passes": false
+  },
+  {
+    "category": "phase3-scale",
+    "description": "Advanced WhatsApp automation.",
+    "steps": [
+      "Add richer intents and scheduled messages.",
+      "Provide admin controls for automation rules.",
+      "Guardrails for opt-out and message limits."
+    ],
+    "passes": false
+  },
+  {
+    "category": "plan",
+    "description": "Document phase map in README.",
+    "steps": [
+      "Add phase breakdown (v1.0, v1.1, v1.2, v2.0) to README.",
+      "Mark which features are MVP vs later.",
+      "Keep the list short and sales-ready."
+    ],
+    "passes": false
+  }
+]
