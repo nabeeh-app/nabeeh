@@ -1,12 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
+const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
-
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const logger = require('../lib/logger');
 
 // Get all offerings for the logged-in teacher
 router.get('/', authenticateToken, async (req, res) => {
@@ -26,9 +22,10 @@ router.get('/', authenticateToken, async (req, res) => {
             .order('grade_level(order)');
 
         if (error) throw error;
-        res.json(offerings);
+        res.json({ success: true, data: offerings });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        logger.error('Get offerings error', { error: error.message });
+        res.status(500).json({ success: false, message: 'Failed to fetch offerings' });
     }
 });
 
@@ -46,7 +43,7 @@ router.post('/:offeringId/groups', authenticateToken, async (req, res) => {
             .eq('teacher_id', req.user.id)
             .single();
 
-        if (!offering) return res.status(403).json({ error: 'Unauthorized' });
+        if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized' });
 
         const { data: group, error } = await supabase
             .from('groups')
@@ -59,9 +56,10 @@ router.post('/:offeringId/groups', authenticateToken, async (req, res) => {
             .single();
 
         if (error) throw error;
-        res.json(group);
+        res.json({ success: true, data: group });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        logger.error('Create group error', { error: error.message });
+        res.status(500).json({ success: false, message: 'Failed to create group' });
     }
 });
 

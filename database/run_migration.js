@@ -2,7 +2,6 @@ const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
 
-// Load environment variables from backend/.env by default
 require('dotenv').config({ path: path.join(__dirname, '..', 'backend', '.env') });
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -25,13 +24,13 @@ async function runMigrationFile(fileName) {
     const { error } = await supabase.rpc('exec_sql', { sql });
 
     if (error) {
-      console.error(`❌ Migration ${fileName} failed:`, error);
+      console.error(`❌ Migration ${fileName} failed:`, error.message);
       process.exit(1);
     }
 
     console.log(`✅ Migration ${fileName} completed`);
   } catch (err) {
-    console.error(`❌ Error reading migration ${fileName}:`, err);
+    console.error(`❌ Error reading migration ${fileName}:`, err.message);
     process.exit(1);
   }
 }

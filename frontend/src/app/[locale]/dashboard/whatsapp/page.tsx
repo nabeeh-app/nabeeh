@@ -102,7 +102,7 @@ export default function WhatsAppDashboardPage() {
   const statusSummary = useMemo(() => {
     const toneMap: Record<string, { label: string; tone: string }> = {
       connected: { label: t('connected'), tone: 'text-green-700 bg-green-50' },
-      qr_ready: { label: t('scanQR'), tone: 'text-blue-700 bg-blue-50' },
+      qr_ready: { label: t('scanQR'), tone: 'text-primary bg-primary/10' },
       connecting: { label: t('connecting'), tone: 'text-amber-700 bg-amber-50' },
       error: { label: t('error'), tone: 'text-red-700 bg-red-50' },
       disconnected: { label: t('disconnected'), tone: 'text-gray-700 bg-gray-100' }
@@ -212,7 +212,7 @@ export default function WhatsAppDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="h-full border-blue-100 bg-blue-50">
+        <Card className="h-full border-primary/20 bg-primary/5">
           <CardHeader className="space-y-2">
             <CardTitle className="text-base font-semibold text-blue-900">
               {t('scanQR')}

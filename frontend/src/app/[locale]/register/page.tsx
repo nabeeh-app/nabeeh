@@ -172,7 +172,7 @@ export default function RegisterPage({ params }: Props) {
         {/* Header */}
         <div className="text-center">
           <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold text-blue-600">
+            <h1 className="text-3xl font-bold text-primary">
               {isRTL ? 'نبيه - Nabeeh' : 'Nabeeh - نبيه'}
             </h1>
             {/* Language switcher */}
@@ -181,7 +181,7 @@ export default function RegisterPage({ params }: Props) {
                 href={`/en/register`}
                 className={cn(
                   "px-2 py-1 rounded text-sm",
-                  locale === 'en' ? "bg-blue-100 text-blue-800" : "text-gray-600 hover:text-blue-600"
+                  locale === 'en' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-primary"
                 )}
               >
                 EN
@@ -190,7 +190,7 @@ export default function RegisterPage({ params }: Props) {
                 href={`/ar/register`}
                 className={cn(
                   "px-2 py-1 rounded text-sm",
-                  locale === 'ar' ? "bg-blue-100 text-blue-800" : "text-gray-600 hover:text-blue-600"
+                  locale === 'ar' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-primary"
                 )}
               >
                 عربي
@@ -431,7 +431,7 @@ export default function RegisterPage({ params }: Props) {
                     {isRTL ? 'لديك حساب بالفعل؟' : 'Already have an account?'}{' '}
                     <Link 
                       href={`/${locale}/login`}
-                      className="text-blue-600 hover:text-blue-500 font-medium"
+                      className="text-primary hover:text-primary/80 font-medium"
                     >
                       {isRTL ? 'تسجيل الدخول' : 'Sign in'}
                     </Link>

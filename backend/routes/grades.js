@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const logger = require('../lib/logger');
 
 const router = express.Router();
 
@@ -125,7 +126,7 @@ const getGrades = async (req, res) => {
       data: grades
     });
   } catch (error) {
-    console.error('Get grades error:', error);
+    logger.error('Get grades error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error fetching grades'
@@ -212,7 +213,7 @@ const createGrade = async (req, res) => {
       data: grade
     });
   } catch (error) {
-    console.error('Create grade error:', error);
+    logger.error('Create grade error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error creating grade'
@@ -311,7 +312,7 @@ const createBulkGrades = async (req, res) => {
         });
 
       } catch (err) {
-        console.error(`Error processing student ${gradeData.student_id}:`, err);
+        logger.error('Error processing student', { student_id: gradeData.student_id, error: err.message });
         errors.push({ student_id: gradeData.student_id, message: err.message });
       }
     }
@@ -323,7 +324,7 @@ const createBulkGrades = async (req, res) => {
       message: `${results.length} grades created successfully`
     });
   } catch (error) {
-    console.error('Bulk create grades error:', error);
+    logger.error('Bulk create grades error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error creating bulk grades'
@@ -434,7 +435,7 @@ const updateGrade = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Update grade error:', error);
+    logger.error('Update grade error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error updating grade'
@@ -471,7 +472,7 @@ const deleteGrade = async (req, res) => {
       message: 'Grade deleted successfully'
     });
   } catch (error) {
-    console.error('Delete grade error:', error);
+    logger.error('Delete grade error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error deleting grade'
@@ -512,7 +513,7 @@ const getGradeStats = async (req, res) => {
     const { data: rawData, error } = await query;
 
     if (error) {
-      console.log(error);
+      logger.error('Grade stats query error', { error: error.message });
       throw error;
     }
 
@@ -575,7 +576,7 @@ const getGradeStats = async (req, res) => {
       data: stats
     });
   } catch (error) {
-    console.error('Get grade stats error:', error);
+    logger.error('Get grade stats error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error fetching grade statistics'

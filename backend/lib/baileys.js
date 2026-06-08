@@ -3,6 +3,7 @@ const qrcode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
 const EventEmitter = require('events');
+const logger = require('./logger');
 
 class BaileysClient extends EventEmitter {
   constructor() {
@@ -54,7 +55,7 @@ class BaileysClient extends EventEmitter {
       this.sock.ev.on('connection.update', (update) => this.handleConnectionUpdate(update));
       this.sock.ev.on('messages.upsert', (update) => this.handleIncomingMessages(update));
     } catch (error) {
-      console.error('Baileys connect error:', error);
+      logger.error('Baileys connect error', { error: error.message });
       this.status = 'error';
       this.emitStatus({ error: error.message });
       throw error;
@@ -70,7 +71,7 @@ class BaileysClient extends EventEmitter {
       try {
         this.qrCode = await qrcode.toDataURL(qr);
       } catch (err) {
-        console.error('QR encoding failed:', err);
+        logger.error('QR encoding failed', { error: err.message });
         this.qrCode = null;
       }
       this.status = 'qr_ready';
@@ -115,7 +116,7 @@ class BaileysClient extends EventEmitter {
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      this.connect().catch((error) => console.error('Reconnection error:', error));
+      this.connect().catch((error) => logger.error('Reconnection error', { error: error.message }));
     }, 2000);
   }
 
@@ -160,7 +161,7 @@ class BaileysClient extends EventEmitter {
         try {
           await this.sock.logout();
         } catch (error) {
-          console.warn('Baileys logout warning:', error.message);
+          logger.warn('Baileys logout warning', { error: error.message });
         }
 
         if (typeof this.sock.end === 'function') {
@@ -174,7 +175,7 @@ class BaileysClient extends EventEmitter {
       this.emitStatus();
       return true;
     } catch (error) {
-      console.error('Logout error:', error);
+      logger.error('Logout error', { error: error.message });
       return false;
     }
   }

@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const logger = require('../lib/logger');
 
 const router = express.Router();
 
@@ -86,7 +87,7 @@ const getStudents = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get students error:', error);
+    logger.error('Get students error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error fetching students'
@@ -140,7 +141,7 @@ const getStudent = async (req, res) => {
       data: student
     });
   } catch (error) {
-    console.error('Get student error:', error);
+    logger.error('Get student error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error fetching student'
@@ -177,7 +178,7 @@ const createStudent = async (req, res) => {
       .single();
 
     if (!groupCheck || groupCheck.offering.teacher_id !== req.user.id) {
-      return res.status(403).json({ error: 'Unauthorized to add to this group' });
+      return res.status(403).json({ success: false, message: 'Unauthorized to add to this group' });
     }
 
     // 1. Create Student
@@ -225,7 +226,7 @@ const createStudent = async (req, res) => {
       message: 'Student created and enrolled successfully'
     });
   } catch (error) {
-    console.error('Create student error:', error);
+    logger.error('Create student error', { error: error.message });
     res.status(500).json({
       success: false,
       message: error.message || 'Server error creating student'
@@ -255,7 +256,7 @@ const updateStudent = async (req, res) => {
       .eq('student_id', req.params.id)
       .eq('group.offering.teacher_id', req.user.id);
 
-    if (count === 0) return res.status(403).json({ error: 'Unauthorized' });
+    if (count === 0) return res.status(403).json({ success: false, message: 'Unauthorized' });
 
     const { data: student, error } = await supabase
       .from('students')
@@ -271,7 +272,7 @@ const updateStudent = async (req, res) => {
       data: student
     });
   } catch (error) {
-    console.error('Update student error:', error);
+    logger.error('Update student error', { error: error.message });
     res.status(500).json({
       success: false,
       message: error.message
@@ -299,7 +300,7 @@ const deleteStudent = async (req, res) => {
       .eq('group.offering.teacher_id', req.user.id);
 
     if (!enrollments || enrollments.length === 0) {
-      return res.status(404).json({ message: 'Student not found in your classes' });
+      return res.status(404).json({ success: false, message: 'Student not found in your classes' });
     }
 
     const enrollmentIds = enrollments.map(e => e.id);
@@ -320,7 +321,7 @@ const deleteStudent = async (req, res) => {
       message: 'Student removed from your classes'
     });
   } catch (error) {
-    console.error('Delete student error:', error);
+    logger.error('Delete student error', { error: error.message });
     res.status(500).json({
       success: false,
       message: error.message
@@ -418,7 +419,7 @@ const getStudentStats = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get student stats error:', error);
+    logger.error('Get student stats error', { error: error.message });
     res.status(500).json({ success: false, message: 'Server error fetching stats' });
   }
 };

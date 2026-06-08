@@ -1,25 +1,20 @@
 const express = require('express');
-const { createClient } = require('@supabase/supabase-js');
-const { AuthService } = require('../lib/auth');
+const { supabaseAdmin } = require('../config/database');
+const { TokenService, AuthService } = require('../lib/auth');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
+const logger = require('../lib/logger');
 
 const router = express.Router();
 
 // Auth routes initialized
 
 // Initialize Supabase client
-let supabase;
+let supabase = supabaseAdmin;
 try {
-    supabase = createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-    console.log('Supabase client initialized successfully');
+    logger.info('Supabase client initialized successfully');
 } catch (error) {
-    console.error('Failed to initialize Supabase client:', error.message);
-    console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'NOT SET');
-    console.log('SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
+    logger.error('Failed to initialize Supabase client', { error: error.message });
 }
 
 // Initialize auth service
@@ -28,15 +23,8 @@ const teacherSelectFields = `
     id,
     email,
     name,
-    password_hash,
-    role,
-    subject_id,
-    preferred_language,
-    is_active,
-    last_login,
     phone,
     business_name,
-    logo_url,
     bio,
     subjects,
     address,
@@ -45,8 +33,6 @@ const teacherSelectFields = `
     timezone,
     whatsapp_number,
     telegram_username,
-    subscription_plan,
-    subscription_expires_at,
     created_at,
     updated_at
 `;
@@ -60,9 +46,8 @@ const formatTeacherResponse = (teacher) => {
         email: teacher.email,
         phone: teacher.phone || '',
         name: teacher.name,
-        role: teacher.role || 'teacher',
+        role: 'teacher',
         business_name: teacher.business_name || null,
-        logo_url: teacher.logo_url || null,
         bio: teacher.bio || null,
         subjects: teacher.subjects || [],
         address: teacher.address || null,
@@ -71,10 +56,6 @@ const formatTeacherResponse = (teacher) => {
         timezone: teacher.timezone || 'Africa/Cairo',
         whatsapp_number: teacher.whatsapp_number || null,
         telegram_username: teacher.telegram_username || null,
-        is_active: teacher.is_active !== false,
-        subscription_plan: teacher.subscription_plan || 'free',
-        subscription_expires_at: teacher.subscription_expires_at,
-        preferred_language: teacher.preferred_language || 'ar',
         created_at: teacher.created_at,
         updated_at: teacher.updated_at
     };
@@ -126,7 +107,7 @@ async function getUserByEmail(email) {
         .single();
 
     if (error) {
-        console.error('Database error:', error);
+        logger.error('Database error', { error });
         return null;
     }
 
@@ -140,13 +121,12 @@ async function updateLastLogin(userId) {
     const { error } = await supabase
         .from('teachers')
         .update({
-            last_login: new Date().toISOString(),
             updated_at: new Date().toISOString()
         })
         .eq('id', userId);
 
     if (error) {
-        console.error('Error updating last login:', error);
+        logger.error('Error updating last login', { error: error.message });
     }
 }
 
@@ -166,7 +146,7 @@ async function logAuthEvent(userId, action, success, ipAddress, userAgent, detai
         });
 
     if (error) {
-        console.error('Error logging auth event:', error);
+        logger.error('Error logging auth event', { error: error.message });
     }
 }
 
@@ -175,8 +155,6 @@ async function provisionTeacherAccount(payload) {
         name,
         email,
         password,
-        preferred_language = 'en',
-        role = 'teacher',
         phone = null,
         business_name = null,
         subjects = null,
@@ -212,7 +190,7 @@ async function provisionTeacherAccount(payload) {
         email_confirm: true,
         user_metadata: {
             name,
-            role
+            role: 'teacher'
         }
     });
 
@@ -236,11 +214,7 @@ async function provisionTeacherAccount(payload) {
             phone,
             business_name,
             subjects,
-            whatsapp_number,
-            preferred_language,
-            password_hash: hashedPassword,
-            role,
-            is_active: true
+            whatsapp_number
         })
         .select(teacherSelectFields)
         .single();
@@ -259,11 +233,7 @@ async function provisionTeacherAccount(payload) {
  */
 router.post('/register', registerLimiter, async (req, res) => {
     try {
-        const teacher = await provisionTeacherAccount({
-            ...req.body,
-            preferred_language: req.body.preferred_language || 'ar',
-            role: 'teacher'
-        });
+        const teacher = await provisionTeacherAccount(req.body);
 
         const token = authService.tokenService.generateToken(teacher);
 
@@ -287,7 +257,7 @@ router.post('/register', registerLimiter, async (req, res) => {
         });
     } catch (error) {
         const statusCode = error.status || 500;
-        console.error('Registration error:', error);
+        logger.error('Registration error', { error: error.message });
         res.status(statusCode).json({
             success: false,
             message: statusCode === 409 ? 'Email is already registered' : 'Internal server error',
@@ -306,7 +276,7 @@ router.post('/admin/create-teacher', authenticateToken, requireRole('admin'), as
         });
     } catch (error) {
         const statusCode = error.status || 500;
-        console.error('Admin create teacher error:', error);
+        logger.error('Admin create teacher error', { error: error.message });
         res.status(statusCode).json({
             success: false,
             message: statusCode === 409 ? 'Email is already registered' : 'Failed to create teacher account'
@@ -322,8 +292,8 @@ router.post('/admin/create-teacher', authenticateToken, requireRole('admin'), as
 router.post('/login', loginLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
-        console.log('LOGIN PAYLOAD', req.body);
         const normalizedEmail = email?.toLowerCase().trim();
+        logger.info('Login attempt', { email: normalizedEmail });
 
         // Validate input
         if (!normalizedEmail || !password) {
@@ -334,41 +304,57 @@ router.post('/login', loginLimiter, async (req, res) => {
             });
         }
 
-        // Authenticate user
-        const result = await authService.authenticateUser(normalizedEmail, password, getUserByEmail);
-
-        // Log authentication attempt
-        const user = await getUserByEmail(normalizedEmail);
-        await logAuthEvent(
-            user?.id || null,
-            'login',
-            result.success,
-            req.ip || req.connection.remoteAddress,
-            req.get('User-Agent'),
-            { email: normalizedEmail }
-        );
+        // Authenticate user with Supabase Auth
+        const result = await authService.authenticateUser(normalizedEmail, password, supabase);
 
         if (result.success) {
-            const teacherRecord = user || await getUserByEmail(normalizedEmail);
-            if (teacherRecord) {
-                await updateLastLogin(teacherRecord.id);
-            }
+            // Get teacher profile from database
+            const { data: teacherProfile } = await supabase
+                .from('teachers')
+                .select(teacherSelectFields)
+                .eq('id', result.user.id)
+                .single();
+
+            await updateLastLogin(result.user.id);
+
+            // Log authentication attempt
+            await logAuthEvent(
+                result.user.id,
+                'login',
+                true,
+                req.ip || req.connection.remoteAddress,
+                req.get('User-Agent'),
+                { email: normalizedEmail }
+            );
 
             res.json({
                 success: true,
                 data: {
-                    teacher: formatTeacherResponse(teacherRecord || result.user),
+                    teacher: formatTeacherResponse(teacherProfile) || result.user,
                     token: result.token
                 },
                 message: result.message,
                 messageAr: result.messageAr
             });
         } else {
-            res.status(401).json(result);
+            // Log failed attempt
+            await logAuthEvent(
+                null,
+                'login',
+                false,
+                req.ip || req.connection.remoteAddress,
+                req.get('User-Agent'),
+                { email: normalizedEmail }
+            );
+            res.status(401).json({
+                success: false,
+                message: result.message || 'Invalid credentials',
+                messageAr: result.messageAr || 'بيانات الدخول غير صحيحة'
+            });
         }
 
     } catch (error) {
-        console.error('Login error:', error);
+        logger.error('Login error', { error: error.message });
         res.status(500).json({
             success: false,
             message: 'Internal server error',
@@ -381,7 +367,7 @@ router.post('/login', loginLimiter, async (req, res) => {
  * POST /api/auth/logout
  * Logout user and invalidate session
  */
-router.post('/logout', async (req, res) => {
+router.post('/logout', authenticateToken, async (req, res) => {
     try {
         const token = req.headers.authorization?.replace('Bearer ', '');
         const ipAddress = req.ip || req.connection.remoteAddress;
@@ -404,7 +390,7 @@ router.post('/logout', async (req, res) => {
 
             } catch (error) {
                 // Token might be expired or invalid, but still allow logout
-                console.log('Token verification failed during logout:', error.message);
+                logger.info('Token verification failed during logout', { error: error.message });
             }
         }
 
@@ -415,7 +401,7 @@ router.post('/logout', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Logout error:', error);
+        logger.error('Logout error', { error: error.message });
         res.status(500).json({
             success: false,
             message: 'Internal server error',
@@ -434,7 +420,7 @@ router.post('/logout', async (req, res) => {
  * POST /api/auth/verify-token
  * Verify JWT token validity
  */
-router.post('/verify-token', async (req, res) => {
+router.get('/verify-token', async (req, res) => {
     try {
         const token = req.headers.authorization?.replace('Bearer ', '') || req.body.token;
 
@@ -448,31 +434,30 @@ router.post('/verify-token', async (req, res) => {
 
         const decoded = authService.tokenService.verifyToken(token);
 
-        // Get fresh user data to ensure user is still active
+        // Get fresh user data to ensure user still exists
         const user = await getUserByEmail(decoded.email);
-        if (!user || !user.is_active) {
+        if (!user) {
             return res.status(401).json({
                 success: false,
-                message: 'User account is inactive',
-                messageAr: 'حساب المستخدم غير نشط'
+                message: 'User not found',
+                messageAr: 'المستخدم غير موجود'
             });
         }
 
         res.json({
             success: true,
-            user: {
+            data: {
                 id: user.id,
                 email: user.email,
                 name: user.name,
-                role: user.role,
-                preferred_language: user.preferred_language
+                role: 'teacher'
             },
             message: 'Token is valid',
             messageAr: 'الرمز المميز صالح'
         });
 
     } catch (error) {
-        console.error('Token verification error:', error);
+        logger.error('Token verification error', { error: error.message });
         res.status(401).json({
             success: false,
             message: 'Invalid or expired token',
@@ -506,7 +491,7 @@ router.get('/me', authenticateToken, async (req, res) => {
             data: formatTeacherResponse(teacher)
         });
     } catch (error) {
-        console.error('Get profile error:', error);
+        logger.error('Get profile error', { error: error.message });
         res.status(500).json({
             success: false,
             message: 'Internal server error',
@@ -526,13 +511,11 @@ router.put('/profile', authenticateToken, async (req, res) => {
             'phone',
             'business_name',
             'bio',
-            'logo_url',
             'subjects',
             'address',
             'city',
             'country',
             'timezone',
-            'preferred_language',
             'whatsapp_number',
             'telegram_username'
         ];
@@ -576,7 +559,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
             messageAr: 'تم تحديث الملف الشخصي بنجاح'
         });
     } catch (error) {
-        console.error('Update profile error:', error);
+        logger.error('Update profile error', { error: error.message });
         res.status(500).json({
             success: false,
             message: 'Internal server error',
@@ -613,7 +596,7 @@ router.post('/request-reset', resetLimiter, async (req, res) => {
             messageAr: 'إذا كان هناك حساب بهذا البريد الإلكتروني، فقد تم إرسال رابط إعادة تعيين كلمة المرور'
         };
 
-        if (user && user.is_active) {
+        if (user) {
             // Generate reset token
             const resetToken = authService.tokenService.generateResetToken();
             const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
@@ -629,7 +612,7 @@ router.post('/request-reset', resetLimiter, async (req, res) => {
 
             if (!error) {
                 // TODO: Send email with reset link
-                console.log(`Password reset token for ${email}: ${resetToken}`);
+                logger.info('Password reset requested', { email });
 
                 // Log password reset request
                 await logAuthEvent(
@@ -646,7 +629,7 @@ router.post('/request-reset', resetLimiter, async (req, res) => {
         res.json(response);
 
     } catch (error) {
-        console.error('Password reset request error:', error);
+        logger.error('Password reset request error', { error: error.message });
         res.status(500).json({
             success: false,
             message: 'Internal server error',
@@ -701,7 +684,7 @@ router.get('/reset/:token', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Reset token validation error:', error);
+        logger.error('Reset token validation error', { error: error.message });
         res.status(500).json({
             success: false,
             message: 'Internal server error',
@@ -788,7 +771,7 @@ router.post('/reset-password', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Password reset error:', error);
+        logger.error('Password reset error', { error: error.message });
         res.status(500).json({
             success: false,
             message: 'Internal server error',

@@ -102,7 +102,14 @@ nabeeh/
 │   │   │   ├── error-boundary.tsx  # Root error boundary
 │   │   │   ├── auth/
 │   │   │   │   └── ProtectedRoute.tsx  # Auth guard
-│   │   │   └── ui/                 # shadcn/ui components
+│   │   │   └── ui/                 # shadcn/ui + shared components
+│   │   │       ├── PageHeader.tsx   # Title + description + action buttons
+│   │   │       ├── LoadingSpinner.tsx # Centered loading state
+│   │   │       ├── EmptyState.tsx   # Empty list placeholder
+│   │   │       ├── StatCards.tsx    # Summary stat cards grid
+│   │   │       ├── FilterBar.tsx    # Search + filter dropdowns
+│   │   │       ├── ViewModeTabs.tsx # View mode toggle
+│   │   │       └── DataTable.tsx    # Generic table (not yet adopted)
 │   │   ├── hooks/
 │   │   │   ├── useAuth.tsx         # Auth context + provider
 │   │   │   └── useWhatsAppStatus.ts
@@ -234,10 +241,12 @@ Both modes share the same DB query layer in `lib/whatsappQuery.js`.
 ### 9. Frontend Patterns
 
 - **Locale routing:** `[locale]/` segment handles AR/EN. Use `useTranslations()` from next-intl, NOT inline translation objects.
+- **i18n:** Use `t('namespace.key')` for all user-facing strings. Never use `locale === 'ar' ? '...' : '...'` inline checks. Translation keys live in `messages/en.json` and `messages/ar.json`.
 - **Theme:** Use CSS variables (`var(--primary)`, `var(--accent)`), NOT hardcoded `text-blue-600`.
 - **RTL:** Use `tailwindcss-rtl` plugin (`rtl:mr-2`), NOT manual CSS overrides.
 - **Mock data:** Gated behind `NEXT_PUBLIC_USE_MOCK=true`. Production shows error states.
 - **Error boundaries:** Each dashboard page has its own error boundary. One page crash must not kill the dashboard.
+- **Shared components:** Use `LoadingSpinner`, `StatCard`, `EmptyState` from `components/ui/`. Don't duplicate.
 - **Shared components:** Use `LoadingSpinner`, `StatCard`, `EmptyState` from `components/ui/`. Don't duplicate.
 - **Icons:** Use Lucide React. Never use emoji as icons (👥 📊 📝 💬).
 
@@ -330,6 +339,9 @@ Each PR must include:
 - Unused components (e.g., `components/auth/LoginForm.tsx`)
 - Abandoned queries (e.g., old code blocks left in files)
 - Duplicate routes (e.g., `/send-test` same as `/send-to-number`)
+- `components/auth/LoginForm.tsx` — references deleted `useAuth` hook
+- `app/(auth)/layout.tsx` — references deleted `useAuth` hook
+- `app/(auth)/login/page.tsx` — references deleted `useAuth` hook
 
 ### Schema Files
 - `database/schema.sql` — OLD flat schema, retired. Reference only.

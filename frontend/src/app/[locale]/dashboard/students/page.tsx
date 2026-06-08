@@ -1,7 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { useLocale } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,19 +23,22 @@ import {
   Edit,
   Trash2,
   Eye,
-  Filter,
   Download,
   Upload,
   Users,
   GraduationCap,
   Phone,
-  Mail,
   Calendar,
   MapPin,
   BookOpen
 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { Student, CreateStudentRequest, Parent, Offering } from '@/types';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { StatCards } from '@/components/ui/StatCards';
+import { FilterBar } from '@/components/ui/FilterBar';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface StudentWithParents extends Student {
   parents: Parent[];
@@ -57,21 +59,16 @@ export default function StudentsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [gradeFilter, setGradeFilter] = useState<string>('all');
-
-  // New: Offerings/Groups State
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
 
-
-  // Form state
   const [newStudent, setNewStudent] = useState<CreateStudentRequest>({
     student_id: '',
     name: '',
     grade_level: '',
-    group_id: '', // New required field
+    group_id: '',
     date_of_birth: '',
     gender: '',
     subjects: [],
@@ -89,7 +86,7 @@ export default function StudentsPage() {
 
   useEffect(() => {
     loadStudents();
-  }, [selectedGroupId]); // Reload when group changes
+  }, [selectedGroupId]);
 
   useEffect(() => {
     filterStudents();
@@ -99,8 +96,6 @@ export default function StudentsPage() {
     try {
       const data = await apiClient.getOfferings();
       setOfferings(data);
-      // Auto-select first group if available and nothing selected?
-      // For now keep 'all' as default
     } catch (err) {
       console.error('Failed checking offerings', err);
     }
@@ -118,7 +113,6 @@ export default function StudentsPage() {
 
       const response = await apiClient.getStudents(params);
 
-      // Mock parents data for demo - in real app, this would come from API
       const studentsWithParents = response.data.map(student => ({
         ...student,
         parents: [
@@ -134,68 +128,9 @@ export default function StudentsPage() {
       }));
 
       setStudents(studentsWithParents);
-    } catch (err: any) {
-      console.error('Error loading students:', err);
-      setError(err.message || 'Failed to load students');
-
-      // Fallback to mock data
-      const mockStudents: StudentWithParents[] = [
-        {
-          id: '1',
-          teacher_id: 'teacher-1',
-          student_id: 'ST001',
-          name: 'أحمد محمد علي',
-          grade_level: 'Grade 10',
-          date_of_birth: '2008-05-15',
-          gender: 'male',
-          subjects: ['Mathematics', 'Physics'],
-          enrollment_date: '2024-01-15',
-          status: 'active',
-          notes: 'Excellent student in mathematics',
-          emergency_contact: '+966501234567',
-          address: 'Riyadh, Saudi Arabia',
-          created_at: '2024-01-15T00:00:00Z',
-          updated_at: '2024-12-21T00:00:00Z',
-          parents: [
-            {
-              id: 'parent-1',
-              name: 'محمد علي أحمد',
-              phone: '+966501234567',
-              is_primary: true,
-              relationship: 'father',
-              preferred_language: 'ar'
-            }
-          ]
-        },
-        {
-          id: '2',
-          teacher_id: 'teacher-1',
-          student_id: 'ST002',
-          name: 'فاطمة سعد إبراهيم',
-          grade_level: 'Grade 11',
-          date_of_birth: '2007-08-22',
-          gender: 'female',
-          subjects: ['English', 'Chemistry'],
-          enrollment_date: '2024-02-10',
-          status: 'active',
-          notes: 'Strong in languages',
-          emergency_contact: '+966507654321',
-          address: 'Jeddah, Saudi Arabia',
-          created_at: '2024-02-10T00:00:00Z',
-          updated_at: '2024-12-21T00:00:00Z',
-          parents: [
-            {
-              id: 'parent-2',
-              name: 'سعد إبراهيم محمد',
-              phone: '+966507654321',
-              is_primary: true,
-              relationship: 'father',
-              preferred_language: 'ar'
-            }
-          ]
-        }
-      ];
-      setStudents(mockStudents);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load students';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -223,7 +158,7 @@ export default function StudentsPage() {
     e.preventDefault();
 
     if (!newStudent.name || !newStudent.grade_level || !newStudent.student_id || !newStudent.group_id) {
-      setFormError(locale === 'ar' ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill all required fields');
+      setFormError(t('students.validation.fillRequired'));
       return;
     }
 
@@ -233,7 +168,6 @@ export default function StudentsPage() {
 
       const createdStudent = await apiClient.createStudent(newStudent);
 
-      // Add to local state
       const studentWithParents: StudentWithParents = {
         ...createdStudent,
         parents: []
@@ -280,7 +214,7 @@ export default function StudentsPage() {
 
     if (!selectedStudent) return;
     if (!newStudent.group_id) {
-      setFormError(locale === 'ar' ? 'يرجى اختيار الفصل' : 'Please select a class');
+      setFormError(t('students.validation.selectClass'));
       return;
     }
 
@@ -290,7 +224,6 @@ export default function StudentsPage() {
 
       const updatedStudent = await apiClient.updateStudent(selectedStudent.id, newStudent);
 
-      // Update local state
       setStudents(prev =>
         prev.map(s => s.id === selectedStudent.id
           ? { ...updatedStudent, parents: s.parents }
@@ -311,7 +244,7 @@ export default function StudentsPage() {
   };
 
   const handleDeleteStudent = async (student: StudentWithParents) => {
-    if (!confirm(locale === 'ar' ? 'هل أنت متأكد من حذف هذا الطالب؟' : 'Are you sure you want to delete this student?')) {
+    if (!confirm(t('students.deleteConfirm'))) {
       return;
     }
 
@@ -346,18 +279,18 @@ export default function StudentsPage() {
     const statusMap = {
       active: {
         variant: 'default' as const,
-        label: locale === 'ar' ? 'نشط' : 'Active',
+        label: t('students.status.active'),
         color: 'bg-green-100 text-green-800'
       },
       inactive: {
         variant: 'secondary' as const,
-        label: locale === 'ar' ? 'غير نشط' : 'Inactive',
+        label: t('students.status.inactive'),
         color: 'bg-gray-100 text-gray-800'
       },
       graduated: {
         variant: 'outline' as const,
-        label: locale === 'ar' ? 'متخرج' : 'Graduated',
-        color: 'bg-blue-100 text-blue-800'
+        label: t('students.status.graduated'),
+        color: 'bg-primary/10 text-primary'
       }
     };
 
@@ -367,373 +300,275 @@ export default function StudentsPage() {
   const uniqueGrades = [...new Set(students.map(s => s.grade_level))].filter(Boolean);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">
-            {locale === 'ar' ? 'جاري تحميل الطلاب...' : 'Loading students...'}
-          </p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message={t('students.loading')} />;
   }
+
+  const stats = [
+    { icon: Users, value: students.length, label: t('students.totalStudents'), color: 'text-primary' },
+    { icon: GraduationCap, value: students.filter(s => s.status === 'active').length, label: t('students.activeStudents'), color: 'text-green-600' },
+    { icon: BookOpen, value: uniqueGrades.length, label: t('students.fields.gradeLevel'), color: 'text-purple-600' },
+    { icon: Calendar, value: students.filter(s => { const d = new Date(s.enrollment_date); const m = new Date(); m.setMonth(m.getMonth() - 1); return d >= m; }).length, label: t('students.newThisMonth'), color: 'text-orange-600' },
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            {locale === 'ar' ? 'إدارة الطلاب' : 'Student Management'}
-          </h1>
-          <p className="text-gray-600 mt-2">
-            {locale === 'ar'
-              ? `إدارة وتتبع ${students.length} طالب مسجل`
-              : `Manage and track ${students.length} registered students`
-            }
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
-            <Upload className="w-4 h-4 mr-2" />
-            {locale === 'ar' ? 'استيراد' : 'Import'}
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            {locale === 'ar' ? 'تصدير' : 'Export'}
-          </Button>
-          <Dialog open={isAddModalOpen} onOpenChange={setAddModalOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                {locale === 'ar' ? 'إضافة طالب جديد' : 'Add New Student'}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {locale === 'ar' ? 'إضافة طالب جديد' : 'Add New Student'}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddStudent} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="student_id">
-                      {locale === 'ar' ? 'رقم الطالب' : 'Student ID'} *
-                    </Label>
-                    <Input
-                      id="student_id"
-                      value={newStudent.student_id}
-                      onChange={(e) => setNewStudent(s => ({ ...s, student_id: e.target.value }))}
-                      placeholder={locale === 'ar' ? 'مثال: ST001' : 'e.g., ST001'}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="name">
-                      {locale === 'ar' ? 'اسم الطالب' : 'Student Name'} *
-                    </Label>
-                    <Input
-                      id="name"
-                      value={newStudent.name}
-                      onChange={(e) => setNewStudent(s => ({ ...s, name: e.target.value }))}
-                      placeholder={locale === 'ar' ? 'الاسم الكامل' : 'Full name'}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="group_id">
-                      {locale === 'ar' ? 'الفصل/المجموعة' : 'Class/Group'} *
-                    </Label>
-                    <select
-                      id="group_id"
-                      className="w-full border rounded px-3 py-2"
-                      value={newStudent.group_id}
-                      onChange={(e) => {
-                        const groupId = e.target.value;
-                        // Auto file grade level if possible?
-                        const group = offerings.flatMap(o => o.groups).find((g) => g.id === groupId);
-                        const offering = offerings.find(o => o.groups.some((g) => g.id === groupId));
-
-                        setNewStudent(s => ({
-                          ...s,
-                          group_id: groupId,
-                          grade_level: offering?.grade_level?.name || s.grade_level
-                        }));
-                      }}
-                      required
-                    >
-                      <option value="">{locale === 'ar' ? 'اختر الفصل' : 'Select Class'}</option>
-                      {offerings.flatMap(o => o.groups.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {o.subject.name_en} - {g.name}
-                        </option>
-                      )))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="grade_level">
-                      {locale === 'ar' ? 'المستوى الدراسي' : 'Grade Level'} *
-                    </Label>
-                    <Input
-                      id="grade_level"
-                      value={newStudent.grade_level}
-                      onChange={(e) => setNewStudent(s => ({ ...s, grade_level: e.target.value }))}
-                      placeholder={locale === 'ar' ? 'مثال: الصف العاشر' : 'e.g., Grade 10'}
-                      required
-                      readOnly // Derived from group usually, but editable if needed
-                      className="bg-gray-50"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="date_of_birth">
-                      {locale === 'ar' ? 'تاريخ الميلاد' : 'Date of Birth'}
-                    </Label>
-                    <Input
-                      id="date_of_birth"
-                      type="date"
-                      value={newStudent.date_of_birth}
-                      onChange={(e) => setNewStudent(s => ({ ...s, date_of_birth: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="gender">
-                      {locale === 'ar' ? 'الجنس' : 'Gender'}
-                    </Label>
-                    <select
-                      id="gender"
-                      className="w-full border rounded px-3 py-2"
-                      value={newStudent.gender}
-                      onChange={(e) => setNewStudent(s => ({ ...s, gender: e.target.value }))}
-                    >
-                      <option value="">{locale === 'ar' ? 'اختر الجنس' : 'Select Gender'}</option>
-                      <option value="male">{locale === 'ar' ? 'ذكر' : 'Male'}</option>
-                      <option value="female">{locale === 'ar' ? 'أنثى' : 'Female'}</option>
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="emergency_contact">
-                      {locale === 'ar' ? 'جهة الاتصال للطوارئ' : 'Emergency Contact'}
-                    </Label>
-                    <Input
-                      id="emergency_contact"
-                      value={newStudent.emergency_contact}
-                      onChange={(e) => setNewStudent(s => ({ ...s, emergency_contact: e.target.value }))}
-                      placeholder={locale === 'ar' ? '+966xxxxxxxxx' : '+966xxxxxxxxx'}
-                    />
-                  </div>
-                </div>
+      <PageHeader
+        title={t('students.title')}
+        description={t('students.descriptionCount', { count: students.length })}
+      >
+        <Button variant="outline" size="sm">
+          <Upload className="w-4 h-4 mr-2" />
+          {t('common.import')}
+        </Button>
+        <Button variant="outline" size="sm">
+          <Download className="w-4 h-4 mr-2" />
+          {t('common.export')}
+        </Button>
+        <Dialog open={isAddModalOpen} onOpenChange={setAddModalOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              {t('students.addStudent')}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {t('students.addStudent')}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddStudent} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="subjects">
-                    {locale === 'ar' ? 'المواد' : 'Subjects'}
+                  <Label htmlFor="student_id">
+                    {t('students.fields.studentId')} *
                   </Label>
                   <Input
-                    id="subjects"
-                    value={Array.isArray(newStudent.subjects) ? newStudent.subjects.join(', ') : ''}
-                    onChange={(e) => setNewStudent(s => ({
-                      ...s,
-                      subjects: e.target.value.split(',').map(subject => subject.trim()).filter(Boolean)
-                    }))}
-                    placeholder={locale === 'ar' ? 'الرياضيات، الفيزياء، الكيمياء' : 'Mathematics, Physics, Chemistry'}
+                    id="student_id"
+                    value={newStudent.student_id}
+                    onChange={(e) => setNewStudent(s => ({ ...s, student_id: e.target.value }))}
+                    placeholder={locale === 'ar' ? 'مثال: ST001' : 'e.g., ST001'}
+                    required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="address">
-                    {locale === 'ar' ? 'العنوان' : 'Address'}
+                  <Label htmlFor="name">
+                    {t('students.fields.name')} *
                   </Label>
                   <Input
-                    id="address"
-                    value={newStudent.address}
-                    onChange={(e) => setNewStudent(s => ({ ...s, address: e.target.value }))}
-                    placeholder={locale === 'ar' ? 'العنوان الكامل' : 'Full address'}
+                    id="name"
+                    value={newStudent.name}
+                    onChange={(e) => setNewStudent(s => ({ ...s, name: e.target.value }))}
+                    placeholder={locale === 'ar' ? 'الاسم الكامل' : 'Full name'}
+                    required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="notes">
-                    {locale === 'ar' ? 'ملاحظات' : 'Notes'}
+                  <Label htmlFor="group_id">
+                    {t('students.fields.group')} *
                   </Label>
-                  <textarea
-                    id="notes"
+                  <select
+                    id="group_id"
                     className="w-full border rounded px-3 py-2"
-                    rows={3}
-                    value={newStudent.notes}
-                    onChange={(e) => setNewStudent(s => ({ ...s, notes: e.target.value }))}
-                    placeholder={locale === 'ar' ? 'ملاحظات إضافية...' : 'Additional notes...'}
+                    value={newStudent.group_id}
+                    onChange={(e) => {
+                      const groupId = e.target.value;
+                      const group = offerings.flatMap(o => o.groups).find((g) => g.id === groupId);
+                      const offering = offerings.find(o => o.groups.some((g) => g.id === groupId));
+
+                      setNewStudent(s => ({
+                        ...s,
+                        group_id: groupId,
+                        grade_level: offering?.grade_level?.name || s.grade_level
+                      }));
+                    }}
+                    required
+                  >
+                    <option value="">{locale === 'ar' ? 'اختر الفصل' : 'Select Class'}</option>
+                    {offerings.flatMap(o => o.groups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {o.subject.name_en} - {g.name}
+                      </option>
+                    )))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="grade_level">
+                    {t('students.fields.gradeLevel')} *
+                  </Label>
+                  <Input
+                    id="grade_level"
+                    value={newStudent.grade_level}
+                    onChange={(e) => setNewStudent(s => ({ ...s, grade_level: e.target.value }))}
+                    placeholder={locale === 'ar' ? 'مثال: الصف العاشر' : 'e.g., Grade 10'}
+                    required
+                    readOnly
+                    className="bg-gray-50"
                   />
                 </div>
-                {formError && (
-                  <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
-                    {formError}
-                  </div>
-                )}
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setAddModalOpen(false)}
-                    disabled={submitting}
-                  >
-                    {locale === 'ar' ? 'إلغاء' : 'Cancel'}
-                  </Button>
-                  <Button type="submit" disabled={submitting}>
-                    {submitting
-                      ? (locale === 'ar' ? 'جاري الحفظ...' : 'Saving...')
-                      : (locale === 'ar' ? 'حفظ' : 'Save')
-                    }
-                  </Button>
+                <div>
+                  <Label htmlFor="date_of_birth">
+                    {t('students.fields.dateOfBirth')}
+                  </Label>
+                  <Input
+                    id="date_of_birth"
+                    type="date"
+                    value={newStudent.date_of_birth}
+                    onChange={(e) => setNewStudent(s => ({ ...s, date_of_birth: e.target.value }))}
+                  />
                 </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Users className="h-8 w-8 text-blue-600" />
-              <div>
-                <p className="text-2xl font-bold">{students.length}</p>
-                <p className="text-sm text-gray-600">
-                  {locale === 'ar' ? 'إجمالي الطلاب' : 'Total Students'}
-                </p>
+                <div>
+                  <Label htmlFor="gender">
+                    {t('students.fields.gender')}
+                  </Label>
+                  <select
+                    id="gender"
+                    className="w-full border rounded px-3 py-2"
+                    value={newStudent.gender}
+                    onChange={(e) => setNewStudent(s => ({ ...s, gender: e.target.value }))}
+                  >
+                    <option value="">{locale === 'ar' ? 'اختر الجنس' : 'Select Gender'}</option>
+                    <option value="male">{t('students.gender.male')}</option>
+                    <option value="female">{t('students.gender.female')}</option>
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="emergency_contact">
+                    {t('students.fields.emergencyContact')}
+                  </Label>
+                  <Input
+                    id="emergency_contact"
+                    value={newStudent.emergency_contact}
+                    onChange={(e) => setNewStudent(s => ({ ...s, emergency_contact: e.target.value }))}
+                    placeholder={locale === 'ar' ? '+966xxxxxxxxx' : '+966xxxxxxxxx'}
+                  />
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <GraduationCap className="h-8 w-8 text-green-600" />
               <div>
-                <p className="text-2xl font-bold">
-                  {students.filter(s => s.status === 'active').length}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {locale === 'ar' ? 'طلاب نشطون' : 'Active Students'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <BookOpen className="h-8 w-8 text-purple-600" />
-              <div>
-                <p className="text-2xl font-bold">{uniqueGrades.length}</p>
-                <p className="text-sm text-gray-600">
-                  {locale === 'ar' ? 'مستويات دراسية' : 'Grade Levels'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-8 w-8 text-orange-600" />
-              <div>
-                <p className="text-2xl font-bold">
-                  {students.filter(s => {
-                    const enrollmentDate = new Date(s.enrollment_date);
-                    const oneMonthAgo = new Date();
-                    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-                    return enrollmentDate >= oneMonthAgo;
-                  }).length}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {locale === 'ar' ? 'مسجلون حديثاً' : 'New This Month'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filters */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Label htmlFor="subjects">
+                  {t('students.fields.subjects')}
+                </Label>
                 <Input
-                  placeholder={locale === 'ar' ? 'البحث عن الطلاب بالاسم أو الرقم...' : 'Search students...'}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  id="subjects"
+                  value={Array.isArray(newStudent.subjects) ? newStudent.subjects.join(', ') : ''}
+                  onChange={(e) => setNewStudent(s => ({
+                    ...s,
+                    subjects: e.target.value.split(',').map(subject => subject.trim()).filter(Boolean)
+                  }))}
+                  placeholder={locale === 'ar' ? 'الرياضيات، الفيزياء، الكيمياء' : 'Mathematics, Physics, Chemistry'}
                 />
               </div>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <select
-                value={selectedGroupId}
-                onChange={(e) => setSelectedGroupId(e.target.value)}
-                className="border rounded px-3 py-2 min-w-[200px]"
-              >
-                <option value="all">{locale === 'ar' ? 'جميع الفصول' : 'All Classes'}</option>
-                {offerings.flatMap(o => o.groups.map((g: any) => (
-                  <option key={g.id} value={g.id}>
-                    {o.subject.name_en} - {g.name}
-                  </option>
-                )))}
-              </select>
+              <div>
+                <Label htmlFor="address">
+                  {t('students.fields.address')}
+                </Label>
+                <Input
+                  id="address"
+                  value={newStudent.address}
+                  onChange={(e) => setNewStudent(s => ({ ...s, address: e.target.value }))}
+                  placeholder={locale === 'ar' ? 'العنوان الكامل' : 'Full address'}
+                />
+              </div>
+              <div>
+                <Label htmlFor="notes">
+                  {t('students.fields.notes')}
+                </Label>
+                <textarea
+                  id="notes"
+                  className="w-full border rounded px-3 py-2"
+                  rows={3}
+                  value={newStudent.notes}
+                  onChange={(e) => setNewStudent(s => ({ ...s, notes: e.target.value }))}
+                  placeholder={locale === 'ar' ? 'ملاحظات إضافية...' : 'Additional notes...'}
+                />
+              </div>
+              {formError && (
+                <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
+                  {formError}
+                </div>
+              )}
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAddModalOpen(false)}
+                  disabled={submitting}
+                >
+                  {t('common.cancel')}
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting
+                    ? t('common.saving')
+                    : t('common.save')
+                  }
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </PageHeader>
 
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="border rounded px-3 py-2"
-              >
-                <option value="all">{locale === 'ar' ? 'جميع الحالات' : 'All Status'}</option>
-                <option value="active">{locale === 'ar' ? 'نشط' : 'Active'}</option>
-                <option value="inactive">{locale === 'ar' ? 'غير نشط' : 'Inactive'}</option>
-                <option value="graduated">{locale === 'ar' ? 'متخرج' : 'Graduated'}</option>
-              </select>
-            </div>
-          </div>
-          {filteredStudents.length !== students.length && (
-            <p className="text-sm text-gray-600 mt-2">
-              {locale === 'ar'
-                ? `عرض ${filteredStudents.length} من ${students.length} طالب`
-                : `Showing ${filteredStudents.length} of ${students.length} students`
-              }
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <StatCards stats={stats} />
 
-      {/* Students Table */}
+      <FilterBar
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder={t('students.searchPlaceholderShort')}
+        resultCount={filteredStudents.length}
+        totalCount={students.length}
+        resultLabel={locale === 'ar' ? `عرض ${filteredStudents.length} من ${students.length} طالب` : `Showing ${filteredStudents.length} of ${students.length} students`}
+      >
+        <select
+          value={selectedGroupId}
+          onChange={(e) => setSelectedGroupId(e.target.value)}
+          className="border rounded px-3 py-2 min-w-[200px]"
+        >
+          <option value="all">{t('students.allClasses')}</option>
+          {offerings.flatMap(o => o.groups.map((g: any) => (
+            <option key={g.id} value={g.id}>
+              {o.subject.name_en} - {g.name}
+            </option>
+          )))}
+        </select>
+
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="border rounded px-3 py-2"
+        >
+          <option value="all">{t('students.allStatus')}</option>
+          <option value="active">{t('students.status.active')}</option>
+          <option value="inactive">{t('students.status.inactive')}</option>
+          <option value="graduated">{t('students.status.graduated')}</option>
+        </select>
+      </FilterBar>
+
       <Card>
         <CardHeader>
           <CardTitle>
-            {locale === 'ar' ? 'قائمة الطلاب' : 'Students List'}
+            {t('students.studentList')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {filteredStudents.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">
-                {searchTerm || statusFilter !== 'all' || gradeFilter !== 'all'
-                  ? (locale === 'ar' ? 'لم يتم العثور على طلاب مطابقين للبحث' : 'No students found matching your search')
-                  : (locale === 'ar' ? 'لا يوجد طلاب مسجلون بعد' : 'No students registered yet')
-                }
-              </p>
-            </div>
+            <EmptyState
+              icon={Users}
+              message={
+                searchTerm || statusFilter !== 'all' || gradeFilter !== 'all'
+                  ? t('students.noStudentsMatch')
+                  : t('students.noStudentsYet')
+              }
+            />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{locale === 'ar' ? 'الطالب' : 'Student'}</TableHead>
-                  <TableHead>{locale === 'ar' ? 'المعلومات' : 'Details'}</TableHead>
-                  <TableHead>{locale === 'ar' ? 'المواد' : 'Subjects'}</TableHead>
-                  <TableHead>{locale === 'ar' ? 'الحالة' : 'Status'}</TableHead>
-                  <TableHead>{locale === 'ar' ? 'تاريخ التسجيل' : 'Enrollment'}</TableHead>
-                  <TableHead>{locale === 'ar' ? 'الإجراءات' : 'Actions'}</TableHead>
+                  <TableHead>{t('students.student')}</TableHead>
+                  <TableHead>{t('students.details')}</TableHead>
+                  <TableHead>{t('students.fields.subjects')}</TableHead>
+                  <TableHead>{t('students.fields.status')}</TableHead>
+                  <TableHead>{t('students.enrollment')}</TableHead>
+                  <TableHead>{t('students.actionsColumn')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -744,7 +579,7 @@ export default function StudentsPage() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar>
-                            <AvatarFallback className="bg-blue-100 text-blue-700">
+                            <AvatarFallback className="bg-primary/10 text-primary">
                               {student.name.split(' ')[0].charAt(0)}
                               {student.name.split(' ')[1]?.charAt(0)}
                             </AvatarFallback>
@@ -801,7 +636,7 @@ export default function StudentsPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleViewStudent(student)}
-                            title={locale === 'ar' ? 'عرض التفاصيل' : 'View Details'}
+                            title={t('students.viewDetails')}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -809,7 +644,7 @@ export default function StudentsPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEditStudent(student)}
-                            title={locale === 'ar' ? 'تعديل' : 'Edit'}
+                            title={t('common.edit')}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -818,7 +653,7 @@ export default function StudentsPage() {
                             size="sm"
                             onClick={() => handleDeleteStudent(student)}
                             className="text-red-600 hover:text-red-700"
-                            title={locale === 'ar' ? 'حذف' : 'Delete'}
+                            title={t('common.delete')}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -838,14 +673,14 @@ export default function StudentsPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {locale === 'ar' ? 'تفاصيل الطالب' : 'Student Details'}
+              {t('students.studentDetails')}
             </DialogTitle>
           </DialogHeader>
           {selectedStudent && (
             <div className="space-y-6">
               <div className="flex items-center space-x-4">
                 <Avatar className="h-16 w-16">
-                  <AvatarFallback className="bg-blue-100 text-blue-700 text-xl">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xl">
                     {selectedStudent.name.split(' ')[0].charAt(0)}
                     {selectedStudent.name.split(' ')[1]?.charAt(0)}
                   </AvatarFallback>
@@ -862,7 +697,7 @@ export default function StudentsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <h4 className="font-medium mb-2">
-                    {locale === 'ar' ? 'المعلومات الأساسية' : 'Basic Information'}
+                    {t('students.basicInfo')}
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
@@ -881,10 +716,10 @@ export default function StudentsPage() {
                     )}
                     {selectedStudent.gender && (
                       <div>
-                        <strong>{locale === 'ar' ? 'الجنس:' : 'Gender:'}</strong> {
+                        <strong>{t('students.genderLabel')}</strong> {
                           selectedStudent.gender === 'male'
-                            ? (locale === 'ar' ? 'ذكر' : 'Male')
-                            : (locale === 'ar' ? 'أنثى' : 'Female')
+                            ? t('students.gender.male')
+                            : t('students.gender.female')
                         }
                       </div>
                     )}
@@ -899,7 +734,7 @@ export default function StudentsPage() {
 
                 <div>
                   <h4 className="font-medium mb-2">
-                    {locale === 'ar' ? 'معلومات الاتصال' : 'Contact Information'}
+                    {t('students.contactInfo')}
                   </h4>
                   <div className="space-y-2 text-sm">
                     {selectedStudent.emergency_contact && (
@@ -909,7 +744,7 @@ export default function StudentsPage() {
                       </div>
                     )}
                     <div>
-                      <strong>{locale === 'ar' ? 'تاريخ التسجيل:' : 'Enrollment Date:'}</strong>
+                      <strong>{t('students.enrollmentDateLabel')}</strong>
                       <br />
                       {new Date(selectedStudent.enrollment_date).toLocaleDateString(
                         locale === 'ar' ? 'ar-SA' : 'en-US'
@@ -922,7 +757,7 @@ export default function StudentsPage() {
               {selectedStudent.subjects && selectedStudent.subjects.length > 0 && (
                 <div>
                   <h4 className="font-medium mb-2">
-                    {locale === 'ar' ? 'المواد الدراسية' : 'Subjects'}
+                    {t('students.fields.subjects')}
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedStudent.subjects.map((subject, index) => (
@@ -937,7 +772,7 @@ export default function StudentsPage() {
               {selectedStudent.parents && selectedStudent.parents.length > 0 && (
                 <div>
                   <h4 className="font-medium mb-2">
-                    {locale === 'ar' ? 'أولياء الأمور' : 'Parents/Guardians'}
+                    {t('students.parentsGuardians')}
                   </h4>
                   <div className="space-y-2">
                     {selectedStudent.parents.map((parent) => (
@@ -950,7 +785,7 @@ export default function StudentsPage() {
                         </div>
                         {parent.is_primary && (
                           <Badge variant="outline" className="text-xs">
-                            {locale === 'ar' ? 'أساسي' : 'Primary'}
+                            {t('students.primary')}
                           </Badge>
                         )}
                       </div>
@@ -962,7 +797,7 @@ export default function StudentsPage() {
               {selectedStudent.notes && (
                 <div>
                   <h4 className="font-medium mb-2">
-                    {locale === 'ar' ? 'ملاحظات' : 'Notes'}
+                    {t('students.fields.notes')}
                   </h4>
                   <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
                     {selectedStudent.notes}
@@ -979,14 +814,14 @@ export default function StudentsPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {locale === 'ar' ? 'تعديل بيانات الطالب' : 'Edit Student'}
+              {t('students.editStudent')}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleUpdateStudent} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit_student_id">
-                  {locale === 'ar' ? 'رقم الطالب' : 'Student ID'} *
+                  {t('students.fields.studentId')} *
                 </Label>
                 <Input
                   id="edit_student_id"
@@ -997,7 +832,7 @@ export default function StudentsPage() {
               </div>
               <div>
                 <Label htmlFor="edit_name">
-                  {locale === 'ar' ? 'اسم الطالب' : 'Student Name'} *
+                  {t('students.fields.name')} *
                 </Label>
                 <Input
                   id="edit_name"
@@ -1008,7 +843,7 @@ export default function StudentsPage() {
               </div>
               <div>
                 <Label htmlFor="edit_group_id">
-                  {locale === 'ar' ? 'الفصل/المجموعة' : 'Class/Group'} *
+                  {t('students.fields.group')} *
                 </Label>
                 <select
                   id="edit_group_id"
@@ -1035,7 +870,7 @@ export default function StudentsPage() {
               </div>
               <div>
                 <Label htmlFor="edit_grade_level">
-                  {locale === 'ar' ? 'المستوى الدراسي' : 'Grade Level'} *
+                  {t('students.fields.gradeLevel')} *
                 </Label>
                 <Input
                   id="edit_grade_level"
@@ -1048,7 +883,7 @@ export default function StudentsPage() {
               </div>
               <div>
                 <Label htmlFor="edit_status">
-                  {locale === 'ar' ? 'الحالة' : 'Status'}
+                  {t('students.fields.status')}
                 </Label>
                 <select
                   id="edit_status"
@@ -1056,9 +891,9 @@ export default function StudentsPage() {
                   value={newStudent.status}
                   onChange={(e) => setNewStudent(s => ({ ...s, status: e.target.value as 'active' | 'inactive' | 'graduated' }))}
                 >
-                  <option value="active">{locale === 'ar' ? 'نشط' : 'Active'}</option>
-                  <option value="inactive">{locale === 'ar' ? 'غير نشط' : 'Inactive'}</option>
-                  <option value="graduated">{locale === 'ar' ? 'متخرج' : 'Graduated'}</option>
+                  <option value="active">{t('students.status.active')}</option>
+                  <option value="inactive">{t('students.status.inactive')}</option>
+                  <option value="graduated">{t('students.status.graduated')}</option>
                 </select>
               </div>
             </div>
@@ -1074,12 +909,12 @@ export default function StudentsPage() {
                 onClick={() => setEditModalOpen(false)}
                 disabled={submitting}
               >
-                {locale === 'ar' ? 'إلغاء' : 'Cancel'}
+                {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={submitting}>
                 {submitting
-                  ? (locale === 'ar' ? 'جاري الحفظ...' : 'Saving...')
-                  : (locale === 'ar' ? 'حفظ التغييرات' : 'Save Changes')
+                  ? t('common.saving')
+                  : t('common.save')
                 }
               </Button>
             </div>

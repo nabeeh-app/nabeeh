@@ -29,19 +29,21 @@ import {
   AlertCircle,
   Download,
   Upload,
-  Filter,
   Search,
   ChevronLeft,
   ChevronRight,
   CalendarDays,
   UserCheck,
-  UserX,
   Timer,
   FileText,
   BarChart3
 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { Attendance, BulkAttendanceRequest, Offering, Student } from '@/types';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ViewModeTabs } from '@/components/ui/ViewModeTabs';
 
 interface AttendanceWithStudent extends Attendance {
   student: Student;
@@ -73,7 +75,6 @@ export default function AttendancePage() {
 
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
-  // New: Offerings/Groups
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [noGroups, setNoGroups] = useState(false);
@@ -86,11 +87,9 @@ export default function AttendancePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // View modes
   const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'bulk'>('calendar');
   const [isStatsModalOpen, setStatsModalOpen] = useState(false);
 
-  // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [studentFilter, setStudentFilter] = useState<string>('');
   const [dateRange, setDateRange] = useState({
@@ -106,7 +105,7 @@ export default function AttendancePage() {
     if (selectedGroupId && selectedGroupId !== '') {
       loadInitialData();
     }
-  }, [selectedGroupId, dateRange]); // Reload when group or range changes
+  }, [selectedGroupId, dateRange]);
 
   useEffect(() => {
     if (selectedDate && selectedGroupId) {
@@ -118,7 +117,6 @@ export default function AttendancePage() {
     try {
       const data = await apiClient.getOfferings();
       setOfferings(data);
-      // Auto select first group
       const groups = data.flatMap((offering) => offering.groups ?? []);
       if (groups.length === 0) {
         setNoGroups(true);
@@ -139,7 +137,6 @@ export default function AttendancePage() {
       setLoading(true);
       setError(null);
 
-      // Load students for this group
       if (!selectedGroupId) return;
 
       const studentsResponse = await apiClient.getStudents({
@@ -149,55 +146,12 @@ export default function AttendancePage() {
       });
       setStudents(studentsResponse.data);
 
-      // Load attendance records
       await loadAttendanceRecords();
-
-      // Load stats
       await loadAttendanceStats();
 
-    } catch (err: any) {
-      console.error('Error loading attendance data:', err);
-      setError(err.message || 'Failed to load attendance data');
-
-      // Fallback to mock data
-      const mockStudents: Student[] = [
-        {
-          id: '1',
-          teacher_id: 'teacher-1',
-          student_id: 'ST001',
-          name: 'أحمد محمد علي',
-          grade_level: 'Grade 10',
-          date_of_birth: '2008-05-15',
-          gender: 'male',
-          subjects: ['Mathematics', 'Physics'],
-          enrollment_date: '2024-01-15',
-          status: 'active',
-          notes: null,
-          emergency_contact: '+966501234567',
-          address: 'Riyadh, Saudi Arabia',
-          created_at: '2024-01-15T00:00:00Z',
-          updated_at: '2024-12-21T00:00:00Z'
-        },
-        {
-          id: '2',
-          teacher_id: 'teacher-1',
-          student_id: 'ST002',
-          name: 'فاطمة سعد إبراهيم',
-          grade_level: 'Grade 11',
-          date_of_birth: '2007-08-22',
-          gender: 'female',
-          subjects: ['English', 'Chemistry'],
-          enrollment_date: '2024-02-10',
-          status: 'active',
-          notes: null,
-          emergency_contact: '+966507654321',
-          address: 'Jeddah, Saudi Arabia',
-          created_at: '2024-02-10T00:00:00Z',
-          updated_at: '2024-12-21T00:00:00Z'
-        }
-      ];
-      setStudents(mockStudents);
-
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load attendance data';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -207,8 +161,8 @@ export default function AttendancePage() {
     try {
       const response = await apiClient.getAttendance({
         limit: 100,
-        date_from: dateRange.from,
-        date_to: dateRange.to,
+        start_date: dateRange.from,
+        end_date: dateRange.to,
         group_id: selectedGroupId
       });
 
@@ -220,37 +174,28 @@ export default function AttendancePage() {
       setAttendanceRecords(recordsWithStudents);
     } catch (err: any) {
       console.error('Error loading attendance records:', err);
-      // Mock data will be used
     }
   };
 
   const loadAttendanceStats = async () => {
     try {
       const response = await apiClient.getAttendanceSummary({
-        date_from: dateRange.from,
-        date_to: dateRange.to,
+        start_date: dateRange.from,
+        end_date: dateRange.to,
         group_id: selectedGroupId
       });
       setAttendanceStats(response);
     } catch (err: any) {
       console.error('Error loading attendance stats:', err);
-      // Mock stats
-      setAttendanceStats({
-        total_sessions: 25,
-        present_count: 180,
-        absent_count: 15,
-        late_count: 8,
-        excused_count: 5,
-        attendance_rate: 87.5
-      });
+      setAttendanceStats(null);
     }
   };
 
   const loadDailyAttendance = async (date: string) => {
     try {
       const response = await apiClient.getAttendance({
-        date_from: date,
-        date_to: date,
+        start_date: date,
+        end_date: date,
         limit: 100,
         group_id: selectedGroupId
       });
@@ -271,7 +216,6 @@ export default function AttendancePage() {
       setDailyAttendance(dailyData);
     } catch (err: any) {
       console.error('Error loading daily attendance:', err);
-      // Create mock daily data
       setDailyAttendance({
         date,
         students: students.map(student => ({
@@ -312,7 +256,7 @@ export default function AttendancePage() {
           .filter(student => student.status !== null)
           .map(student => ({
             student_id: student.student_id,
-            group_id: selectedGroupId, // Pass the group ID!
+            group_id: selectedGroupId,
             status: student.status!,
             notes: student.notes
           }))
@@ -320,7 +264,6 @@ export default function AttendancePage() {
 
       await apiClient.createAttendance(attendanceData);
 
-      // Refresh data
       await loadAttendanceRecords();
       await loadAttendanceStats();
 
@@ -341,7 +284,7 @@ export default function AttendancePage() {
       case 'late':
         return <Clock className="h-4 w-4 text-yellow-600" />;
       case 'excused':
-        return <AlertCircle className="h-4 w-4 text-blue-600" />;
+        return <AlertCircle className="h-4 w-4 text-primary" />;
       default:
         return <div className="h-4 w-4 rounded-full border-2 border-gray-300" />;
     }
@@ -351,23 +294,23 @@ export default function AttendancePage() {
     const statusMap = {
       present: {
         variant: 'default' as const,
-        label: locale === 'ar' ? 'حضر' : 'Present',
+        label: t('attendance.status.present'),
         color: 'bg-green-100 text-green-800'
       },
       absent: {
         variant: 'destructive' as const,
-        label: locale === 'ar' ? 'غاب' : 'Absent',
+        label: t('attendance.status.absent'),
         color: 'bg-red-100 text-red-800'
       },
       late: {
         variant: 'outline' as const,
-        label: locale === 'ar' ? 'تأخر' : 'Late',
+        label: t('attendance.status.late'),
         color: 'bg-yellow-100 text-yellow-800'
       },
       excused: {
         variant: 'secondary' as const,
-        label: locale === 'ar' ? 'معذور' : 'Excused',
-        color: 'bg-blue-100 text-blue-800'
+        label: t('attendance.status.excused'),
+        color: 'bg-primary/10 text-primary'
       }
     };
 
@@ -392,7 +335,6 @@ export default function AttendancePage() {
       const isToday = dateStr === new Date().toISOString().split('T')[0];
       const isSelected = dateStr === selectedDate;
 
-      // Mock attendance data for calendar view
       const hasAttendance = attendanceRecords.some(record => record.date === dateStr);
 
       days.push({
@@ -435,16 +377,7 @@ export default function AttendancePage() {
   });
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">
-            {locale === 'ar' ? 'جاري تحميل بيانات الحضور...' : 'Loading attendance data...'}
-          </p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message={t('attendance.loading')} />;
   }
 
   if (noGroups) {
@@ -453,17 +386,15 @@ export default function AttendancePage() {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
           <div className="space-y-1">
             <p className="text-sm font-semibold">
-              {locale === 'ar' ? 'لا توجد مجموعات بعد' : 'No groups yet'}
+              {t('attendance.noGroups')}
             </p>
             <p className="text-sm text-amber-700">
-              {locale === 'ar'
-                ? 'أنشئ مجموعة واحدة على الأقل قبل تسجيل الحضور.'
-                : 'Create at least one group before taking attendance.'}
+              {t('attendance.noGroupsDescription')}
             </p>
           </div>
           <Button asChild variant="outline" className="border-amber-300 text-amber-900 hover:bg-amber-100">
             <Link href={`/${locale}/dashboard/classes?setup=required`}>
-              {locale === 'ar' ? 'إعداد المجموعات' : 'Set up groups'}
+              {t('attendance.setUpGroups')}
             </Link>
           </Button>
         </div>
@@ -471,29 +402,24 @@ export default function AttendancePage() {
     );
   }
 
+  const viewModes = [
+    { id: 'calendar', label: t('attendance.calendar'), icon: CalendarDays },
+    { id: 'bulk', label: t('attendance.bulkEntry'), icon: Users },
+    { id: 'list', label: t('attendance.listView'), icon: FileText },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            {locale === 'ar' ? 'تتبع الحضور' : 'Attendance Tracking'}
-          </h1>
-          <p className="text-gray-600 mt-2">
-            {locale === 'ar'
-              ? 'إدارة وتتبع حضور الطلاب اليومي'
-              : 'Manage and track daily student attendance'
-            }
-          </p>
-        </div>
-
-        {/* Group Selector */}
+      <PageHeader
+        title={t('attendance.title')}
+        description={t('attendance.description')}
+      >
         <select
           value={selectedGroupId}
           onChange={(e) => setSelectedGroupId(e.target.value)}
           className="border rounded px-4 py-2 min-w-[250px] bg-white shadow-sm"
         >
-          <option value="" disabled>{locale === 'ar' ? 'اختر الفصل' : 'Select Class...'}</option>
+          <option value="" disabled>{t('attendance.selectClass')}</option>
           {offerings.flatMap((offering) =>
             offering.groups.map((group) => (
               <option key={group.id} value={group.id}>
@@ -502,113 +428,88 @@ export default function AttendancePage() {
             ))
           )}
         </select>
-
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            {locale === 'ar' ? 'تصدير' : 'Export'}
-          </Button>
-          <Button variant="outline" size="sm">
-            <Upload className="w-4 h-4 mr-2" />
-            {locale === 'ar' ? 'استيراد' : 'Import'}
-          </Button>
-          <Dialog open={isStatsModalOpen} onOpenChange={setStatsModalOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <BarChart3 className="w-4 h-4 mr-2" />
-                {locale === 'ar' ? 'الإحصائيات' : 'Statistics'}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {locale === 'ar' ? 'إحصائيات الحضور' : 'Attendance Statistics'}
-                </DialogTitle>
-              </DialogHeader>
-              {attendanceStats && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {attendanceStats.total_sessions}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {locale === 'ar' ? 'إجمالي الجلسات' : 'Total Sessions'}
-                      </div>
+        <Button variant="outline" size="sm">
+          <Download className="w-4 h-4 mr-2" />
+          {t('common.export')}
+        </Button>
+        <Button variant="outline" size="sm">
+          <Upload className="w-4 h-4 mr-2" />
+          {t('common.import')}
+        </Button>
+        <Dialog open={isStatsModalOpen} onOpenChange={setStatsModalOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              {t('attendance.statsTitle')}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {t('attendance.statsTitle')}
+              </DialogTitle>
+            </DialogHeader>
+            {attendanceStats && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-4 bg-primary/5 rounded-lg">
+                    <div className="text-2xl font-bold text-primary">
+                      {attendanceStats.total_sessions}
                     </div>
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">
-                        {attendanceStats.attendance_rate}%
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {locale === 'ar' ? 'معدل الحضور' : 'Attendance Rate'}
-                      </div>
+                    <div className="text-sm text-gray-600">
+                      {t('attendance.totalSessions')}
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        {locale === 'ar' ? 'حضر' : 'Present'}
-                      </span>
-                      <span className="font-medium">{attendanceStats.present_count}</span>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">
+                      {attendanceStats.attendance_rate}%
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <XCircle className="h-4 w-4 text-red-600" />
-                        {locale === 'ar' ? 'غاب' : 'Absent'}
-                      </span>
-                      <span className="font-medium">{attendanceStats.absent_count}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-yellow-600" />
-                        {locale === 'ar' ? 'تأخر' : 'Late'}
-                      </span>
-                      <span className="font-medium">{attendanceStats.late_count}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 text-blue-600" />
-                        {locale === 'ar' ? 'معذور' : 'Excused'}
-                      </span>
-                      <span className="font-medium">{attendanceStats.excused_count}</span>
+                    <div className="text-sm text-gray-600">
+                      {t('attendance.attendanceRate')}
                     </div>
                   </div>
                 </div>
-              )}
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      {t('attendance.status.present')}
+                    </span>
+                    <span className="font-medium">{attendanceStats.present_count}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <XCircle className="h-4 w-4 text-red-600" />
+                      {t('attendance.status.absent')}
+                    </span>
+                    <span className="font-medium">{attendanceStats.absent_count}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-yellow-600" />
+                      {t('attendance.status.late')}
+                    </span>
+                    <span className="font-medium">{attendanceStats.late_count}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-primary" />
+                      {t('attendance.status.excused')}
+                    </span>
+                    <span className="font-medium">{attendanceStats.excused_count}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </PageHeader>
 
-      {/* View Mode Tabs */}
-      <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
-        <Button
-          variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setViewMode('calendar')}
-        >
-          <CalendarDays className="w-4 h-4 mr-2" />
-          {locale === 'ar' ? 'التقويم' : 'Calendar'}
-        </Button>
-        <Button
-          variant={viewMode === 'bulk' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setViewMode('bulk')}
-        >
-          <Users className="w-4 h-4 mr-2" />
-          {locale === 'ar' ? 'تسجيل جماعي' : 'Bulk Entry'}
-        </Button>
-        <Button
-          variant={viewMode === 'list' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setViewMode('list')}
-        >
-          <FileText className="w-4 h-4 mr-2" />
-          {locale === 'ar' ? 'القائمة' : 'List View'}
-        </Button>
-      </div>
+      <ViewModeTabs
+        modes={viewModes}
+        active={viewMode}
+        onChange={(mode) => setViewMode(mode as 'calendar' | 'list' | 'bulk')}
+      />
 
       {/* Calendar View */}
       {viewMode === 'calendar' && (
@@ -616,8 +517,8 @@ export default function AttendancePage() {
           {!selectedGroupId ? (
             <div className="lg:col-span-3 text-center p-12 bg-gray-50 rounded-lg border border-dashed">
               <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900">Please Select a Class</h3>
-              <p className="text-gray-500">Select a class from the dropdown above to manage attendance.</p>
+              <h3 className="text-lg font-medium text-gray-900">{t('attendance.pleaseSelectClass')}</h3>
+              <p className="text-gray-500">{t('attendance.pleaseSelectClassDescription')}</p>
             </div>
           ) : (
             <>
@@ -645,10 +546,7 @@ export default function AttendancePage() {
                     <div className="grid grid-cols-7 gap-1 mb-4">
                       {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                         <div key={day} className="p-2 text-center text-sm font-medium text-gray-500">
-                          {locale === 'ar'
-                            ? ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'][['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(day)]
-                            : day
-                          }
+                          {t(`attendance.days.${day.toLowerCase()}`)}
                         </div>
                       ))}
                     </div>
@@ -658,12 +556,12 @@ export default function AttendancePage() {
                           key={index}
                           onClick={() => setSelectedDate(day.dateStr)}
                           className={`
-                        p-2 text-sm rounded-lg border transition-colors
-                        ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
-                        ${day.isToday ? 'bg-blue-100 border-blue-300' : 'border-gray-200'}
-                        ${day.isSelected ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50'}
-                        ${day.hasAttendance ? 'font-semibold' : ''}
-                      `}
+                            p-2 text-sm rounded-lg border transition-colors
+                            ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
+                            ${day.isToday ? 'bg-primary/10 border-primary/30' : 'border-gray-200'}
+                            ${day.isSelected ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-gray-50'}
+                            ${day.hasAttendance ? 'font-semibold' : ''}
+                          `}
                         >
                           <div>{day.date.getDate()}</div>
                           {day.hasAttendance && (
@@ -680,7 +578,7 @@ export default function AttendancePage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>
-                      {locale === 'ar' ? 'حضور اليوم' : 'Today\'s Attendance'}
+                      {t('attendance.todayAttendance')}
                     </CardTitle>
                     <p className="text-sm text-gray-600">
                       {new Date(selectedDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}
@@ -710,10 +608,7 @@ export default function AttendancePage() {
                               size="sm"
                               onClick={() => setViewMode('bulk')}
                             >
-                              {locale === 'ar'
-                                ? `عرض جميع الطلاب (${dailyAttendance.students.length})`
-                                : `View all students (${dailyAttendance.students.length})`
-                              }
+                              {t('attendance.viewAllStudents', { count: dailyAttendance.students.length })}
                             </Button>
                           </div>
                         )}
@@ -722,270 +617,261 @@ export default function AttendancePage() {
                   </CardContent>
                 </Card>
               </div>
-            </> // End check for selectedGroupId
+            </>
           )}
         </div>
       )}
 
-
       {/* Bulk Entry View */}
-      {
-        viewMode === 'bulk' && !selectedGroupId ? (
-          <div className="text-center p-12 bg-gray-50 rounded-lg border border-dashed">
-            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900">Please Select a Class</h3>
-            <p className="text-gray-500">Select a class from the dropdown above to take bulk attendance.</p>
-          </div>
-        ) : viewMode === 'bulk' && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>
-                    {locale === 'ar' ? 'تسجيل الحضور الجماعي' : 'Bulk Attendance Entry'}
-                  </CardTitle>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {new Date(selectedDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-auto"
-                  />
+      {viewMode === 'bulk' && !selectedGroupId ? (
+        <div className="text-center p-12 bg-gray-50 rounded-lg border border-dashed">
+          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900">{t('attendance.pleaseSelectClass')}</h3>
+          <p className="text-gray-500">{t('attendance.pleaseSelectClassDescription')}</p>
+        </div>
+      ) : viewMode === 'bulk' && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>
+                  {t('attendance.bulkAttendanceEntry')}
+                </CardTitle>
+                <p className="text-sm text-gray-600 mt-1">
+                  {new Date(selectedDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-auto"
+                />
+                <Button
+                  onClick={handleBulkAttendanceSave}
+                  disabled={saving}
+                  className="gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      {t('attendance.saving')}
+                    </>
+                  ) : (
+                    <>
+                      <UserCheck className="w-4 h-4" />
+                      {t('attendance.saveAttendance')}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {dailyAttendance && (
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2 p-4 bg-gray-50 rounded-lg">
+                  <span className="text-sm font-medium">
+                    {t('attendance.quickActions')}
+                  </span>
                   <Button
-                    onClick={handleBulkAttendanceSave}
-                    disabled={saving}
-                    className="gap-2"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      dailyAttendance.students.forEach(student => {
+                        handleAttendanceChange(student.student_id, 'present');
+                      });
+                    }}
                   >
-                    {saving ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        {locale === 'ar' ? 'جاري الحفظ...' : 'Saving...'}
-                      </>
-                    ) : (
-                      <>
-                        <UserCheck className="w-4 h-4" />
-                        {locale === 'ar' ? 'حفظ الحضور' : 'Save Attendance'}
-                      </>
-                    )}
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    {t('attendance.markAllPresent')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      dailyAttendance.students.forEach(student => {
+                        handleAttendanceChange(student.student_id, 'absent');
+                      });
+                    }}
+                  >
+                    <XCircle className="w-4 h-4 mr-1" />
+                    {t('attendance.markAllAbsent')}
                   </Button>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {dailyAttendance && (
-                <div className="space-y-4">
-                  {/* Quick Actions */}
-                  <div className="flex items-center space-x-2 p-4 bg-gray-50 rounded-lg">
-                    <span className="text-sm font-medium">
-                      {locale === 'ar' ? 'إجراءات سريعة:' : 'Quick Actions:'}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        dailyAttendance.students.forEach(student => {
-                          handleAttendanceChange(student.student_id, 'present');
-                        });
-                      }}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      {locale === 'ar' ? 'حضر الجميع' : 'Mark All Present'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        dailyAttendance.students.forEach(student => {
-                          handleAttendanceChange(student.student_id, 'absent');
-                        });
-                      }}
-                    >
-                      <XCircle className="w-4 h-4 mr-1" />
-                      {locale === 'ar' ? 'غاب الجميع' : 'Mark All Absent'}
-                    </Button>
-                  </div>
 
-                  {/* Student List */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {dailyAttendance.students.map((student) => {
-                      const studentData = students.find(s => s.id === student.student_id);
-                      return (
-                        <Card key={student.student_id} className="p-4">
-                          <div className="flex items-center space-x-3 mb-3">
-                            <Avatar>
-                              <AvatarFallback className="bg-blue-100 text-blue-700">
-                                {student.name.split(' ')[0].charAt(0)}
-                                {student.name.split(' ')[1]?.charAt(0)}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {dailyAttendance.students.map((student) => {
+                    const studentData = students.find(s => s.id === student.student_id);
+                    return (
+                      <Card key={student.student_id} className="p-4">
+                        <div className="flex items-center space-x-3 mb-3">
+                          <Avatar>
+                            <AvatarFallback className="bg-primary/10 text-primary">
+                              {student.name.split(' ')[0].charAt(0)}
+                              {student.name.split(' ')[1]?.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{student.name}</div>
+                            <div className="text-xs text-gray-500">
+                              {studentData?.grade_level}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            variant={student.status === 'present' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => handleAttendanceChange(student.student_id, 'present')}
+                            className="gap-1"
+                          >
+                            <CheckCircle className="w-3 h-3" />
+                            {t('attendance.status.present')}
+                          </Button>
+                          <Button
+                            variant={student.status === 'absent' ? 'destructive' : 'outline'}
+                            size="sm"
+                            onClick={() => handleAttendanceChange(student.student_id, 'absent')}
+                            className="gap-1"
+                          >
+                            <XCircle className="w-3 h-3" />
+                            {t('attendance.status.absent')}
+                          </Button>
+                          <Button
+                            variant={student.status === 'late' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => handleAttendanceChange(student.student_id, 'late')}
+                            className="gap-1"
+                          >
+                            <Clock className="w-3 h-3" />
+                            {t('attendance.status.late')}
+                          </Button>
+                          <Button
+                            variant={student.status === 'excused' ? 'secondary' : 'outline'}
+                            size="sm"
+                            onClick={() => handleAttendanceChange(student.student_id, 'excused')}
+                            className="gap-1"
+                          >
+                            <AlertCircle className="w-3 h-3" />
+                            {t('attendance.status.excused')}
+                          </Button>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* List View */}
+      {viewMode === 'list' && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>
+                {t('attendance.attendanceRecords')}
+              </CardTitle>
+              <div className="flex items-center space-x-2">
+                <Input
+                  placeholder={t('attendance.searchStudent')}
+                  value={studentFilter}
+                  onChange={(e) => setStudentFilter(e.target.value)}
+                  className="w-64"
+                />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="border rounded px-3 py-2"
+                >
+                  <option value="all">{t('attendance.allStatus')}</option>
+                  <option value="present">{t('attendance.status.present')}</option>
+                  <option value="absent">{t('attendance.status.absent')}</option>
+                  <option value="late">{t('attendance.status.late')}</option>
+                  <option value="excused">{t('attendance.status.excused')}</option>
+                </select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {filteredRecords.length === 0 ? (
+              <EmptyState
+                icon={Calendar}
+                message={t('attendance.noRecords')}
+              />
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('attendance.student')}</TableHead>
+                    <TableHead>{t('attendance.date')}</TableHead>
+                    <TableHead>{t('attendance.status')}</TableHead>
+                    <TableHead>{t('attendance.notes')}</TableHead>
+                    <TableHead>{t('attendance.recordedAt')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRecords.map((record) => {
+                    const status = getStatusBadge(record.status);
+                    return (
+                      <TableRow key={record.id}>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-gray-100 text-gray-600">
+                                {record.student?.name?.split(' ')[0]?.charAt(0)}
+                                {record.student?.name?.split(' ')[1]?.charAt(0)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <div className="font-medium">{student.name}</div>
-                              <div className="text-xs text-gray-500">
-                                {studentData?.grade_level}
+                              <div className="font-medium">{record.student?.name || t('attendance.unknown')}</div>
+                              <div className="text-sm text-gray-500">
+                                {record.student?.grade_level}
                               </div>
                             </div>
                           </div>
-
-                          <div className="grid grid-cols-2 gap-2">
-                            <Button
-                              variant={student.status === 'present' ? 'default' : 'outline'}
-                              size="sm"
-                              onClick={() => handleAttendanceChange(student.student_id, 'present')}
-                              className="gap-1"
-                            >
-                              <CheckCircle className="w-3 h-3" />
-                              {locale === 'ar' ? 'حضر' : 'Present'}
-                            </Button>
-                            <Button
-                              variant={student.status === 'absent' ? 'destructive' : 'outline'}
-                              size="sm"
-                              onClick={() => handleAttendanceChange(student.student_id, 'absent')}
-                              className="gap-1"
-                            >
-                              <XCircle className="w-3 h-3" />
-                              {locale === 'ar' ? 'غاب' : 'Absent'}
-                            </Button>
-                            <Button
-                              variant={student.status === 'late' ? 'default' : 'outline'}
-                              size="sm"
-                              onClick={() => handleAttendanceChange(student.student_id, 'late')}
-                              className="gap-1"
-                            >
-                              <Clock className="w-3 h-3" />
-                              {locale === 'ar' ? 'تأخر' : 'Late'}
-                            </Button>
-                            <Button
-                              variant={student.status === 'excused' ? 'secondary' : 'outline'}
-                              size="sm"
-                              onClick={() => handleAttendanceChange(student.student_id, 'excused')}
-                              className="gap-1"
-                            >
-                              <AlertCircle className="w-3 h-3" />
-                              {locale === 'ar' ? 'معذور' : 'Excused'}
-                            </Button>
-                          </div>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )
-      }
-
-      {/* List View */}
-      {
-        viewMode === 'list' && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>
-                  {locale === 'ar' ? 'سجل الحضور' : 'Attendance Records'}
-                </CardTitle>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    placeholder={locale === 'ar' ? 'البحث عن طالب...' : 'Search student...'}
-                    value={studentFilter}
-                    onChange={(e) => setStudentFilter(e.target.value)}
-                    className="w-64"
-                  />
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="border rounded px-3 py-2"
-                  >
-                    <option value="all">{locale === 'ar' ? 'جميع الحالات' : 'All Status'}</option>
-                    <option value="present">{locale === 'ar' ? 'حضر' : 'Present'}</option>
-                    <option value="absent">{locale === 'ar' ? 'غاب' : 'Absent'}</option>
-                    <option value="late">{locale === 'ar' ? 'تأخر' : 'Late'}</option>
-                    <option value="excused">{locale === 'ar' ? 'معذور' : 'Excused'}</option>
-                  </select>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {filteredRecords.length === 0 ? (
-                <div className="text-center py-8">
-                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">
-                    {locale === 'ar' ? 'لا توجد سجلات حضور' : 'No attendance records found'}
-                  </p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{locale === 'ar' ? 'الطالب' : 'Student'}</TableHead>
-                      <TableHead>{locale === 'ar' ? 'التاريخ' : 'Date'}</TableHead>
-                      <TableHead>{locale === 'ar' ? 'الحالة' : 'Status'}</TableHead>
-                      <TableHead>{locale === 'ar' ? 'الملاحظات' : 'Notes'}</TableHead>
-                      <TableHead>{locale === 'ar' ? 'وقت التسجيل' : 'Recorded At'}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRecords.map((record) => {
-                      const status = getStatusBadge(record.status);
-                      return (
-                        <TableRow key={record.id}>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback className="bg-gray-100 text-gray-600">
-                                  {record.student?.name?.split(' ')[0]?.charAt(0)}
-                                  {record.student?.name?.split(' ')[1]?.charAt(0)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="font-medium">{record.student?.name || 'Unknown'}</div>
-                                <div className="text-sm text-gray-500">
-                                  {record.student?.grade_level}
-                                </div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {new Date(record.date).toLocaleDateString(
+                        </TableCell>
+                        <TableCell>
+                          {new Date(record.date).toLocaleDateString(
+                            locale === 'ar' ? 'ar-SA' : 'en-US'
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={status.variant} className={status.color}>
+                            {status.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-gray-600">
+                            {record.notes || '-'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-gray-500">
+                            {new Date(record.created_at).toLocaleString(
                               locale === 'ar' ? 'ar-SA' : 'en-US'
                             )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={status.variant} className={status.color}>
-                              {status.label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-gray-600">
-                              {record.notes || '-'}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-gray-500">
-                              {new Date(record.created_at).toLocaleString(
-                                locale === 'ar' ? 'ar-SA' : 'en-US'
-                              )}
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        )
-      }
-    </div >
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

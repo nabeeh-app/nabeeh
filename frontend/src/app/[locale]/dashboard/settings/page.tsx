@@ -29,10 +29,8 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  MessageSquare,
-  ExternalLink
+  MessageSquare
 } from 'lucide-react';
-import SimpleWhatsAppSetup from '@/components/SimpleWhatsAppSetup';
 import apiClient from '@/lib/api';
 
 interface TeacherSettings {
@@ -118,18 +116,18 @@ export default function SettingsPage() {
       });
 
       if (response.data.success) {
-        setWhatsappStatus(response.data.status);
+        setWhatsappStatus(response.data.data?.status || 'disconnected');
 
         // Show detailed status message based on the actual response
-        if (response.data.status === 'connected') {
+        if (response.data.data?.status === 'connected') {
           if (response.data.message?.includes('partially connected')) {
             setStatusMessage('✅ الواتساب متصل جزئياً. يُفضل إكمال الإعداد للاستقرار الكامل.');
           } else {
             setStatusMessage('✅ الواتساب متصل بنجاح! يمكنك الآن إرسال الرسائل.');
           }
-        } else if (response.data.status === 'disconnected') {
+        } else if (response.data.data?.status === 'disconnected') {
           setStatusMessage(response.data.message || '📱 الواتساب غير متصل. يمكنك طلب رمز الربط للبدء.');
-        } else if (response.data.status === 'invalid_number') {
+        } else if (response.data.data?.status === 'invalid_number') {
           setStatusMessage('❌ رقم الهاتف غير مسجل في الواتساب.');
         } else {
           setStatusMessage(response.data.message || '');
@@ -481,21 +479,12 @@ export default function SettingsPage() {
                </div>
              </div>
              
-             <div className="text-sm text-gray-600">
-               {isRTL 
-                 ? 'لإعداد الواتساب، افتح لوحة تحكم WAHA وامسح رمز QR'
-                 : 'To setup WhatsApp, open WAHA dashboard and scan QR code'
-               }
-             </div>
-             
-             <Button 
-               onClick={() => window.open('http://localhost:3000', '_blank')}
-               className="w-full"
-               variant="outline"
-             >
-               <ExternalLink className="w-4 h-4 mr-2" />
-               {isRTL ? 'فتح لوحة تحكم WAHA' : 'Open WAHA Dashboard'}
-             </Button>
+              <div className="text-sm text-gray-600">
+                {isRTL 
+                  ? 'لإعداد الواتساب، افتح لوحة التحكم وامسح رمز QR'
+                  : 'To setup WhatsApp, open the dashboard and scan QR code'
+                }
+              </div>
            </CardContent>
          </Card>
 

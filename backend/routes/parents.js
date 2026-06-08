@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const logger = require('../lib/logger');
 
 const router = express.Router();
 
@@ -11,35 +12,6 @@ const getParents = async (req, res) => {
   try {
     const { student_id, search } = req.query;
     const teacher_id = req.user.id;
-
-    // Base query: Parents of students enrolled in teacher's offerings
-    let query = supabase
-      .from('parents')
-      .select(`
-        *,
-        student:students (
-          id,
-          name,
-          student_id,
-          enrollments!inner (
-             group:groups!inner (
-                offering:offerings!inner (
-                   teacher_id
-                )
-             )
-          )
-        )
-      `)
-      .eq('students.enrollments.groups.offerings.teacher_id', teacher_id)
-      .order('created_at', { ascending: false });
-
-    // Note: Supabase nested filtering syntax can be tricky.
-    // simpler approach: Get all parents, filtered by validity.
-    // Or invert: Get Students of teacher -> then parents.
-
-    // Better Query Strategy:
-    // 1. Get List of Student IDs belonging to teacher (via enrollments)
-    // 2. Fetch parents for those IDs.
 
     // Step 1: Get Teacher's Student IDs
     const { data: teacherStudents, error: studentError } = await supabase
@@ -106,7 +78,7 @@ const getParents = async (req, res) => {
       data: parents
     });
   } catch (error) {
-    console.error('Get parents error:', error);
+    logger.error('Get parents error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error fetching parents'
@@ -182,7 +154,7 @@ const createParent = async (req, res) => {
       data: parent
     });
   } catch (error) {
-    console.error('Create parent error:', error);
+    logger.error('Create parent error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error creating parent'
@@ -281,7 +253,7 @@ const updateParent = async (req, res) => {
       data: parent
     });
   } catch (error) {
-    console.error('Update parent error:', error);
+    logger.error('Update parent error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error updating parent'
@@ -340,7 +312,7 @@ const deleteParent = async (req, res) => {
       message: 'Parent deleted successfully'
     });
   } catch (error) {
-    console.error('Delete parent error:', error);
+    logger.error('Delete parent error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error deleting parent'

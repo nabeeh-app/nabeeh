@@ -1,12 +1,9 @@
 const { TokenService } = require('../lib/auth');
-const { createClient } = require('@supabase/supabase-js');
+const { supabaseAdmin } = require('../config/database');
+const logger = require('../lib/logger');
 
 // Initialize services
 const tokenService = new TokenService();
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 /**
  * Authentication middleware to verify JWT tokens
@@ -59,7 +56,7 @@ const authenticateToken = async (req, res, next) => {
         next();
 
     } catch (error) {
-        console.error('Authentication middleware error:', error);
+        logger.error('Authentication middleware error', { error: error.message });
         
         if (error.message.includes('expired')) {
             return res.status(401).json({
@@ -165,14 +162,14 @@ const optionalAuth = async (req, res, next) => {
                 }
             } catch (error) {
                 // Ignore token errors for optional auth
-                console.log('Optional auth token error:', error.message);
+                logger.info('Optional auth token error', { error: error.message });
             }
         }
 
         next();
 
     } catch (error) {
-        console.error('Optional auth middleware error:', error);
+        logger.error('Optional auth middleware error', { error: error.message });
         next(); // Continue without authentication
     }
 };

@@ -155,8 +155,8 @@ class ApiClient {
     page?: number;
     limit?: number;
     student_id?: string;
-    date_from?: string;
-    date_to?: string;
+    start_date?: string;
+    end_date?: string;
     status?: string;
     group_id?: string;
   }): Promise<ApiResponse<Attendance[]>> {
@@ -178,8 +178,8 @@ class ApiClient {
   }
 
   async getAttendanceSummary(params?: {
-    date_from?: string;
-    date_to?: string;
+    start_date?: string;
+    end_date?: string;
     student_id?: string;
     group_id?: string;
   }): Promise<AttendanceSummary> {
@@ -195,8 +195,8 @@ class ApiClient {
     group_id?: string;
     subject?: string;
     assessment_type?: string;
-    date_from?: string;
-    date_to?: string;
+    start_date?: string;
+    end_date?: string;
   }): Promise<PaginatedResponse<Grade>> {
     const response: AxiosResponse<PaginatedResponse<Grade>> = await this.api.get('/grades', { params });
     return response.data;
@@ -279,13 +279,13 @@ class ApiClient {
 
   // Offerings API
   async getOfferings(): Promise<Offering[]> {
-    const response: AxiosResponse<Offering[]> = await this.api.get('/offerings');
-    return response.data;
+    const response: AxiosResponse<ApiResponse<Offering[]>> = await this.api.get('/offerings');
+    return response.data.data;
   }
 
   async createGroup(offeringId: string, data: CreateGroupRequest): Promise<OfferingGroup> {
-    const response: AxiosResponse<OfferingGroup> = await this.api.post(`/offerings/${offeringId}/groups`, data);
-    return response.data;
+    const response: AxiosResponse<ApiResponse<OfferingGroup>> = await this.api.post(`/offerings/${offeringId}/groups`, data);
+    return response.data.data;
   }
 
   // Settings API

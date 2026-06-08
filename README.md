@@ -1,68 +1,168 @@
-# 🎓 Nabeeh - Smart Teaching Assistant
+# Nabeeh - Smart Teaching Assistant
 
-Bilingual teaching assistant for classroom management, tracking, and parent communication via WhatsApp.
+Bilingual (AR/EN) teaching assistant for classroom management, student tracking, attendance, grade management, and parent communication via WhatsApp. Targets private tutors and tutoring centers in Egypt/MENA.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Node.js](https://img.shields.io/badge/node.js-18+-green.svg) ![React](https://img.shields.io/badge/react-18+-blue.svg) ![Supabase](https://img.shields.io/badge/supabase-enabled-green.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Node.js](https://img.shields.io/badge/node.js-18+-green.svg) ![React](https://img.shields.io/badge/react-19+-blue.svg) ![Supabase](https://img.shields.io/badge/supabase-enabled-green.svg)
 
-## ⚡ Quick Start
+## Quick Start
 
-### 1. Backend
+### Prerequisites
+- Node.js 18+
+- Supabase account (database + auth)
+- Gemini API key (for WhatsApp bot AI responses)
+
+### 1. Database
+```bash
+cd database
+node run_migration.js
+```
+
+### 2. Backend
 ```bash
 cd backend
 npm install
-cp .env.example .env  # fill in Supabase, JWT, Gemini, WAHA secrets
-npm start
+cp .env.example .env  # Fill in Supabase, JWT, Gemini secrets
+npm run dev            # Starts with Nodemon (hot reload)
 ```
 
-### 2. Frontend
+### 3. Frontend
 ```bash
 cd frontend
 npm install
 cp .env.example .env.local
-npm run dev
+npm run dev            # Starts with Turbopack
 ```
 
-### 3. Database
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 16, React 19, Tailwind v4, TypeScript |
+| Backend | Express 5, Node.js |
+| Database | Supabase/PostgreSQL |
+| Auth | JWT (httpOnly cookies), RBAC |
+| WhatsApp | Baileys (native integration) |
+| AI Bot | Gemini AI |
+| Testing | Jest + Supertest (backend), Vitest (frontend) |
+
+## Project Structure
+
+```
+nabeeh/
+├── backend/                    # Express API
+│   ├── server.js               # Entry point
+│   ├── config/database.js      # Supabase clients
+│   ├── middleware/              # Auth, security, error handling
+│   ├── routes/                 # API endpoints
+│   │   ├── auth.js             # Login, register, password reset
+│   │   ├── students.js         # CRUD + enrollment chain
+│   │   ├── attendance.js       # Mark + query
+│   │   ├── grades.js           # CRUD + bulk + stats
+│   │   └── ...
+│   └── lib/                    # Auth, WhatsApp, logger
+├── frontend/                   # Next.js app
+│   └── src/
+│       ├── app/[locale]/       # Locale-segmented routes
+│       ├── components/         # React components
+│       │   └── ui/             # Shared components
+│       ├── hooks/              # useAuth, useWhatsAppStatus
+│       ├── lib/                # API client, utils
+│       ├── messages/           # i18n translations (en.json, ar.json)
+│       └── types/              # TypeScript interfaces
+├── database/
+│   └── migrations/             # SQL migrations
+└── docs/adr/                   # Architecture Decision Records
+```
+
+## Environment Variables
+
+### Backend (`backend/.env`)
+```env
+# Supabase
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# JWT
+JWT_SECRET=your_jwt_secret
+JWT_EXPIRES_IN=24h
+
+# Gemini AI
+GEMINI_API_KEY=your_gemini_key
+
+# Server
+PORT=5000
+NODE_ENV=development
+CORS_ORIGINS=http://localhost:3000
+```
+
+### Frontend (`frontend/.env.local`)
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_USE_MOCK=false
+```
+
+## Testing
+
+### Backend (Jest + Supertest)
 ```bash
 cd backend
-node database/run_migration.js
-node scripts/seed_test_users.js
+npm test                # Run all tests
 ```
 
-## 🔐 Environment Files
-- `backend/.env.example` ships with placeholder values. Copy it to `backend/.env`, populate your own Supabase, JWT, Gemini, and WhatsApp details, and **do not commit the real file**.
-- `frontend/.env.example` should be copied to `frontend/.env.local`; set `NEXT_PUBLIC_API_URL` to point at your Express instance.
-- Secrets and Baileys session artifacts are intentionally absent from the repository. Each developer must log in or pair a new WhatsApp session locally.
+### Frontend (Vitest)
+```bash
+cd frontend
+npm run test            # Run all tests
+npm run test:watch      # Watch mode
+```
 
-## 📱 WhatsApp Automation Status
-WhatsApp monitoring + sending now run through the authenticated Express API. `/api/whatsapp/status` (GET or POST) surfaces the live Baileys socket state + QR image, `/api/whatsapp/send-*` relays teacher-triggered test messages, and `/api/whatsapp/logout` tears down the current session. Pair a fresh device locally because session files are no longer tracked in git.
+## API Endpoints
 
-## 🚦 Feature Availability (Temporary)
-| Feature/Page | Status | Notes |
-| --- | --- | --- |
-| Login | Available | Custom JWT login works; `/api/auth/register` and profile updates are not implemented yet. |
-| Registration | Available | `/api/auth/register` now hashes credentials, creates teacher settings, and returns a JWT to the UI. |
-| Dashboard KPIs | Demo data | Cards use hardcoded counts; `GET /teachers/dashboard` is not wired to the UI. |
-| Students | Partial | Listing fetches Supabase data, but parent columns are mocked and create payloads lack `group_id`. |
-| Attendance | Partial | Frontend + API now share the `group_id` contract; pagination and advanced filtering still pending. |
-| Grades | Partial | UI (and WhatsApp bot) expect denormalized `subject/percentage` fields that the API does not yet provide. |
-| Messaging/Conversations | Demo UI | Dashboard/messages page renders local arrays; not connected to `/messages` routes. |
-| Settings | Partial | Uses `/api/auth/profile` for teacher updates; WhatsApp setup UI still needs polish. |
-| WhatsApp Monitor | Partial | `/api/whatsapp/status` is live again, but requires an active Baileys session to report “working.” |
-| Courses/Schedule/Reports/Monitor | Demo UI | These admin pages show static arrays/random values only. |
+### Auth
+- `POST /api/auth/login` - Login with email/password
+- `POST /api/auth/register` - Create teacher account
+- `GET /api/auth/verify-token` - Verify JWT validity
+- `GET /api/auth/me` - Get current user profile
+- `PUT /api/auth/profile` - Update profile
+- `POST /api/auth/request-reset` - Request password reset
+- `POST /api/auth/reset-password` - Reset password with token
 
-## 🧪 Test Accounts
+### Students
+- `GET /api/students` - List students (paginated, filtered)
+- `GET /api/students/:id` - Get student details
+- `POST /api/students` - Create student + enroll in group
+- `PUT /api/students/:id` - Update student
+- `DELETE /api/students/:id` - Remove student from classes
+- `GET /api/students/:id/stats` - Get attendance + academic stats
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@nabeeh.com | Admin123! |
-| Teacher | teacher.math@nabeeh.com | Teacher123! |
+### Attendance
+- `GET /api/attendance` - Get attendance records (date range)
+- `POST /api/attendance` - Mark attendance (bulk)
+- `GET /api/attendance/summary` - Get attendance summary
 
-## 🛠 Tech Stack
-- **Frontend:** Next.js 14, React 18, Tailwind, TypeScript
-- **Backend:** Express.js, Supabase, Google Gemini AI
-- **Auth:** Custom JWT, Role-based access
-- **WhatsApp:** Baileys (Native integration)
+### Grades
+- `GET /api/grades` - Get grades (filtered)
+- `POST /api/grades` - Create grade
+- `POST /api/grades/bulk` - Bulk create grades
+- `PUT /api/grades/:id` - Update grade
+- `DELETE /api/grades/:id` - Delete grade
+- `GET /api/grades/stats` - Get grade statistics
 
-## 📄 License
+## Domain Language
+
+| Term | Definition |
+|------|-----------|
+| **Teacher** | Account holder who manages students |
+| **Student** | Learner enrolled in a teacher's offering |
+| **Parent** | Contact linked to one or more students |
+| **Offering** | A course: (teacher + subject + grade_level + academic_year) |
+| **Group** | Cohort of students within an offering |
+| **Enrollment** | Link between a student and a group |
+| **Assessment** | Graded event (midterm, quiz, homework, final) |
+| **Grade** | A student's score on a specific assessment |
+| **Session** | A single class meeting where attendance is recorded |
+
+## License
+
 MIT License

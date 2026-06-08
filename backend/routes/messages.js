@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const logger = require('../lib/logger');
 
 const router = express.Router();
 
@@ -35,7 +36,7 @@ const getConversations = async (req, res) => {
       data: conversations
     });
   } catch (error) {
-    console.error('Get conversations error:', error);
+    logger.error('Get conversations error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error fetching conversations'
@@ -85,11 +86,13 @@ const getConversationMessages = async (req, res) => {
       data: messages.reverse(), // Show oldest first
       pagination: {
         page: parseInt(page),
-        limit: parseInt(limit)
+        limit: parseInt(limit),
+        total: 0, // TODO: Add count query for accurate total
+        pages: 0
       }
     });
   } catch (error) {
-    console.error('Get conversation messages error:', error);
+    logger.error('Get conversation messages error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error fetching messages'
@@ -169,12 +172,12 @@ const getMessageStats = async (req, res) => {
         outgoing_messages: (totalMessages || 0) - (incomingMessages || 0),
         automated_messages: automatedMessages || 0,
         manual_messages: (totalMessages || 0) - (automatedMessages || 0),
-        common_intents: intentCounts
-      },
-      period: { start_date: startDate, end_date: endDate }
+        common_intents: intentCounts,
+        period: { start_date: startDate, end_date: endDate }
+      }
     });
   } catch (error) {
-    console.error('Get message stats error:', error);
+    logger.error('Get message stats error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error fetching message statistics'

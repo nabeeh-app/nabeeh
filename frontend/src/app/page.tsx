@@ -14,9 +14,9 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-blue-600 mb-4">نبيه - Nabeeh</h1>
+        <h1 className="text-3xl font-bold text-primary mb-4">نبيه - Nabeeh</h1>
         <p className="text-gray-600 mb-4">Smart Teaching Assistant</p>
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
         <p className="text-sm text-gray-500 mt-4">Redirecting to login...</p>
       </div>
     </div>

@@ -245,7 +245,7 @@ export default function MessagesPage() {
                     key={conversation.id}
                     type="button"
                     onClick={() => setSelectedConversationId(conversation.id)}
-                    className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition ${isActive ? 'border-blue-500 bg-blue-50' : 'border-border hover:bg-muted/30'}`}
+                    className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition ${isActive ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/30'}`}
                   >
                     <Avatar>
                       <AvatarFallback>{getInitials(label)}</AvatarFallback>
@@ -313,7 +313,7 @@ export default function MessagesPage() {
                       className={`flex flex-col gap-1 ${isFromParent ? 'items-start' : 'items-end'}`}
                     >
                       <div
-                        className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${isFromParent ? 'bg-muted text-foreground' : 'bg-blue-600 text-white'}`}
+                        className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${isFromParent ? 'bg-muted text-foreground' : 'bg-primary text-primary-foreground'}`}
                       >
                         <p>{message.content}</p>
                         {message.message_type !== 'text' && (

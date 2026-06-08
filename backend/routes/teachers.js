@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const logger = require('../lib/logger');
 
 const router = express.Router();
 
@@ -39,14 +40,14 @@ const getProfile = async (req, res) => {
       students: { count: studentIds.size }
     };
 
-    delete teacherProfile.password;
+    delete teacherProfile.password_hash;
 
     res.status(200).json({
       success: true,
       data: teacherProfile
     });
   } catch (error) {
-    console.error('Get profile error:', error);
+    logger.error('Get profile error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error fetching profile'
@@ -140,11 +141,10 @@ const getDashboardStats = async (req, res) => {
 
     // Transform recentGrades to flat format
     const formattedGrades = recentGrades?.map(g => ({
-      id: Math.random(), // No ID returned?
       score: g.score,
       assessment_name: g.assessment.title,
       student_name: g.enrollment.student.name,
-      date: g.assessment.date // Using assessment date
+      date: g.assessment.date
     })) || [];
 
     res.status(200).json({
@@ -161,7 +161,7 @@ const getDashboardStats = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get dashboard stats error:', error);
+    logger.error('Get dashboard stats error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error fetching dashboard stats'
@@ -197,7 +197,7 @@ const getSettings = async (req, res) => {
       data: settingsObj
     });
   } catch (error) {
-    console.error('Get settings error:', error);
+    logger.error('Get settings error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error fetching settings'
@@ -240,7 +240,7 @@ const updateSettings = async (req, res) => {
       message: 'Settings updated successfully'
     });
   } catch (error) {
-    console.error('Update settings error:', error);
+    logger.error('Update settings error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error updating settings'

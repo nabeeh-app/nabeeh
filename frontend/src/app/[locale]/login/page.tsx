@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
-import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,8 +17,8 @@ type Props = {
 };
 
 export default function LoginPage({ params: _ }: Props) {
-  const [email, setEmail] = useState('ahmed.hassan@example.com'); // Pre-fill demo email
-  const [password, setPassword] = useState('test123'); // Pre-fill demo password
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
 
@@ -84,7 +83,7 @@ export default function LoginPage({ params: _ }: Props) {
         {/* Header */}
         <div className="text-center">
           <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold text-blue-600">
+            <h1 className="text-3xl font-bold text-primary">
               {isRTL ? 'نبيه - Nabeeh' : 'Nabeeh - نبيه'}
             </h1>
             <LanguageSwitcher />
@@ -160,45 +159,9 @@ export default function LoginPage({ params: _ }: Props) {
                   : (locale === 'ar' ? 'تسجيل الدخول' : 'Sign In')
                 }
               </Button>
-
-              <div className="mt-6 p-4 bg-blue-50 rounded-md">
-                <p className="text-xs text-blue-800 font-medium mb-2">
-                  {locale === 'ar' ? 'حساب تجريبي:' : 'Demo Account:'}
-                </p>
-                <p className="text-xs text-blue-700">
-                  {locale === 'ar' ? 'البريد الإلكتروني' : 'Email'}: ahmed.hassan@example.com<br />
-                  {locale === 'ar' ? 'كلمة المرور' : 'Password'}: test123
-                </p>
-                <p className="text-xs text-blue-600 mt-2">
-                  {locale === 'ar' 
-                    ? 'البيانات معبأة مسبقاً للتجربة' 
-                    : 'Credentials are pre-filled for demo'
-                  }
-                </p>
-              </div>
             </form>
           </CardContent>
         </Card>
-
-        {/* Language Toggle */}
-        <div className="text-center">
-          <p className="text-sm text-gray-500">
-            {locale === 'ar' ? 'تغيير اللغة:' : 'Change language:'}{' '}
-            <Link 
-              href="/en/login" 
-              className="text-blue-600 hover:text-blue-500 font-medium"
-            >
-              English
-            </Link>
-            {' | '}
-            <Link 
-              href="/ar/login" 
-              className="text-blue-600 hover:text-blue-500 font-medium"
-            >
-              العربية
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );

@@ -1,86 +1,16 @@
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-
-/**
- * Password hashing and verification utilities
- */
-class PasswordService {
-    constructor() {
-        this.saltRounds = 12; // Minimum 12 as per requirements
-    }
-
-    /**
-     * Hash a plain text password
-     * @param {string} password - Plain text password
-     * @returns {Promise<string>} - Hashed password
-     */
-    async hashPassword(password) {
-        if (!password) {
-            throw new Error('Password is required');
-        }
-        return await bcrypt.hash(password, this.saltRounds);
-    }
-
-    /**
-     * Verify a password against its hash
-     * @param {string} password - Plain text password
-     * @param {string} hash - Hashed password
-     * @returns {Promise<boolean>} - True if password matches
-     */
-    async verifyPassword(password, hash) {
-        if (!password || !hash) {
-            return false;
-        }
-        return await bcrypt.compare(password, hash);
-    }
-
-    /**
-     * Validate password strength
-     * @param {string} password - Password to validate
-     * @returns {Object} - Validation result with isValid and errors
-     */
-    validatePasswordStrength(password) {
-        const errors = [];
-        
-        if (!password) {
-            errors.push('Password is required');
-            return { isValid: false, errors };
-        }
-
-        if (password.length < 8) {
-            errors.push('Password must be at least 8 characters long');
-        }
-
-        if (!/[A-Z]/.test(password)) {
-            errors.push('Password must contain at least one uppercase letter');
-        }
-
-        if (!/[a-z]/.test(password)) {
-            errors.push('Password must contain at least one lowercase letter');
-        }
-
-        if (!/[0-9]/.test(password)) {
-            errors.push('Password must contain at least one number');
-        }
-
-        if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-            errors.push('Password must contain at least one special character');
-        }
-
-        return {
-            isValid: errors.length === 0,
-            errors
-        };
-    }
-}
+const logger = require('./logger');
 
 /**
  * JWT token management utilities
  */
 class TokenService {
     constructor() {
-        this.jwtSecret = process.env.JWT_SECRET || 'your_super_secret_jwt_key_here';
+        if (!process.env.JWT_SECRET) {
+            throw new Error('JWT_SECRET environment variable is required');
+        }
+        this.jwtSecret = process.env.JWT_SECRET;
         this.jwtExpiresIn = process.env.JWT_EXPIRES_IN || '24h';
     }
 
@@ -93,9 +23,7 @@ class TokenService {
         const payload = {
             user_id: user.id,
             email: user.email,
-            role: user.role,
-            subject_id: user.subject_id,
-            preferred_language: user.preferred_language
+            role: user.role || 'teacher'
         };
 
         return jwt.sign(payload, this.jwtSecret, {
@@ -135,22 +63,26 @@ class TokenService {
  */
 class AuthService {
     constructor() {
-        this.passwordService = new PasswordService();
         this.tokenService = new TokenService();
     }
 
     /**
-     * Authenticate user with email and password
+     * Authenticate user with email and password using Supabase Auth
      * @param {string} email - User email
      * @param {string} password - User password
-     * @param {Function} getUserByEmail - Function to get user by email from database
+     * @param {Object} supabaseAdmin - Supabase admin client
      * @returns {Promise<Object>} - Authentication result
      */
-    async authenticateUser(email, password, getUserByEmail) {
+    async authenticateUser(email, password, supabaseAdmin) {
         try {
-            // Get user from database
-            const user = await getUserByEmail(email);
-            if (!user) {
+            // Use Supabase Auth for authentication
+            const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (error) {
+                logger.error('Supabase auth error', { error: error.message });
                 return {
                     success: false,
                     message: 'Invalid credentials',
@@ -158,43 +90,22 @@ class AuthService {
                 };
             }
 
-            // Check if user is active
-            if (!user.is_active) {
-                return {
-                    success: false,
-                    message: 'Account is deactivated',
-                    messageAr: 'الحساب معطل'
-                };
-            }
-
-            // Verify password
-            const isPasswordValid = await this.passwordService.verifyPassword(password, user.password_hash);
-            if (!isPasswordValid) {
-                return {
-                    success: false,
-                    message: 'Invalid credentials',
-                    messageAr: 'بيانات الدخول غير صحيحة'
-                };
-            }
-
-            // Generate token
-            const token = this.tokenService.generateToken(user);
+            const user = data.user;
 
             return {
                 success: true,
                 user: {
                     id: user.id,
                     email: user.email,
-                    name: user.name,
-                    role: user.role,
-                    preferred_language: user.preferred_language
+                    name: user.user_metadata?.name || '',
+                    role: user.user_metadata?.role || 'teacher'
                 },
-                token,
+                token: data.session.access_token,
                 message: 'Login successful',
                 messageAr: 'تم تسجيل الدخول بنجاح'
             };
         } catch (error) {
-            console.error('Authentication error:', error);
+            logger.error('Authentication error', { error: error.message });
             return {
                 success: false,
                 message: 'Authentication failed',
@@ -205,7 +116,6 @@ class AuthService {
 }
 
 module.exports = {
-    PasswordService,
     TokenService,
     AuthService
 };

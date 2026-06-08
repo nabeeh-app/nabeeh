@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const logger = require('../lib/logger');
 
 const router = express.Router();
 
@@ -71,7 +72,7 @@ const getAttendance = async (req, res) => {
       data: flatAttendance
     });
   } catch (error) {
-    console.error('Get attendance error:', error);
+    logger.error('Get attendance error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error fetching attendance'
@@ -143,7 +144,7 @@ const markAttendance = async (req, res) => {
     });
 
     if (activeRecords.length === 0) {
-      return res.status(400).json({ error: 'No valid enrollments found for these students/groups' });
+      return res.status(400).json({ success: false, message: 'No valid enrollments found for these students/groups' });
     }
 
     // 2. Upsert Attendance
@@ -167,7 +168,7 @@ const markAttendance = async (req, res) => {
       message: 'Attendance marked successfully'
     });
   } catch (error) {
-    console.error('Mark attendance error:', error);
+    logger.error('Mark attendance error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error marking attendance'
@@ -218,7 +219,7 @@ const getAttendanceSummary = async (req, res) => {
       // If student-wise breakdown needed, frontend likely hits per-student endpoint or different route.
     });
   } catch (error) {
-    console.error('Get attendance summary error:', error);
+    logger.error('Get attendance summary error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Server error fetching attendance summary'

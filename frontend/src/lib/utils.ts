@@ -60,13 +60,13 @@ export const checkWhatsAppStatus = async (phone?: string) => {
     const data = response.data;
     return {
       success: data.success,
-      status: data.status,
-      message: data.message || (data.status === 'connected'
+      status: data.data?.status || 'disconnected',
+      message: data.message || (data.data?.status === 'connected'
         ? 'Connected'
-        : data.status === 'qr_ready'
+        : data.data?.status === 'qr_ready'
           ? 'Scan QR Code'
           : 'Disconnected'),
-      qr: data.qr || null
+      qr: data.data?.qr || null
     };
   } catch (error) {
     console.error('Check Status Error:', error);

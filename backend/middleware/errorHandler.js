@@ -1,42 +1,55 @@
+const logger = require('../lib/logger');
+
 const errorHandler = (err, req, res, next) => {
-  let error = { ...err };
-  error.message = err.message;
+  logger.error('Unhandled error', { error: err.message, stack: err.stack });
 
-  // Log error
-  console.error(err);
-
-  // Mongoose bad ObjectId
-  if (err.name === 'CastError') {
-    const message = 'Resource not found';
-    error = { message, statusCode: 404 };
-  }
-
-  // Mongoose duplicate key
-  if (err.code === 11000) {
-    const message = 'Duplicate field value entered';
-    error = { message, statusCode: 400 };
-  }
-
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const message = Object.values(err.errors).map(val => val.message);
-    error = { message, statusCode: 400 };
-  }
-
-  // PostgreSQL errors
+  // PostgreSQL error codes
   if (err.code === '23505') {
-    const message = 'Duplicate entry found';
-    error = { message, statusCode: 400 };
+    return res.status(409).json({
+      success: false,
+      message: 'Resource already exists',
+      code: 'DUPLICATE_ENTRY'
+    });
   }
 
   if (err.code === '23503') {
-    const message = 'Foreign key constraint violation';
-    error = { message, statusCode: 400 };
+    return res.status(400).json({
+      success: false,
+      message: 'Referenced resource not found',
+      code: 'FK_VIOLATION'
+    });
   }
 
-  res.status(error.statusCode || 500).json({
+  if (err.code === '22P02') {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid ID format',
+      code: 'INVALID_UUID'
+    });
+  }
+
+  // Supabase PostgREST: row not found
+  if (err.code === 'PGRST116') {
+    return res.status(404).json({
+      success: false,
+      message: 'Resource not found',
+      code: 'NOT_FOUND'
+    });
+  }
+
+  // Supabase RLS: insufficient privilege
+  if (err.code === '42501') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied',
+      code: 'INSUFFICIENT_PRIVILEGE'
+    });
+  }
+
+  const statusCode = err.statusCode || err.status || 500;
+  res.status(statusCode).json({
     success: false,
-    error: error.message || 'Server Error',
+    message: err.message || 'Server Error',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 };

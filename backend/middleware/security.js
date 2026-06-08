@@ -1,5 +1,8 @@
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
+const logger = require('../lib/logger');
+
+const isProd = process.env.NODE_ENV === 'production';
 
 // Rate limiting middleware
 const createRateLimit = (windowMs, max, message) => {
@@ -15,41 +18,20 @@ const createRateLimit = (windowMs, max, message) => {
   });
 };
 
-// General API rate limiting - DISABLED FOR DEVELOPMENT
-// const apiLimiter = createRateLimit(
-//   15 * 60 * 1000, // 15 minutes
-//   100, // limit each IP to 100 requests per windowMs
-//   'Too many API requests from this IP, please try again later.'
-// );
+// General API rate limiting — disabled in development
+const apiLimiter = isProd
+  ? createRateLimit(15 * 60 * 1000, 100, 'Too many API requests from this IP, please try again later.')
+  : (req, res, next) => next();
 
-// Disabled rate limiter for development
-const apiLimiter = (req, res, next) => {
-  next(); // Skip rate limiting
-};
+// Strict rate limiting for auth endpoints — disabled in development
+const authLimiter = isProd
+  ? createRateLimit(15 * 60 * 1000, 50, 'Too many authentication attempts, please try again later.')
+  : (req, res, next) => next();
 
-// Strict rate limiting for auth endpoints - DISABLED FOR DEVELOPMENT
-// const authLimiter = createRateLimit(
-//   15 * 60 * 1000, // 15 minutes
-//   50, // limit each IP to 50 requests per windowMs (increased for development)
-//   'Too many authentication attempts, please try again later.'
-// );
-
-// Disabled rate limiter for development
-const authLimiter = (req, res, next) => {
-  next(); // Skip rate limiting
-};
-
-// WhatsApp endpoint rate limiting - DISABLED FOR DEVELOPMENT
-// const whatsappLimiter = createRateLimit(
-//   60 * 1000, // 1 minute
-//   10, // limit each IP to 10 requests per minute
-//   'Too many WhatsApp requests, please try again later.'
-// );
-
-// Disabled rate limiter for development
-const whatsappLimiter = (req, res, next) => {
-  next(); // Skip rate limiting
-};
+// WhatsApp endpoint rate limiting — disabled in development
+const whatsappLimiter = isProd
+  ? createRateLimit(60 * 1000, 10, 'Too many WhatsApp requests, please try again later.')
+  : (req, res, next) => next();
 
 // Security headers configuration
 const securityHeaders = helmet({
@@ -125,12 +107,12 @@ const securityLogger = (req, res, next) => {
 
     // Log suspicious activities
     if (res.statusCode >= 400) {
-      console.warn('Security Warning:', logData);
+      logger.warn('Security Warning', logData);
     }
 
     // Log slow requests
     if (duration > 5000) {
-      console.warn('Slow Request:', logData);
+      logger.warn('Slow Request', logData);
     }
   });
 

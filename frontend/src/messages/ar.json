@@ -22,7 +22,8 @@
     "close": "إغلاق",
     "confirm": "تأكيد",
     "yes": "نعم",
-    "no": "لا"
+    "no": "لا",
+    "saving": "جاري الحفظ..."
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -68,9 +69,7 @@
     "hidePassword": "إخفاء كلمة المرور",
     "networkError": "حدث خطأ في الشبكة. يرجى التحقق من اتصالك.",
     "serverError": "حدث خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.",
-    "logoutSuccess": "تم تسجيل الخروج بنجاح!",
-    "demoAccount": "حساب تجريبي",
-    "demoCredentials": "استخدم هذه البيانات للاختبار"
+    "logoutSuccess": "تم تسجيل الخروج بنجاح!"
   },
   "navigation": {
     "dashboard": "لوحة التحكم",
@@ -150,7 +149,9 @@
       "email": "البريد الإلكتروني",
       "phone": "رقم الهاتف",
       "parentName": "اسم ولي الأمر",
-      "parentPhone": "هاتف ولي الأمر"
+      "parentPhone": "هاتف ولي الأمر",
+      "group": "الفصل/المجموعة",
+      "classGroup": "الفصل/المجموعة"
     },
     "placeholders": {
       "arabicNamePlaceholder": "أدخل اسم الطالب بالعربية",
@@ -186,16 +187,75 @@
     "validation": {
       "nameRequired": "اسم الطالب مطلوب",
       "gradeRequired": "المستوى الدراسي مطلوب",
-      "enrollmentDateRequired": "تاريخ التسجيل مطلوب"
-    }
+      "enrollmentDateRequired": "تاريخ التسجيل مطلوب",
+      "fillRequired": "يرجى ملء جميع الحقول المطلوبة",
+      "selectClass": "يرجى اختيار الفصل"
+    },
+    "descriptionCount": "إدارة وتتبع {count} طالب مسجل",
+    "loading": "جاري تحميل الطلاب...",
+    "searchPlaceholderShort": "البحث عن الطلاب بالاسم أو الرقم...",
+    "allClasses": "جميع الفصول",
+    "allStatus": "جميع الحالات",
+    "details": "المعلومات",
+    "enrollment": "تاريخ التسجيل",
+    "actionsColumn": "الإجراءات",
+    "viewDetails": "عرض التفاصيل",
+    "basicInfo": "المعلومات الأساسية",
+    "contactInfo": "معلومات الاتصال",
+    "parentsGuardians": "أولياء الأمور",
+    "primary": "أساسي",
+    "enrollmentDateLabel": "تاريخ التسجيل:",
+    "genderLabel": "الجنس:",
+    "noStudentsMatch": "لم يتم العثور على طلاب مطابقين للبحث",
+    "noStudentsYet": "لا يوجد طلاب مسجلون بعد"
   },
   "attendance": {
     "title": "متابعة الحضور",
+    "description": "إدارة وتتبع حضور الطلاب اليومي",
     "markAttendance": "تسجيل الحضور",
     "attendanceHistory": "سجل الحضور",
     "todayAttendance": "حضور اليوم",
     "selectDate": "اختر التاريخ",
     "bulkMark": "التسجيل الجماعي",
+    "loading": "جاري تحميل بيانات الحضور...",
+    "selectClass": "اختر الفصل...",
+    "noGroups": "لا توجد مجموعات بعد",
+    "noGroupsDescription": "أنشئ مجموعة واحدة على الأقل قبل تسجيل الحضور.",
+    "setUpGroups": "إعداد المجموعات",
+    "pleaseSelectClass": "يرجى اختيار فصل",
+    "pleaseSelectClassDescription": "اختر فصلاً من القائمة المنسدلة أعلاه لإدارة الحضور.",
+    "statsTitle": "إحصائيات الحضور",
+    "totalSessions": "إجمالي الجلسات",
+    "attendanceRate": "معدل الحضور",
+    "calendar": "التقويم",
+    "bulkEntry": "تسجيل جماعي",
+    "listView": "القائمة",
+    "bulkAttendanceEntry": "تسجيل الحضور الجماعي",
+    "bulkDateLabel": "تاريخ تسجيل الحضور الجماعي",
+    "quickActions": "إجراءات سريعة:",
+    "markAllPresent": "حضر الجميع",
+    "markAllAbsent": "غاب الجميع",
+    "saving": "جاري الحفظ...",
+    "attendanceRecords": "سجل الحضور",
+    "searchStudent": "البحث عن طالب...",
+    "allStatus": "جميع الحالات",
+    "noRecords": "لا توجد سجلات حضور",
+    "recordedAt": "وقت التسجيل",
+    "viewAllStudents": "عرض جميع الطلاب ({count})",
+    "days": {
+      "sun": "الأحد",
+      "mon": "الإثنين",
+      "tue": "الثلاثاء",
+      "wed": "الأربعاء",
+      "thu": "الخميس",
+      "fri": "الجمعة",
+      "sat": "السبت"
+    },
+    "student": "الطالب",
+    "date": "التاريخ",
+    "status": "الحالة",
+    "notes": "الملاحظات",
+    "unknown": "غير محدد",
     "status": {
       "present": "حاضر",
       "absent": "غائب",
@@ -224,10 +284,46 @@
   },
   "grades": {
     "title": "إدارة الدرجات",
+    "descriptionCount": "إدارة وتتبع درجات الطلاب والتقييمات",
     "addGrade": "إضافة درجة",
     "editGrade": "تعديل الدرجة",
     "gradeHistory": "سجل الدرجات",
     "bulkEntry": "الإدخال الجماعي",
+    "loading": "جاري تحميل بيانات الدرجات...",
+    "noGroups": "لا توجد مجموعات بعد",
+    "noGroupsDescription": "أنشئ مجموعة واحدة على الأقل قبل إدخال الدرجات.",
+    "setUpGroups": "إعداد المجموعات",
+    "totalGrades": "إجمالي الدرجات",
+    "subjectsLabel": "المواد",
+    "overallAverage": "المتوسط العام",
+    "excellentGrades": "درجات ممتازة",
+    "gradebook": "دفتر الدرجات",
+    "gradeList": "قائمة الدرجات",
+    "gradeStatistics": "إحصائيات الدرجات",
+    "addNewGrade": "إضافة درجة جديدة",
+    "selectStudent": "اختر الطالب",
+    "assessmentTypeLabel": "نوع التقييم",
+    "assessmentNameLabel": "اسم التقييم",
+    "scoreLabel": "الدرجة المحققة",
+    "maxScoreLabel": "الدرجة الكاملة",
+    "dateLabel": "التاريخ",
+    "notesLabel": "ملاحظات",
+    "saving": "جاري الحفظ...",
+    "searchEllipsis": "البحث...",
+    "noGradesDisplay": "لا توجد درجات لعرضها",
+    "noGradesMatch": "لا توجد درجات مطابقة للبحث",
+    "averageLabel": "المتوسط",
+    "gradeLabel": "التقدير",
+    "percentageLabel": "النسبة",
+    "editGradeTitle": "تعديل الدرجة",
+    "assessment": "التقييم",
+    "actions": "الإجراءات",
+    "studentsCount": "{count} طالب",
+    "midterm": "امتحان نصف الفصل",
+    "final": "امتحان نهائي",
+    "homework": "واجب",
+    "quizLabel": "مسابقة",
+    "deleteConfirm": "هل أنت متأكد من حذف هذه الدرجة؟",
     "fields": {
       "student": "الطالب",
       "subject": "المادة",
@@ -241,12 +337,15 @@
       "notes": "ملاحظات"
     },
     "assessmentTypes": {
-      "quiz": "اختبار قصير",
+      "quiz": "مسابقة",
       "test": "اختبار",
       "exam": "امتحان",
       "assignment": "واجب",
       "project": "مشروع",
-      "participation": "مشاركة"
+      "participation": "مشاركة",
+      "homework": "واجب",
+      "midterm": "امتحان نصف الفصل",
+      "final": "امتحان نهائي"
     },
     "letterGrades": {
       "aPlus": "أ+",
@@ -265,6 +364,9 @@
       "lowestScore": "أقل درجة",
       "totalAssessments": "إجمالي التقييمات"
     },
+    "subjectPlaceholder": "مثال: الرياضيات",
+    "assessmentNamePlaceholder": "مثال: امتحان الوحدة الأولى",
+    "notesPlaceholder": "ملاحظات إضافية...",
     "saveSuccess": "تم حفظ الدرجة بنجاح",
     "deleteSuccess": "تم حذف الدرجة بنجاح",
     "validation": {
@@ -272,7 +374,9 @@
       "subjectRequired": "المادة مطلوبة",
       "scoreRequired": "الدرجة مطلوبة",
       "maxScoreRequired": "الدرجة العظمى مطلوبة",
-      "invalidScore": "الدرجة لا يمكن أن تكون أكبر من الدرجة العظمى"
+      "invalidScore": "الدرجة لا يمكن أن تكون أكبر من الدرجة العظمى",
+      "fillRequired": "يرجى ملء جميع الحقول المطلوبة",
+      "selectClass": "يرجى اختيار الفصل"
     }
   },
   "parents": {
@@ -386,7 +490,6 @@
     "retryStatus": "إعادة المحاولة",
     "checking": "جاري التحقق...",
     "quickActions": "الإجراءات السريعة",
-    "openWAHADashboard": "فتح لوحة WAHA",
     "sendMessages": "إرسال الرسائل",
     "restartSession": "إعادة تشغيل الجلسة",
     "testMessage": "رسالة تجريبية",

@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const dotenv = require('dotenv');
-const winston = require('winston');
 
 // Load environment variables
 dotenv.config();
@@ -40,27 +39,12 @@ const PORT = process.env.PORT || 5000;
 app.disable('etag');
 
 // Configure Winston logger
-const winstonLogger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'nabeeh-backend' },
-  transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
-    new winston.transports.Console({
-      format: winston.format.simple()
-    })
-  ]
-});
+const winstonLogger = require('./lib/logger');
 
 // Global middleware
 app.use(securityHeaders); // Enhanced security headers
 app.use(cors({
-  origin: true, // Allow all origins
+  origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -102,14 +86,6 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/offerings', offeringRoutes);
 
 // WhatsApp routes with rate limiting
-app.use('/api/whatsapp', whatsappLimiter, (req, res, next) => {
-  console.log('WhatsApp route middleware:', {
-    method: req.method,
-    url: req.url,
-    originalUrl: req.originalUrl
-  });
-  next();
-});
 app.use('/api/whatsapp', whatsappLimiter, whatsappRoutes);
 
 // 404 handler

@@ -43,8 +43,11 @@ import { apiClient } from '@/lib/api';
 import { Student, Grade, CreateGradeRequest, Offering } from '@/types';
 import { AlertCircle, ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-// import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-// import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { StatCards } from '@/components/ui/StatCards';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ViewModeTabs } from '@/components/ui/ViewModeTabs';
 
 interface GradeWithStudent extends Grade {
   student: Student;
@@ -87,24 +90,20 @@ export default function GradesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Offerings & Groups State
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [openGroupSelect, setOpenGroupSelect] = useState(false);
   const [noGroups, setNoGroups] = useState(false);
 
-  // View modes
   const [viewMode, setViewMode] = useState<'gradebook' | 'list' | 'entry'>('gradebook');
   const [selectedAssessmentType, setSelectedAssessmentType] = useState<string>('all');
 
-  // Modals
   const [isAddGradeModalOpen, setAddGradeModalOpen] = useState(false);
   const [isBulkEntryModalOpen, setBulkEntryModalOpen] = useState(false);
   const [isStatsModalOpen, setStatsModalOpen] = useState(false);
   const [selectedGrade, setSelectedGrade] = useState<GradeWithStudent | null>(null);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
 
-  // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState({
@@ -112,8 +111,6 @@ export default function GradesPage() {
     to: new Date().toISOString().split('T')[0]
   });
 
-  // Form state
-  // Derived state
   const currentSubjectName = (() => {
     for (const offering of offerings) {
       if (offering.groups.find((g) => g.id === selectedGroupId)) {
@@ -144,7 +141,6 @@ export default function GradesPage() {
     if (selectedGroupId) {
       loadInitialData();
     } else if (offerings.length > 0) {
-      // Clear data if no group selected
       setStudents([]);
       setGrades([]);
     }
@@ -155,7 +151,6 @@ export default function GradesPage() {
       const data = await apiClient.getOfferings();
       setOfferings(data || []);
 
-      // Auto-select first group if available
       const groups = (data || []).flatMap((offering: { groups?: { id: string }[] }) => offering.groups ?? []);
       if (groups.length === 0) {
         setNoGroups(true);
@@ -195,16 +190,14 @@ export default function GradesPage() {
       setLoading(true);
       setError(null);
 
-      // Find selected offering/group info
       let selectedSubjectName = '';
       offerings.forEach(offering => {
         const group = offering.groups.find((g) => g.id === selectedGroupId);
         if (group) {
-          selectedSubjectName = offering.subject.name_en; // Or name based on locale? Backend returns name_en/ar via nested calls usually
+          selectedSubjectName = offering.subject.name_en;
         }
       });
 
-      // Load students for this group
       const studentsResponse = await apiClient.getStudents({
         limit: 100,
         status: 'active',
@@ -212,18 +205,14 @@ export default function GradesPage() {
       });
       setStudents(studentsResponse.data);
 
-      // Load grades for this subject (since grades are by subject/student)
-      // We filter by subject to get relevant grades for this class context
       const gradesResponse = await apiClient.getGrades({
         limit: 500,
-        date_from: dateRange.from,
-        date_to: dateRange.to,
+        start_date: dateRange.from,
+        end_date: dateRange.to,
         subject: selectedSubjectName,
         group_id: selectedGroupId,
-        // student_id: // We could iterate students but cleaner to get subject grades and filter later
       });
 
-      // Filter grades to only students in this group
       const studentIds = new Set(studentsResponse.data.map(s => s.id));
       const gradesWithStudents = gradesResponse.data
         .filter(g => studentIds.has(g.student_id))
@@ -237,92 +226,13 @@ export default function GradesPage() {
     } catch (err: any) {
       console.error('Error loading grades data:', err);
       setError(err.message || 'Failed to load grades data');
-
-      // Fallback to mock data
-      const mockStudents: Student[] = [
-        {
-          id: '1',
-          teacher_id: 'teacher-1',
-          student_id: 'ST001',
-          name: 'أحمد محمد علي',
-          grade_level: 'Grade 10',
-          date_of_birth: '2008-05-15',
-          gender: 'male',
-          subjects: ['Mathematics', 'Physics'],
-          enrollment_date: '2024-01-15',
-          status: 'active',
-          notes: null,
-          emergency_contact: '+966501234567',
-          address: 'Riyadh, Saudi Arabia',
-          created_at: '2024-01-15T00:00:00Z',
-          updated_at: '2024-12-21T00:00:00Z'
-        },
-        {
-          id: '2',
-          teacher_id: 'teacher-1',
-          student_id: 'ST002',
-          name: 'فاطمة سعد إبراهيم',
-          grade_level: 'Grade 11',
-          date_of_birth: '2007-08-22',
-          gender: 'female',
-          subjects: ['English', 'Chemistry'],
-          enrollment_date: '2024-02-10',
-          status: 'active',
-          notes: null,
-          emergency_contact: '+966507654321',
-          address: 'Jeddah, Saudi Arabia',
-          created_at: '2024-02-10T00:00:00Z',
-          updated_at: '2024-12-21T00:00:00Z'
-        }
-      ];
-
-      const mockGrades: GradeWithStudent[] = [
-        {
-          id: '1',
-          student_id: '1',
-          teacher_id: 'teacher-1',
-          subject: 'Mathematics',
-          assessment_type: 'test',
-          assessment_name: 'Midterm Exam',
-          score: 85,
-          max_score: 100,
-          percentage: 85,
-          letter_grade: 'B+',
-          date: '2024-12-15',
-          notes: 'Good performance',
-          created_at: '2024-12-15T00:00:00Z',
-          updated_at: '2024-12-15T00:00:00Z',
-          student: mockStudents[0]
-        },
-        {
-          id: '2',
-          student_id: '2',
-          teacher_id: 'teacher-1',
-          subject: 'English',
-          assessment_type: 'quiz',
-          assessment_name: 'Vocabulary Quiz',
-          score: 92,
-          max_score: 100,
-          percentage: 92,
-          letter_grade: 'A-',
-          date: '2024-12-18',
-          notes: 'Excellent work',
-          created_at: '2024-12-18T00:00:00Z',
-          updated_at: '2024-12-18T00:00:00Z',
-          student: mockStudents[1]
-        }
-      ];
-
-      setStudents(mockStudents);
-      setGrades(mockGrades);
-
     } finally {
       setLoading(false);
     }
   };
 
   const generateGradebook = () => {
-    const filteredStudents = students; // We already filtered students by group
+    const filteredStudents = students;
 
     const gradebookData: GradebookEntry[] = filteredStudents.map(student => {
       const studentGrades = grades.filter(g =>
@@ -392,17 +302,14 @@ export default function GradesPage() {
   };
 
   const getGradeColor = (percentage: number): string => {
-    if (percentage >= 90) return 'text-green-600 bg-green-100';
-    if (percentage >= 80) return 'text-blue-600 bg-blue-100';
+    if (percentage >= 85) return 'text-green-600 bg-green-100';
     if (percentage >= 70) return 'text-yellow-600 bg-yellow-100';
-    if (percentage >= 60) return 'text-orange-600 bg-orange-100';
     return 'text-red-600 bg-red-100';
   };
 
   const handleAddGrade = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Auto-fill subject if missing
     const gradeToSubmit = { ...newGrade };
     if (!gradeToSubmit.subject && currentSubjectName) {
       gradeToSubmit.subject = currentSubjectName;
@@ -414,7 +321,7 @@ export default function GradesPage() {
     };
 
     if (!gradeWithGroup.group_id || !gradeWithGroup.student_id || !gradeWithGroup.subject || !gradeWithGroup.assessment_name) {
-      setFormError(locale === 'ar' ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill all required fields');
+      setFormError(t('grades.validation.fillRequired'));
       return;
     }
 
@@ -465,7 +372,7 @@ export default function GradesPage() {
 
     if (!selectedGrade) return;
     if (!newGrade.group_id && !selectedGroupId) {
-      setFormError(locale === 'ar' ? 'يرجى اختيار الفصل' : 'Please select a class');
+      setFormError(t('grades.validation.selectClass'));
       return;
     }
 
@@ -499,7 +406,7 @@ export default function GradesPage() {
   };
 
   const handleDeleteGrade = async (grade: GradeWithStudent) => {
-    if (!confirm(locale === 'ar' ? 'هل أنت متأكد من حذف هذه الدرجة؟' : 'Are you sure you want to delete this grade?')) {
+    if (!confirm(t('grades.deleteConfirm'))) {
       return;
     }
 
@@ -524,7 +431,6 @@ export default function GradesPage() {
       date: new Date().toISOString().split('T')[0],
       notes: ''
     });
-    // Update subject when resetting
     if (currentSubjectName) {
       setNewGrade(prev => ({ ...prev, subject: currentSubjectName }));
     }
@@ -539,7 +445,6 @@ export default function GradesPage() {
     const matchesSearch = grade.student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       grade.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
       grade.assessment_name.toLowerCase().includes(searchTerm.toLowerCase());
-    // Subject filter removed as we are already scoped to a class/subject
     const matchesAssessmentType = selectedAssessmentType === 'all' || grade.assessment_type === selectedAssessmentType;
     const matchesGradeFilter = gradeFilter === 'all' || getLetterGrade(grade.percentage) === gradeFilter;
 
@@ -547,16 +452,7 @@ export default function GradesPage() {
   });
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">
-            {locale === 'ar' ? 'جاري تحميل بيانات الدرجات...' : 'Loading grades data...'}
-          </p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message={t('grades.loading')} />;
   }
 
   if (noGroups) {
@@ -565,17 +461,15 @@ export default function GradesPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
           <div className="space-y-1">
             <p className="text-sm font-semibold">
-              {locale === 'ar' ? 'لا توجد مجموعات بعد' : 'No groups yet'}
+              {t('grades.noGroups')}
             </p>
             <p className="text-sm text-amber-700">
-              {locale === 'ar'
-                ? 'أنشئ مجموعة واحدة على الأقل قبل إدخال الدرجات.'
-                : 'Create at least one group before entering grades.'}
+              {t('grades.noGroupsDescription')}
             </p>
           </div>
           <Button asChild variant="outline" className="border-amber-300 text-amber-900 hover:bg-amber-100">
             <Link href={`/${locale}/dashboard/classes?setup=required`}>
-              {locale === 'ar' ? 'إعداد المجموعات' : 'Set up groups'}
+              {t('grades.setUpGroups')}
             </Link>
           </Button>
         </div>
@@ -583,354 +477,267 @@ export default function GradesPage() {
     );
   }
 
+  const stats = [
+    { icon: GraduationCap, value: grades.length, label: t('grades.totalGrades'), color: 'text-primary' },
+    { icon: BookOpen, value: uniqueSubjects.length, label: t('grades.subjectsLabel'), color: 'text-green-600' },
+    { icon: Calculator, value: grades.length > 0 ? (grades.reduce((sum, g) => sum + g.percentage, 0) / grades.length).toFixed(1) + '%' : '0%', label: t('grades.overallAverage'), color: 'text-purple-600' },
+    { icon: Award, value: grades.filter(g => g.percentage >= 90).length, label: t('grades.excellentGrades'), color: 'text-yellow-600' },
+  ];
+
+  const viewModes = [
+    { id: 'gradebook', label: t('grades.gradebook'), icon: FileSpreadsheet },
+    { id: 'list', label: t('grades.gradeList'), icon: GraduationCap },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            {locale === 'ar' ? 'إدارة الدرجات' : 'Grade Management'}
-          </h1>
-          <p className="text-gray-600 mt-2">
-            {locale === 'ar'
-              ? 'إدارة وتتبع درجات الطلاب والتقييمات'
-              : 'Manage and track student grades and assessments'
-            }
-          </p>
-
-          {/* Group Selector */}
-          <div className="mt-4">
-            <select
-              className="w-[300px] border rounded-md p-2"
-              value={selectedGroupId}
-              onChange={(e) => setSelectedGroupId(e.target.value)}
-            >
-              <option value="" disabled>
-                {locale === 'ar' ? 'اختر الفصل' : 'Select Class'}
-              </option>
-              {offerings.map((offering) => (
-                <optgroup key={offering.id} label={offering.subject.name_en}>
-                  {offering.groups.map((group: any) => (
-                    <option key={group.id} value={group.id}>
-                      {offering.subject.name_en} - {group.name}
-                    </option>
-                  ))}
-                </optgroup>
+      <PageHeader
+        title={t('grades.title')}
+        description={t('grades.descriptionCount')}
+      >
+        <select
+          className="w-[300px] border rounded-md p-2"
+          value={selectedGroupId}
+          onChange={(e) => setSelectedGroupId(e.target.value)}
+        >
+          <option value="" disabled>
+            {t('students.fields.group')}
+          </option>
+          {offerings.map((offering) => (
+            <optgroup key={offering.id} label={offering.subject.name_en}>
+              {offering.groups.map((group: any) => (
+                <option key={group.id} value={group.id}>
+                  {offering.subject.name_en} - {group.name}
+                </option>
               ))}
-            </select>
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            {locale === 'ar' ? 'تصدير' : 'Export'}
-          </Button>
-          <Button variant="outline" size="sm">
-            <Upload className="w-4 h-4 mr-2" />
-            {locale === 'ar' ? 'استيراد' : 'Import'}
-          </Button>
-          <Dialog open={isStatsModalOpen} onOpenChange={setStatsModalOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <BarChart3 className="w-4 h-4 mr-2" />
-                {locale === 'ar' ? 'الإحصائيات' : 'Statistics'}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                <DialogTitle>
-                  {locale === 'ar' ? 'إحصائيات الدرجات' : 'Grade Statistics'}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                {subjectStats.map((stat, index) => (
-                  <Card key={index}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">{stat.subject}</h3>
-                        <Badge variant="outline">
-                          {stat.student_count} {locale === 'ar' ? 'طالب' : 'students'}
-                        </Badge>
+            </optgroup>
+          ))}
+        </select>
+        <Button variant="outline" size="sm">
+          <Download className="w-4 h-4 mr-2" />
+          {t('common.export')}
+        </Button>
+        <Button variant="outline" size="sm">
+          <Upload className="w-4 h-4 mr-2" />
+          {t('common.import')}
+        </Button>
+        <Dialog open={isStatsModalOpen} onOpenChange={setStatsModalOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              {t('grades.gradeStatistics')}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>
+                {t('grades.gradeStatistics')}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {subjectStats.map((stat, index) => (
+                <Card key={index}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold">{stat.subject}</h3>
+                      <Badge variant="outline">
+                        {t('grades.studentsCount', { count: stat.student_count })}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <div className="text-gray-600">{t('grades.averageLabel')}</div>
+                        <div className="font-medium">{stat.average_score.toFixed(1)}%</div>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <div className="text-gray-600">{locale === 'ar' ? 'المتوسط' : 'Average'}</div>
-                          <div className="font-medium">{stat.average_score.toFixed(1)}%</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-600">{locale === 'ar' ? 'الأعلى' : 'Highest'}</div>
-                          <div className="font-medium text-green-600">{stat.highest_score}%</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-600">{locale === 'ar' ? 'الأدنى' : 'Lowest'}</div>
-                          <div className="font-medium text-red-600">{stat.lowest_score}%</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-600">{locale === 'ar' ? 'التقييمات' : 'Assessments'}</div>
-                          <div className="font-medium">{stat.total_assessments}</div>
-                        </div>
+                      <div>
+                        <div className="text-gray-600">{t('grades.stats.highestScore')}</div>
+                        <div className="font-medium text-green-600">{stat.highest_score}%</div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </DialogContent>
-          </Dialog>
-          <Dialog open={isAddGradeModalOpen} onOpenChange={setAddGradeModalOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2" disabled={!selectedGroupId}>
-                <Plus className="w-4 h-4" />
-                {locale === 'ar' ? 'إضافة درجة' : 'Add Grade'}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {locale === 'ar' ? 'إضافة درجة جديدة' : 'Add New Grade'}
-                  {currentSubjectName && ` - ${currentSubjectName}`}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddGrade} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="student_id">
-                      {locale === 'ar' ? 'الطالب' : 'Student'} *
-                    </Label>
-                    <select
-                      id="student_id"
-                      className="w-full border rounded px-3 py-2"
-                      value={newGrade.student_id}
-                      onChange={(e) => setNewGrade(s => ({ ...s, student_id: e.target.value }))}
-                      required
-                    >
-                      <option value="">{locale === 'ar' ? 'اختر الطالب' : 'Select Student'}</option>
-                      {students.map(student => (
-                        <option key={student.id} value={student.id}>{student.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="subject">
-                      {locale === 'ar' ? 'المادة' : 'Subject'} *
-                    </Label>
-                    <Input
-                      id="subject"
-                      value={newGrade.subject || currentSubjectName}
-                      onChange={(e) => setNewGrade(s => ({ ...s, subject: e.target.value }))}
-                      placeholder={locale === 'ar' ? 'مثال: الرياضيات' : 'e.g., Mathematics'}
-                      required
-                      disabled={!!currentSubjectName}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="assessment_type">
-                      {locale === 'ar' ? 'نوع التقييم' : 'Assessment Type'} *
-                    </Label>
-                    <select
-                      id="assessment_type"
-                      className="w-full border rounded px-3 py-2"
-                      value={newGrade.assessment_type}
-                      onChange={(e) => setNewGrade(s => ({ ...s, assessment_type: e.target.value }))}
-                    >
-                      {assessmentTypes.map(type => (
-                        <option key={type} value={type}>
-                          {locale === 'ar'
-                            ? {
-                              test: 'اختبار',
-                              quiz: 'مسابقة',
-                              homework: 'واجب',
-                              project: 'مشروع',
-                              midterm: 'امتحان نصف الفصل',
-                              final: 'امتحان نهائي'
-                            }[type] || type
-                            : type.charAt(0).toUpperCase() + type.slice(1)
-                          }
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="assessment_name">
-                      {locale === 'ar' ? 'اسم التقييم' : 'Assessment Name'} *
-                    </Label>
-                    <Input
-                      id="assessment_name"
-                      value={newGrade.assessment_name}
-                      onChange={(e) => setNewGrade(s => ({ ...s, assessment_name: e.target.value }))}
-                      placeholder={locale === 'ar' ? 'مثال: امتحان الوحدة الأولى' : 'e.g., Unit 1 Test'}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="score">
-                      {locale === 'ar' ? 'الدرجة المحققة' : 'Score'} *
-                    </Label>
-                    <Input
-                      id="score"
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      value={newGrade.score}
-                      onChange={(e) => setNewGrade(s => ({ ...s, score: parseFloat(e.target.value) || 0 }))}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="max_score">
-                      {locale === 'ar' ? 'الدرجة الكاملة' : 'Max Score'} *
-                    </Label>
-                    <Input
-                      id="max_score"
-                      type="number"
-                      min="1"
-                      value={newGrade.max_score}
-                      onChange={(e) => setNewGrade(s => ({ ...s, max_score: parseFloat(e.target.value) || 100 }))}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="date">
-                      {locale === 'ar' ? 'التاريخ' : 'Date'} *
-                    </Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={newGrade.date}
-                      onChange={(e) => setNewGrade(s => ({ ...s, date: e.target.value }))}
-                      required
-                    />
-                  </div>
+                      <div>
+                        <div className="text-gray-600">{t('grades.stats.lowestScore')}</div>
+                        <div className="font-medium text-red-600">{stat.lowest_score}%</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-600">{t('grades.stats.totalAssessments')}</div>
+                        <div className="font-medium">{stat.total_assessments}</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={isAddGradeModalOpen} onOpenChange={setAddGradeModalOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2" disabled={!selectedGroupId}>
+              <Plus className="w-4 h-4" />
+              {t('grades.addGrade')}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {t('grades.addNewGrade')}
+                {currentSubjectName && ` - ${currentSubjectName}`}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddGrade} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="student_id">
+                    {t('grades.fields.student')} *
+                  </Label>
+                  <select
+                    id="student_id"
+                    className="w-full border rounded px-3 py-2"
+                    value={newGrade.student_id}
+                    onChange={(e) => setNewGrade(s => ({ ...s, student_id: e.target.value }))}
+                    required
+                  >
+                    <option value="">{t('grades.selectStudent')}</option>
+                    {students.map(student => (
+                      <option key={student.id} value={student.id}>{student.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <Label htmlFor="notes">
-                    {locale === 'ar' ? 'ملاحظات' : 'Notes'}
+                  <Label htmlFor="subject">
+                    {t('grades.fields.subject')} *
                   </Label>
-                  <textarea
-                    id="notes"
-                    className="w-full border rounded px-3 py-2"
-                    rows={3}
-                    value={newGrade.notes}
-                    onChange={(e) => setNewGrade(s => ({ ...s, notes: e.target.value }))}
-                    placeholder={locale === 'ar' ? 'ملاحظات إضافية...' : 'Additional notes...'}
+                  <Input
+                    id="subject"
+                    value={newGrade.subject || currentSubjectName}
+                    onChange={(e) => setNewGrade(s => ({ ...s, subject: e.target.value }))}
+                    placeholder={t('grades.subjectPlaceholder')}
+                    required
+                    disabled={!!currentSubjectName}
                   />
                 </div>
-                {formError && (
-                  <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
-                    {formError}
-                  </div>
-                )}
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setAddGradeModalOpen(false)}
-                    disabled={submitting}
+                <div>
+                  <Label htmlFor="assessment_type">
+                    {t('grades.fields.assessmentType')} *
+                  </Label>
+                  <select
+                    id="assessment_type"
+                    className="w-full border rounded px-3 py-2"
+                    value={newGrade.assessment_type}
+                    onChange={(e) => setNewGrade(s => ({ ...s, assessment_type: e.target.value }))}
                   >
-                    {locale === 'ar' ? 'إلغاء' : 'Cancel'}
-                  </Button>
-                  <Button type="submit" disabled={submitting}>
-                    {submitting
-                      ? (locale === 'ar' ? 'جاري الحفظ...' : 'Saving...')
-                      : (locale === 'ar' ? 'حفظ' : 'Save')
-                    }
-                  </Button>
+                    {assessmentTypes.map(type => (
+                      <option key={type} value={type}>
+                        {t(`grades.assessmentTypes.${type}`)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+                <div>
+                  <Label htmlFor="assessment_name">
+                    {t('grades.fields.assessmentName')} *
+                  </Label>
+                  <Input
+                    id="assessment_name"
+                    value={newGrade.assessment_name}
+                    onChange={(e) => setNewGrade(s => ({ ...s, assessment_name: e.target.value }))}
+                    placeholder={t('grades.assessmentNamePlaceholder')}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="score">
+                    {t('grades.fields.score')} *
+                  </Label>
+                  <Input
+                    id="score"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={newGrade.score}
+                    onChange={(e) => setNewGrade(s => ({ ...s, score: parseFloat(e.target.value) || 0 }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="max_score">
+                    {t('grades.fields.maxScore')} *
+                  </Label>
+                  <Input
+                    id="max_score"
+                    type="number"
+                    min="1"
+                    value={newGrade.max_score}
+                    onChange={(e) => setNewGrade(s => ({ ...s, max_score: parseFloat(e.target.value) || 100 }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="date">
+                    {t('grades.fields.date')} *
+                  </Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={newGrade.date}
+                    onChange={(e) => setNewGrade(s => ({ ...s, date: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="notes">
+                  {t('grades.fields.notes')}
+                </Label>
+                <textarea
+                  id="notes"
+                  className="w-full border rounded px-3 py-2"
+                  rows={3}
+                  value={newGrade.notes}
+                  onChange={(e) => setNewGrade(s => ({ ...s, notes: e.target.value }))}
+                  placeholder={t('grades.notesPlaceholder')}
+                />
+              </div>
+              {formError && (
+                <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
+                  {formError}
+                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAddGradeModalOpen(false)}
+                  disabled={submitting}
+                >
+                  {t('common.cancel')}
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting
+                    ? t('grades.saving')
+                    : t('common.save')
+                  }
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </PageHeader>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <GraduationCap className="h-8 w-8 text-blue-600" />
-              <div>
-                <p className="text-2xl font-bold">{grades.length}</p>
-                <p className="text-sm text-gray-600">
-                  {locale === 'ar' ? 'إجمالي الدرجات' : 'Total Grades'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <BookOpen className="h-8 w-8 text-green-600" />
-              <div>
-                <p className="text-2xl font-bold">{uniqueSubjects.length}</p>
-                <p className="text-sm text-gray-600">
-                  {locale === 'ar' ? 'المواد' : 'Subjects'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Calculator className="h-8 w-8 text-purple-600" />
-              <div>
-                <p className="text-2xl font-bold">
-                  {grades.length > 0 ? (grades.reduce((sum, g) => sum + g.percentage, 0) / grades.length).toFixed(1) : '0'}%
-                </p>
-                <p className="text-sm text-gray-600">
-                  {locale === 'ar' ? 'المتوسط العام' : 'Overall Average'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Award className="h-8 w-8 text-yellow-600" />
-              <div>
-                <p className="text-2xl font-bold">
-                  {grades.filter(g => g.percentage >= 90).length}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {locale === 'ar' ? 'درجات ممتازة' : 'Excellent Grades'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <StatCards stats={stats} />
 
-      {/* View Mode Tabs */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
-          <Button
-            variant={viewMode === 'gradebook' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('gradebook')}
-          >
-            <FileSpreadsheet className="w-4 h-4 mr-2" />
-            {locale === 'ar' ? 'دفتر الدرجات' : 'Gradebook'}
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('list')}
-          >
-            <GraduationCap className="w-4 h-4 mr-2" />
-            {locale === 'ar' ? 'قائمة الدرجات' : 'Grade List'}
-          </Button>
-        </div>
+        <ViewModeTabs
+          modes={viewModes}
+          active={viewMode}
+          onChange={(mode) => setViewMode(mode as 'gradebook' | 'list')}
+        />
 
-        {/* Filters */}
         <div className="flex items-center space-x-2">
           <Input
-            placeholder={locale === 'ar' ? 'البحث...' : 'Search...'}
+            placeholder={t('grades.searchEllipsis')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-64"
           />
-          {/* Subject Filter removed in favor of context-aware fetching */}
         </div>
       </div>
 
@@ -939,25 +746,23 @@ export default function GradesPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {locale === 'ar' ? 'دفتر الدرجات' : 'Gradebook'}
+              {t('grades.gradebook')}
               {currentSubjectName && ` - ${currentSubjectName}`}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {gradebook.length === 0 ? (
-              <div className="text-center py-8">
-                <GraduationCap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">
-                  {locale === 'ar' ? 'لا توجد درجات لعرضها' : 'No grades to display'}
-                </p>
-              </div>
+              <EmptyState
+                icon={GraduationCap}
+                message={t('grades.noGradesDisplay')}
+              />
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[200px]">
-                        {locale === 'ar' ? 'الطالب' : 'Student'}
+                        {t('grades.fields.student')}
                       </TableHead>
                       {uniqueAssessments.slice(0, 5).map(assessment => (
                         <TableHead key={assessment} className="text-center min-w-[120px]">
@@ -965,10 +770,10 @@ export default function GradesPage() {
                         </TableHead>
                       ))}
                       <TableHead className="text-center min-w-[100px]">
-                        {locale === 'ar' ? 'المتوسط' : 'Average'}
+                        {t('grades.averageLabel')}
                       </TableHead>
                       <TableHead className="text-center min-w-[80px]">
-                        {locale === 'ar' ? 'التقدير' : 'Grade'}
+                        {t('grades.gradeLabel')}
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -978,7 +783,7 @@ export default function GradesPage() {
                         <TableCell>
                           <div className="flex items-center space-x-2">
                             <Avatar className="h-8 w-8">
-                              <AvatarFallback className="bg-blue-100 text-blue-700">
+                              <AvatarFallback className="bg-primary/10 text-primary">
                                 {entry.student_name.split(' ')[0].charAt(0)}
                                 {entry.student_name.split(' ')[1]?.charAt(0)}
                               </AvatarFallback>
@@ -1026,28 +831,26 @@ export default function GradesPage() {
       {viewMode === 'list' && (
         <Card>
           <CardHeader>
-            <CardTitle>{locale === 'ar' ? 'قائمة الدرجات' : 'Grade List'}</CardTitle>
+            <CardTitle>{t('grades.gradeList')}</CardTitle>
           </CardHeader>
           <CardContent>
             {filteredGrades.length === 0 ? (
-              <div className="text-center py-8">
-                <GraduationCap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">
-                  {locale === 'ar' ? 'لا توجد درجات مطابقة للبحث' : 'No grades found matching your search'}
-                </p>
-              </div>
+              <EmptyState
+                icon={GraduationCap}
+                message={t('grades.noGradesMatch')}
+              />
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{locale === 'ar' ? 'الطالب' : 'Student'}</TableHead>
-                    <TableHead>{locale === 'ar' ? 'المادة' : 'Subject'}</TableHead>
-                    <TableHead>{locale === 'ar' ? 'التقييم' : 'Assessment'}</TableHead>
-                    <TableHead>{locale === 'ar' ? 'الدرجة' : 'Score'}</TableHead>
-                    <TableHead>{locale === 'ar' ? 'النسبة' : 'Percentage'}</TableHead>
-                    <TableHead>{locale === 'ar' ? 'التقدير' : 'Grade'}</TableHead>
-                    <TableHead>{locale === 'ar' ? 'التاريخ' : 'Date'}</TableHead>
-                    <TableHead>{locale === 'ar' ? 'الإجراءات' : 'Actions'}</TableHead>
+                    <TableHead>{t('grades.fields.student')}</TableHead>
+                    <TableHead>{t('grades.fields.subject')}</TableHead>
+                    <TableHead>{t('grades.assessment')}</TableHead>
+                    <TableHead>{t('grades.fields.score')}</TableHead>
+                    <TableHead>{t('grades.percentageLabel')}</TableHead>
+                    <TableHead>{t('grades.gradeLabel')}</TableHead>
+                    <TableHead>{t('grades.fields.date')}</TableHead>
+                    <TableHead>{t('grades.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1108,7 +911,7 @@ export default function GradesPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEditGrade(grade)}
-                            title={locale === 'ar' ? 'تعديل' : 'Edit'}
+                            title={t('common.edit')}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -1117,7 +920,7 @@ export default function GradesPage() {
                             size="sm"
                             onClick={() => handleDeleteGrade(grade)}
                             className="text-red-600 hover:text-red-700"
-                            title={locale === 'ar' ? 'حذف' : 'Delete'}
+                            title={t('common.delete')}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -1137,14 +940,14 @@ export default function GradesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {locale === 'ar' ? 'تعديل الدرجة' : 'Edit Grade'}
+              {t('grades.editGradeTitle')}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleUpdateGrade} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit_score">
-                  {locale === 'ar' ? 'الدرجة المحققة' : 'Score'} *
+                  {t('grades.fields.score')} *
                 </Label>
                 <Input
                   id="edit_score"
@@ -1158,7 +961,7 @@ export default function GradesPage() {
               </div>
               <div>
                 <Label htmlFor="edit_max_score">
-                  {locale === 'ar' ? 'الدرجة الكاملة' : 'Max Score'} *
+                  {t('grades.fields.maxScore')} *
                 </Label>
                 <Input
                   id="edit_max_score"
@@ -1172,7 +975,7 @@ export default function GradesPage() {
             </div>
             <div>
               <Label htmlFor="edit_notes">
-                {locale === 'ar' ? 'ملاحظات' : 'Notes'}
+                {t('grades.fields.notes')}
               </Label>
               <textarea
                 id="edit_notes"
@@ -1180,7 +983,7 @@ export default function GradesPage() {
                 rows={3}
                 value={newGrade.notes}
                 onChange={(e) => setNewGrade(s => ({ ...s, notes: e.target.value }))}
-                placeholder={locale === 'ar' ? 'ملاحظات إضافية...' : 'Additional notes...'}
+                placeholder={t('grades.notesPlaceholder')}
               />
             </div>
             {formError && (
@@ -1195,12 +998,12 @@ export default function GradesPage() {
                 onClick={() => setEditModalOpen(false)}
                 disabled={submitting}
               >
-                {locale === 'ar' ? 'إلغاء' : 'Cancel'}
+                {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={submitting}>
                 {submitting
-                  ? (locale === 'ar' ? 'جاري الحفظ...' : 'Saving...')
-                  : (locale === 'ar' ? 'حفظ التغييرات' : 'Save Changes')
+                  ? t('grades.saving')
+                  : t('common.save')
                 }
               </Button>
             </div>
@@ -1209,4 +1012,4 @@ export default function GradesPage() {
       </Dialog>
     </div>
   );
-} 
+}

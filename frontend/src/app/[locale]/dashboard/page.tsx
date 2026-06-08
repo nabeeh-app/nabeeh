@@ -5,6 +5,8 @@ import { useAuth, usePermissions } from '@/hooks/useAuth';
 import { apiClient } from '@/lib/api';
 import { DashboardStats } from '@/types';
 import { useParams } from 'next/navigation';
+import { Users, BarChart3, FileText, MessageSquare, GraduationCap, User, Users2, Zap, BookOpen, ClipboardList, Settings } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 export default function DashboardPage() {
   const { teacher } = useAuth();
@@ -138,7 +140,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center space-x-4">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${teacher?.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                  teacher?.role === 'teacher' ? 'bg-blue-100 text-blue-800' :
+                  teacher?.role === 'teacher' ? 'bg-primary/10 text-primary' :
                     'bg-green-100 text-green-800'
                   }`}>
                   {teacher?.role}
@@ -165,22 +167,22 @@ export default function DashboardPage() {
                   <StatCard
                     title={text.students}
                     value={isStatsReady ? formatNumber(totalStudents) : '—'}
-                    icon="👥"
+                    icon={Users}
                   />
                   <StatCard
                     title={text.attendance}
                     value={isStatsReady ? `${attendanceRate}%` : '—'}
-                    icon="📊"
+                    icon={BarChart3}
                   />
                   <StatCard
                     title={text.grades}
                     value={isStatsReady ? formatNumber(totalGrades) : '—'}
-                    icon="📝"
+                    icon={FileText}
                   />
                   <StatCard
                     title={text.messages}
                     value={isStatsReady ? formatNumber(messageConversations) : '—'}
-                    icon="💬"
+                    icon={MessageSquare}
                   />
                 </>
               )}
@@ -190,22 +192,22 @@ export default function DashboardPage() {
                   <StatCard
                     title={text.students}
                     value={isStatsReady ? formatNumber(totalStudents) : '—'}
-                    icon="🎓"
+                    icon={GraduationCap}
                   />
                   <StatCard
                     title={text.activeStudents}
                     value={isStatsReady ? formatNumber(activeStudents) : '—'}
-                    icon="👤"
+                    icon={User}
                   />
                   <StatCard
                     title={text.totalParents}
                     value={isStatsReady ? formatNumber(totalParents) : '—'}
-                    icon="👨‍👩‍👧"
+                    icon={Users2}
                   />
                   <StatCard
                     title={text.responseRate}
                     value={isStatsReady ? `${Math.round(responseRate)}%` : '—'}
-                    icon="⚡"
+                    icon={Zap}
                   />
                 </>
               )}
@@ -220,25 +222,25 @@ export default function DashboardPage() {
                   <NavigationCard
                     title={text.students}
                     description="Manage your students and their information"
-                    icon="👥"
+                    icon={Users}
                     href={`/${locale}/dashboard/students`}
                   />
                   <NavigationCard
                     title={text.attendance}
                     description="Track and manage student attendance"
-                    icon="📊"
+                    icon={BarChart3}
                     href={`/${locale}/dashboard/attendance`}
                   />
                   <NavigationCard
                     title={text.grades}
                     description="Record and manage student grades"
-                    icon="📝"
+                    icon={FileText}
                     href={`/${locale}/dashboard/grades`}
                   />
                   <NavigationCard
                     title={text.messages}
                     description="Communicate with parents via WhatsApp"
-                    icon="💬"
+                    icon={MessageSquare}
                     href={`/${locale}/dashboard/messages`}
                   />
                 </>
@@ -250,19 +252,19 @@ export default function DashboardPage() {
                   <NavigationCard
                     title={text.userManagement}
                     description="Manage teachers, students, and parents"
-                    icon="👤"
+                    icon={User}
                     href={`/${locale}/dashboard/admin/users`}
                   />
                   <NavigationCard
                     title={text.systemSettings}
                     description="Configure system settings and preferences"
-                    icon="⚙️"
+                    icon={Settings}
                     href={`/${locale}/dashboard/admin/settings`}
                   />
                   <NavigationCard
                     title={text.auditLogs}
                     description="View system audit logs and security events"
-                    icon="📋"
+                    icon={ClipboardList}
                     href={`/${locale}/dashboard/admin/audit`}
                   />
                 </>
@@ -272,7 +274,7 @@ export default function DashboardPage() {
               <NavigationCard
                 title={text.settings}
                 description="Manage your account settings and preferences"
-                icon="⚙️"
+                icon={Settings}
                 href={`/${locale}/dashboard/settings`}
               />
             </div>
@@ -283,13 +285,14 @@ export default function DashboardPage() {
 }
 
 // Stat Card Component
-function StatCard({ title, value, icon }: { title: string; value: string; icon: string }) {
+function StatCard({ title, value, icon }: { title: string; value: string; icon: LucideIcon }) {
+  const Icon = icon;
   return (
     <div className="bg-white overflow-hidden shadow rounded-lg">
       <div className="p-5">
         <div className="flex items-center">
           <div className="flex-shrink-0">
-            <span className="text-2xl">{icon}</span>
+            <Icon className="h-6 w-6 text-primary" />
           </div>
           <div className="ml-5 w-0 flex-1">
             <dl>
@@ -316,9 +319,10 @@ function NavigationCard({
 }: {
   title: string;
   description: string;
-  icon: string;
+  icon: LucideIcon;
   href: string;
 }) {
+  const Icon = icon;
   return (
     <a
       href={href}
@@ -327,7 +331,7 @@ function NavigationCard({
       <div className="p-6">
         <div className="flex items-center">
           <div className="flex-shrink-0">
-            <span className="text-3xl">{icon}</span>
+            <Icon className="h-8 w-8 text-primary" />
           </div>
           <div className="ml-4">
             <h3 className="text-lg font-medium text-gray-900">
