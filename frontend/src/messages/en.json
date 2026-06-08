@@ -125,6 +125,8 @@
     "activeStudents": "Active Students",
     "inactiveStudents": "Inactive Students",
     "allClasses": "All Classes",
+    "selectClass": "Select Class",
+    "selectGender": "Select Gender",
     "allStatus": "All Status",
     "student": "Student",
     "contact": "Contact",
@@ -545,7 +547,10 @@
       "enterPhoneNumber": "Enter your phone number (e.g., +201234567890):",
       "enterTestPhoneNumber": "Enter phone number to test (e.g., +201234567890):",
       "testMessageContent": "🤖 Test message from Nabeeh AI Assistant!\n\nThis is a test to verify WhatsApp integration is working properly.",
-      "version": "Version"
+      "version": "Version",
+      "confirmLogout": "Are you sure you want to logout from WhatsApp?",
+      "logoutFailed": "Logout failed",
+      "qrRequestFailed": "Failed to request QR code"
     }
   },
   "analytics": {

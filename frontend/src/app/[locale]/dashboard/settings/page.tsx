@@ -32,6 +32,8 @@ import {
   MessageSquare
 } from 'lucide-react';
 import apiClient from '@/lib/api';
+import logger from '@/lib/logger';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface TeacherSettings {
   name: string;
@@ -137,11 +139,11 @@ export default function SettingsPage() {
         setStatusMessage(response.data.message || 'فشل في التحقق من حالة الواتساب');
       }
     } catch (error: any) {
-      console.error('WhatsApp status check failed:', error);
+      logger.error('WhatsApp status check failed:', error);
       // Don't set to 'unknown' on errors, just keep current status
       if (error.response?.status === 401) {
         // Token expired, let the auth interceptor handle it
-        console.log('Token expired, redirecting to login');
+        logger.info('Token expired, redirecting to login');
       } else {
         setWhatsappStatus('disconnected');
         setStatusMessage('فشل في التحقق من حالة الواتساب');
@@ -222,7 +224,7 @@ export default function SettingsPage() {
       // Recheck WhatsApp status if number changed
       checkWhatsAppStatus();
     } catch (error: any) {
-      console.error('Save settings error:', error);
+      logger.error('Save settings error:', error);
       setMessage({
         type: 'error',
         text: error?.response?.data?.message || (isRTL ? 'خطأ في الاتصال بالخادم' : 'Network error. Please try again.')
@@ -569,18 +571,21 @@ export default function SettingsPage() {
                 <Clock className="h-4 w-4" />
                 {isRTL ? 'المنطقة الزمنية' : 'Timezone'}
               </Label>
-              <select
-                id="timezone"
+              <Select
                 value={settings.timezone}
-                onChange={(e) => handleInputChange('timezone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onValueChange={(value) => handleInputChange('timezone', value)}
               >
-                <option value="Africa/Cairo">Africa/Cairo (GMT+2)</option>
-                <option value="Asia/Riyadh">Asia/Riyadh (GMT+3)</option>
-                <option value="Asia/Dubai">Asia/Dubai (GMT+4)</option>
-                <option value="Europe/London">Europe/London (GMT+0)</option>
-                <option value="America/New_York">America/New_York (GMT-5)</option>
-              </select>
+                <SelectTrigger id="timezone">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Africa/Cairo">Africa/Cairo (GMT+2)</SelectItem>
+                  <SelectItem value="Asia/Riyadh">Asia/Riyadh (GMT+3)</SelectItem>
+                  <SelectItem value="Asia/Dubai">Asia/Dubai (GMT+4)</SelectItem>
+                  <SelectItem value="Europe/London">Europe/London (GMT+0)</SelectItem>
+                  <SelectItem value="America/New_York">America/New_York (GMT-5)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -598,28 +603,31 @@ export default function SettingsPage() {
               <Label htmlFor="language">
                 {isRTL ? 'لغة الواجهة' : 'Interface Language'}
               </Label>
-              <select
-                id="language"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue={locale}
-              >
-                <option value="en">English</option>
-                <option value="ar">العربية</option>
-              </select>
+              <Select defaultValue={locale}>
+                <SelectTrigger id="language">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="ar">العربية</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="theme">
                 {isRTL ? 'المظهر' : 'Theme'}
               </Label>
-              <select
-                id="theme"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="light">{isRTL ? 'فاتح' : 'Light'}</option>
-                <option value="dark">{isRTL ? 'داكن' : 'Dark'}</option>
-                <option value="system">{isRTL ? 'حسب النظام' : 'System'}</option>
-              </select>
+              <Select>
+                <SelectTrigger id="theme">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">{isRTL ? 'فاتح' : 'Light'}</SelectItem>
+                  <SelectItem value="dark">{isRTL ? 'داكن' : 'Dark'}</SelectItem>
+                  <SelectItem value="system">{isRTL ? 'حسب النظام' : 'System'}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>

@@ -3,18 +3,29 @@
 import { useTranslations, useLocale } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo } from 'react';
 import { useWhatsAppStatus } from '@/hooks/useWhatsAppStatus';
 import { sendWhatsAppMessage } from '@/lib/utils';
 import apiClient from '@/lib/api';
+import logger from '@/lib/logger';
 
 export default function WhatsAppDashboardPage() {
   const t = useTranslations('whatsapp');
+  const tc = useTranslations('common');
   const locale = useLocale();
   const isRTL = locale === 'ar';
   const { whatsappStatus, refreshStatus } = useWhatsAppStatus();
   const [isLoading, setIsLoading] = useState(false);
   const [isPairing, setIsPairing] = useState(false);
+
+  const [alertDialog, setAlertDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm?: () => void;
+    variant?: 'default' | 'destructive';
+  }>({ open: false, title: '', description: '' });
 
   const statusDetails = useMemo(() => {
     const detailsMap: Record<string, { title: string; description: string }> = {
@@ -44,22 +55,32 @@ export default function WhatsAppDashboardPage() {
   }, [t, whatsappStatus.status]);
 
   const handleLogout = async () => {
-    if (!confirm(t('alerts.confirmLogout'))) return;
-
-    setIsLoading(true);
-    try {
-      const response = await apiClient.api.post('/whatsapp/logout');
-      const data = response.data;
-      if (data.success) {
-        refreshStatus();
-      } else {
-        alert('Logout failed');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    setAlertDialog({
+      open: true,
+      title: t('logout'),
+      description: t('alerts.confirmLogout'),
+      variant: 'destructive',
+      onConfirm: async () => {
+        setIsLoading(true);
+        try {
+          const response = await apiClient.api.post('/whatsapp/logout');
+          const data = response.data;
+          if (data.success) {
+            refreshStatus();
+          } else {
+            setAlertDialog({
+              open: true,
+              title: t('alerts.logoutFailed'),
+              description: t('alerts.logoutFailed'),
+            });
+          }
+        } catch (error) {
+          logger.error('Logout error:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      },
+    });
   };
 
   const requestQrCode = async () => {
@@ -69,8 +90,12 @@ export default function WhatsAppDashboardPage() {
       await refreshStatus();
       setTimeout(refreshStatus, 2000);
     } catch (error) {
-      console.error('QR request failed:', error);
-      alert(isRTL ? 'فشل في طلب رمز QR' : 'Failed to request QR code');
+      logger.error('QR request failed:', error);
+      setAlertDialog({
+        open: true,
+        title: t('alerts.qrRequestFailed'),
+        description: t('alerts.qrRequestFailed'),
+      });
     } finally {
       setIsPairing(false);
     }
@@ -88,12 +113,24 @@ export default function WhatsAppDashboardPage() {
       );
 
       if (result.success) {
-        alert(`✅ ${t('alerts.testMessageSent')}`);
+        setAlertDialog({
+          open: true,
+          title: t('alerts.testMessageSent'),
+          description: t('alerts.testMessageSent'),
+        });
       } else {
-        alert(`❌ ${t('alerts.testMessageFailed')}: ` + result.message);
+        setAlertDialog({
+          open: true,
+          title: t('alerts.testMessageFailed'),
+          description: `${t('alerts.testMessageFailed')}: ${result.message}`,
+        });
       }
     } catch (error) {
-      alert(`❌ ${t('alerts.errorSendingTest')}: ` + (error as Error).message);
+      setAlertDialog({
+        open: true,
+        title: t('alerts.errorSendingTest'),
+        description: `${t('alerts.errorSendingTest')}: ${(error as Error).message}`,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -236,6 +273,27 @@ export default function WhatsAppDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog open={alertDialog.open} onOpenChange={(open) => setAlertDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{alertDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{alertDialog.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tc('cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className={alertDialog.variant === 'destructive' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+              onClick={() => {
+                alertDialog.onConfirm?.();
+                setAlertDialog(prev => ({ ...prev, open: false }));
+              }}
+            >
+              {tc('confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

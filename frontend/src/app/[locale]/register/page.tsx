@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { validateEmail, formatPhoneNumber } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Phone, Mail, User, Building, BookOpen } from 'lucide-react';
+import logger from '@/lib/logger';
 
 interface RegisterFormData {
   name: string;
@@ -154,7 +155,7 @@ export default function RegisterPage({ params }: Props) {
         setErrors({ general: data.message || (isRTL ? 'حدث خطأ أثناء التسجيل' : 'Registration failed') });
       }
     } catch (error) {
-      console.error('Registration error:', error);
+      logger.error('Registration error:', error);
       setErrors({ 
         general: isRTL ? 'خطأ في الاتصال بالخادم' : 'Network error. Please try again.' 
       });

@@ -1,63 +1,29 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { useAuth, usePermissions } from '@/hooks/useAuth';
 import { apiClient } from '@/lib/api';
 import { DashboardStats } from '@/types';
-import { useParams } from 'next/navigation';
 import { Users, BarChart3, FileText, MessageSquare, GraduationCap, User, Users2, Zap, BookOpen, ClipboardList, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export default function DashboardPage() {
   const { teacher } = useAuth();
-  const { isTeacher, isAdmin, isParent } = usePermissions();
-  const params = useParams();
-  const locale = params.locale as 'ar' | 'en';
-  const isRTL = locale === 'ar';
+  const { isTeacher, isAdmin } = usePermissions();
+  const locale = useLocale();
+  const t = useTranslations('dashboard');
+  const tNav = useTranslations('navigation');
+  const tStudents = useTranslations('students');
+  const tAttendance = useTranslations('attendance');
+  const tGrades = useTranslations('grades');
+  const tMessages = useTranslations('messages');
+  const tSettings = useTranslations('settings');
+
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
 
-  const t = {
-    en: {
-      welcome: 'Welcome back',
-      dashboard: 'Dashboard',
-      overview: 'Overview',
-      students: 'Students',
-      attendance: 'Attendance',
-      grades: 'Grades',
-      messages: 'Messages',
-      settings: 'Settings',
-      adminPanel: 'Admin Panel',
-      userManagement: 'User Management',
-      systemSettings: 'System Settings',
-      auditLogs: 'Audit Logs',
-      responseRate: 'Response Rate',
-      totalParents: 'Total Parents',
-      activeStudents: 'Active Students',
-      statsUnavailable: 'Stats are temporarily unavailable.'
-    },
-    ar: {
-      welcome: 'مرحباً بعودتك',
-      dashboard: 'لوحة التحكم',
-      overview: 'نظرة عامة',
-      students: 'الطلاب',
-      attendance: 'الحضور',
-      grades: 'الدرجات',
-      messages: 'الرسائل',
-      settings: 'الإعدادات',
-      adminPanel: 'لوحة الإدارة',
-      userManagement: 'إدارة المستخدمين',
-      systemSettings: 'إعدادات النظام',
-      auditLogs: 'سجلات التدقيق',
-      responseRate: 'معدل الاستجابة',
-      totalParents: 'إجمالي أولياء الأمور',
-      activeStudents: 'الطلاب النشطون',
-      statsUnavailable: 'الإحصاءات غير متاحة مؤقتاً.'
-    }
-  };
-
-  const text = t[locale];
   const formatNumber = (value: number) => new Intl.NumberFormat(locale).format(value);
 
   useEffect(() => {
@@ -125,181 +91,172 @@ export default function DashboardPage() {
   const isStatsReady = !statsLoading && !statsError;
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${isRTL ? 'rtl' : 'ltr'}`}>
+    <div className="space-y-6">
         {/* Header */}
-        <header className="bg-white shadow">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  {text.dashboard}
-                </h1>
-                <p className="mt-1 text-sm text-gray-600">
-                  {text.welcome}, {teacher?.name}
-                </p>
-              </div>
-              <div className="flex items-center space-x-4">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${teacher?.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                  teacher?.role === 'teacher' ? 'bg-primary/10 text-primary' :
-                    'bg-green-100 text-green-800'
-                  }`}>
-                  {teacher?.role}
-                </span>
-              </div>
+        <header>
+          <div className="flex justify-between items-center py-6">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">
+                {t('title')}
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t('welcome')}, {teacher?.name}
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${teacher?.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                teacher?.role === 'teacher' ? 'bg-primary/10 text-primary' :
+                  'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                }`}>
+                {teacher?.role}
+              </span>
             </div>
           </div>
         </header>
 
-        {/* Main Content */}
-        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0">
-
-            {/* Quick Stats */}
-            {statsError && (
-              <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                {text.statsUnavailable}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {isTeacher() && (
-                <>
-                  <StatCard
-                    title={text.students}
-                    value={isStatsReady ? formatNumber(totalStudents) : '—'}
-                    icon={Users}
-                  />
-                  <StatCard
-                    title={text.attendance}
-                    value={isStatsReady ? `${attendanceRate}%` : '—'}
-                    icon={BarChart3}
-                  />
-                  <StatCard
-                    title={text.grades}
-                    value={isStatsReady ? formatNumber(totalGrades) : '—'}
-                    icon={FileText}
-                  />
-                  <StatCard
-                    title={text.messages}
-                    value={isStatsReady ? formatNumber(messageConversations) : '—'}
-                    icon={MessageSquare}
-                  />
-                </>
-              )}
-
-              {isAdmin() && (
-                <>
-                  <StatCard
-                    title={text.students}
-                    value={isStatsReady ? formatNumber(totalStudents) : '—'}
-                    icon={GraduationCap}
-                  />
-                  <StatCard
-                    title={text.activeStudents}
-                    value={isStatsReady ? formatNumber(activeStudents) : '—'}
-                    icon={User}
-                  />
-                  <StatCard
-                    title={text.totalParents}
-                    value={isStatsReady ? formatNumber(totalParents) : '—'}
-                    icon={Users2}
-                  />
-                  <StatCard
-                    title={text.responseRate}
-                    value={isStatsReady ? `${Math.round(responseRate)}%` : '—'}
-                    icon={Zap}
-                  />
-                </>
-              )}
-            </div>
-
-            {/* Navigation Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-              {/* Teacher Features */}
-              {isTeacher() && (
-                <>
-                  <NavigationCard
-                    title={text.students}
-                    description="Manage your students and their information"
-                    icon={Users}
-                    href={`/${locale}/dashboard/students`}
-                  />
-                  <NavigationCard
-                    title={text.attendance}
-                    description="Track and manage student attendance"
-                    icon={BarChart3}
-                    href={`/${locale}/dashboard/attendance`}
-                  />
-                  <NavigationCard
-                    title={text.grades}
-                    description="Record and manage student grades"
-                    icon={FileText}
-                    href={`/${locale}/dashboard/grades`}
-                  />
-                  <NavigationCard
-                    title={text.messages}
-                    description="Communicate with parents via WhatsApp"
-                    icon={MessageSquare}
-                    href={`/${locale}/dashboard/messages`}
-                  />
-                </>
-              )}
-
-              {/* Admin Features */}
-              {isAdmin() && (
-                <>
-                  <NavigationCard
-                    title={text.userManagement}
-                    description="Manage teachers, students, and parents"
-                    icon={User}
-                    href={`/${locale}/dashboard/admin/users`}
-                  />
-                  <NavigationCard
-                    title={text.systemSettings}
-                    description="Configure system settings and preferences"
-                    icon={Settings}
-                    href={`/${locale}/dashboard/admin/settings`}
-                  />
-                  <NavigationCard
-                    title={text.auditLogs}
-                    description="View system audit logs and security events"
-                    icon={ClipboardList}
-                    href={`/${locale}/dashboard/admin/audit`}
-                  />
-                </>
-              )}
-
-              {/* Common Features */}
-              <NavigationCard
-                title={text.settings}
-                description="Manage your account settings and preferences"
-                icon={Settings}
-                href={`/${locale}/dashboard/settings`}
-              />
-            </div>
+        {/* Quick Stats */}
+        {statsError && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+            {t('statsUnavailable')}
           </div>
-        </main>
-      </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {isTeacher() && (
+            <>
+              <StatCard
+                title={tStudents('totalStudents')}
+                value={isStatsReady ? formatNumber(totalStudents) : '—'}
+                icon={Users}
+              />
+              <StatCard
+                title={tAttendance('attendanceRate')}
+                value={isStatsReady ? `${attendanceRate}%` : '—'}
+                icon={BarChart3}
+              />
+              <StatCard
+                title={tGrades('totalGrades')}
+                value={isStatsReady ? formatNumber(totalGrades) : '—'}
+                icon={FileText}
+              />
+              <StatCard
+                title={tMessages('title')}
+                value={isStatsReady ? formatNumber(messageConversations) : '—'}
+                icon={MessageSquare}
+              />
+            </>
+          )}
+
+          {isAdmin() && (
+            <>
+              <StatCard
+                title={tStudents('totalStudents')}
+                value={isStatsReady ? formatNumber(totalStudents) : '—'}
+                icon={GraduationCap}
+              />
+              <StatCard
+                title={tStudents('activeStudents')}
+                value={isStatsReady ? formatNumber(activeStudents) : '—'}
+                icon={User}
+              />
+              <StatCard
+                title={t('totalParents')}
+                value={isStatsReady ? formatNumber(totalParents) : '—'}
+                icon={Users2}
+              />
+              <StatCard
+                title={t('responseRate')}
+                value={isStatsReady ? `${Math.round(responseRate)}%` : '—'}
+                icon={Zap}
+              />
+            </>
+          )}
+        </div>
+
+        {/* Navigation Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+          {/* Teacher Features */}
+          {isTeacher() && (
+            <>
+              <NavigationCard
+                title={tStudents('title')}
+                description={tStudents('manageDescription')}
+                icon={Users}
+                href={`/${locale}/dashboard/students`}
+              />
+              <NavigationCard
+                title={tAttendance('title')}
+                description={tAttendance('description')}
+                icon={BarChart3}
+                href={`/${locale}/dashboard/attendance`}
+              />
+              <NavigationCard
+                title={tGrades('title')}
+                description={tGrades('descriptionCount')}
+                icon={FileText}
+                href={`/${locale}/dashboard/grades`}
+              />
+              <NavigationCard
+                title={tMessages('title')}
+                description={tMessages('sendViaWhatsApp')}
+                icon={MessageSquare}
+                href={`/${locale}/dashboard/messages`}
+              />
+            </>
+          )}
+
+          {/* Admin Features */}
+          {isAdmin() && (
+            <>
+              <NavigationCard
+                title={tNav('students')}
+                description={tStudents('manageDescription')}
+                icon={User}
+                href={`/${locale}/dashboard/admin/users`}
+              />
+              <NavigationCard
+                title={tSettings('title')}
+                description={tSettings('preferences')}
+                icon={Settings}
+                href={`/${locale}/dashboard/admin/settings`}
+              />
+              <NavigationCard
+                title={t('auditLogs')}
+                description={t('auditLogs')}
+                icon={ClipboardList}
+                href={`/${locale}/dashboard/admin/audit`}
+              />
+            </>
+          )}
+
+          {/* Common Features */}
+          <NavigationCard
+            title={tSettings('title')}
+            description={tSettings('preferences')}
+            icon={Settings}
+            href={`/${locale}/dashboard/settings`}
+          />
+        </div>
+    </div>
   );
 }
 
-// Stat Card Component
 function StatCard({ title, value, icon }: { title: string; value: string; icon: LucideIcon }) {
   const Icon = icon;
   return (
-    <div className="bg-white overflow-hidden shadow rounded-lg">
+    <div className="bg-card overflow-hidden shadow rounded-lg border border-border">
       <div className="p-5">
         <div className="flex items-center">
           <div className="flex-shrink-0">
             <Icon className="h-6 w-6 text-primary" />
           </div>
-          <div className="ml-5 w-0 flex-1">
+          <div className="ms-5 w-0 flex-1">
             <dl>
-              <dt className="text-sm font-medium text-gray-500 truncate">
+              <dt className="text-sm font-medium text-muted-foreground truncate">
                 {title}
               </dt>
-              <dd className="text-lg font-medium text-gray-900">
+              <dd className="text-lg font-medium text-foreground">
                 {value}
               </dd>
             </dl>
@@ -310,7 +267,6 @@ function StatCard({ title, value, icon }: { title: string; value: string; icon: 
   );
 }
 
-// Navigation Card Component
 function NavigationCard({
   title,
   description,
@@ -326,18 +282,18 @@ function NavigationCard({
   return (
     <a
       href={href}
-      className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200"
+      className="bg-card overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 border border-border"
     >
       <div className="p-6">
         <div className="flex items-center">
           <div className="flex-shrink-0">
             <Icon className="h-8 w-8 text-primary" />
           </div>
-          <div className="ml-4">
-            <h3 className="text-lg font-medium text-gray-900">
+          <div className="ms-4">
+            <h3 className="text-lg font-medium text-foreground">
               {title}
             </h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               {description}
             </p>
           </div>

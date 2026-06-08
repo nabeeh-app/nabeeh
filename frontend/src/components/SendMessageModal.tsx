@@ -16,6 +16,7 @@ import {
 import { Loader2, Send, Phone, MessageSquare } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { formatPhoneNumber, validatePhoneNumber } from '@/lib/utils';
+import logger from '@/lib/logger';
 
 interface SendMessageModalProps {
   isOpen: boolean;
@@ -73,7 +74,7 @@ export default function SendMessageModal({
       setErrors({});
       onClose();
     } catch (error) {
-      console.error('Error sending message:', error);
+      logger.error('Error sending message:', error);
       // Error handling is done by parent component
     } finally {
       setIsLoading(false);

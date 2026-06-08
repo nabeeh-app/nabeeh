@@ -5,10 +5,14 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import logger from '@/lib/logger';
 import {
   Table,
   TableBody,
@@ -80,6 +84,14 @@ export default function StudentsPage() {
   });
   const [formError, setFormError] = useState('');
 
+  const [alertDialog, setAlertDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+    variant?: 'default' | 'destructive';
+  }>({ open: false, title: '', description: '', onConfirm: () => {} });
+
   useEffect(() => {
     loadOfferings();
   }, []);
@@ -97,7 +109,7 @@ export default function StudentsPage() {
       const data = await apiClient.getOfferings();
       setOfferings(data);
     } catch (err) {
-      console.error('Failed checking offerings', err);
+      logger.error('Failed checking offerings', err);
     }
   };
 
@@ -115,16 +127,7 @@ export default function StudentsPage() {
 
       const studentsWithParents = response.data.map(student => ({
         ...student,
-        parents: [
-          {
-            id: `parent-${student.id}-1`,
-            name: `Parent of ${student.name}`,
-            phone: `+966${Math.floor(Math.random() * 1000000000)}`,
-            is_primary: true,
-            relationship: 'father',
-            preferred_language: locale
-          }
-        ]
+        parents: student.parents || []
       }));
 
       setStudents(studentsWithParents);
@@ -178,7 +181,7 @@ export default function StudentsPage() {
       resetForm();
 
     } catch (err: any) {
-      console.error('Error creating student:', err);
+      logger.error('Error creating student:', err);
       setFormError(err.message || 'Failed to create student');
     } finally {
       setSubmitting(false);
@@ -236,7 +239,7 @@ export default function StudentsPage() {
       resetForm();
 
     } catch (err: any) {
-      console.error('Error updating student:', err);
+      logger.error('Error updating student:', err);
       setFormError(err.message || 'Failed to update student');
     } finally {
       setSubmitting(false);
@@ -244,17 +247,26 @@ export default function StudentsPage() {
   };
 
   const handleDeleteStudent = async (student: StudentWithParents) => {
-    if (!confirm(t('students.deleteConfirm'))) {
-      return;
-    }
-
-    try {
-      await apiClient.deleteStudent(student.id);
-      setStudents(prev => prev.filter(s => s.id !== student.id));
-    } catch (err: any) {
-      console.error('Error deleting student:', err);
-      alert(err.message || 'Failed to delete student');
-    }
+    setAlertDialog({
+      open: true,
+      title: t('common.delete'),
+      description: t('students.deleteConfirm'),
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await apiClient.deleteStudent(student.id);
+          setStudents(prev => prev.filter(s => s.id !== student.id));
+        } catch (err: any) {
+          logger.error('Error deleting student:', err);
+          setAlertDialog({
+            open: true,
+            title: t('errors.generic'),
+            description: err.message || t('errors.generic'),
+            onConfirm: () => setAlertDialog(prev => ({ ...prev, open: false })),
+          });
+        }
+      },
+    });
   };
 
   const resetForm = () => {
@@ -304,10 +316,10 @@ export default function StudentsPage() {
   }
 
   const stats = [
-    { icon: Users, value: students.length, label: t('students.totalStudents'), color: 'text-primary' },
-    { icon: GraduationCap, value: students.filter(s => s.status === 'active').length, label: t('students.activeStudents'), color: 'text-green-600' },
-    { icon: BookOpen, value: uniqueGrades.length, label: t('students.fields.gradeLevel'), color: 'text-purple-600' },
-    { icon: Calendar, value: students.filter(s => { const d = new Date(s.enrollment_date); const m = new Date(); m.setMonth(m.getMonth() - 1); return d >= m; }).length, label: t('students.newThisMonth'), color: 'text-orange-600' },
+    { icon: Users, value: students.length, label: t('students.totalStudents'), color: 'primary' as const },
+    { icon: GraduationCap, value: students.filter(s => s.status === 'active').length, label: t('students.activeStudents'), color: 'success' as const },
+    { icon: BookOpen, value: uniqueGrades.length, label: t('students.fields.gradeLevel'), color: 'accent' as const },
+    { icon: Calendar, value: students.filter(s => { const d = new Date(s.enrollment_date); const m = new Date(); m.setMonth(m.getMonth() - 1); return d >= m; }).length, label: t('students.newThisMonth'), color: 'warning' as const },
   ];
 
   return (
@@ -367,30 +379,28 @@ export default function StudentsPage() {
                   <Label htmlFor="group_id">
                     {t('students.fields.group')} *
                   </Label>
-                  <select
-                    id="group_id"
-                    className="w-full border rounded px-3 py-2"
+                  <Select
                     value={newStudent.group_id}
-                    onChange={(e) => {
-                      const groupId = e.target.value;
-                      const group = offerings.flatMap(o => o.groups).find((g) => g.id === groupId);
+                    onValueChange={(groupId) => {
                       const offering = offerings.find(o => o.groups.some((g) => g.id === groupId));
-
                       setNewStudent(s => ({
                         ...s,
                         group_id: groupId,
                         grade_level: offering?.grade_level?.name || s.grade_level
                       }));
                     }}
-                    required
                   >
-                    <option value="">{locale === 'ar' ? 'اختر الفصل' : 'Select Class'}</option>
-                    {offerings.flatMap(o => o.groups.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {o.subject.name_en} - {g.name}
-                      </option>
-                    )))}
-                  </select>
+                    <SelectTrigger id="group_id">
+                      <SelectValue placeholder={t('students.selectClass')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {offerings.flatMap(o => o.groups.map((g) => (
+                        <SelectItem key={g.id} value={g.id}>
+                          {o.subject.name_en} - {g.name}
+                        </SelectItem>
+                      )))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="grade_level">
@@ -421,16 +431,18 @@ export default function StudentsPage() {
                   <Label htmlFor="gender">
                     {t('students.fields.gender')}
                   </Label>
-                  <select
-                    id="gender"
-                    className="w-full border rounded px-3 py-2"
+                  <Select
                     value={newStudent.gender}
-                    onChange={(e) => setNewStudent(s => ({ ...s, gender: e.target.value }))}
+                    onValueChange={(value) => setNewStudent(s => ({ ...s, gender: value }))}
                   >
-                    <option value="">{locale === 'ar' ? 'اختر الجنس' : 'Select Gender'}</option>
-                    <option value="male">{t('students.gender.male')}</option>
-                    <option value="female">{t('students.gender.female')}</option>
-                  </select>
+                    <SelectTrigger id="gender">
+                      <SelectValue placeholder={t('students.selectGender')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">{t('students.gender.male')}</SelectItem>
+                      <SelectItem value="female">{t('students.gender.female')}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="emergency_contact">
@@ -473,9 +485,8 @@ export default function StudentsPage() {
                 <Label htmlFor="notes">
                   {t('students.fields.notes')}
                 </Label>
-                <textarea
+                <Textarea
                   id="notes"
-                  className="w-full border rounded px-3 py-2"
                   rows={3}
                   value={newStudent.notes}
                   onChange={(e) => setNewStudent(s => ({ ...s, notes: e.target.value }))}
@@ -518,29 +529,37 @@ export default function StudentsPage() {
         totalCount={students.length}
         resultLabel={locale === 'ar' ? `عرض ${filteredStudents.length} من ${students.length} طالب` : `Showing ${filteredStudents.length} of ${students.length} students`}
       >
-        <select
+        <Select
           value={selectedGroupId}
-          onChange={(e) => setSelectedGroupId(e.target.value)}
-          className="border rounded px-3 py-2 min-w-[200px]"
+          onValueChange={setSelectedGroupId}
         >
-          <option value="all">{t('students.allClasses')}</option>
-          {offerings.flatMap(o => o.groups.map((g: any) => (
-            <option key={g.id} value={g.id}>
-              {o.subject.name_en} - {g.name}
-            </option>
-          )))}
-        </select>
+          <SelectTrigger className="min-w-[200px]">
+            <SelectValue placeholder={t('students.allClasses')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('students.allClasses')}</SelectItem>
+            {offerings.flatMap(o => o.groups.map((g: any) => (
+              <SelectItem key={g.id} value={g.id}>
+                {o.subject.name_en} - {g.name}
+              </SelectItem>
+            )))}
+          </SelectContent>
+        </Select>
 
-        <select
+        <Select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="border rounded px-3 py-2"
+          onValueChange={setStatusFilter}
         >
-          <option value="all">{t('students.allStatus')}</option>
-          <option value="active">{t('students.status.active')}</option>
-          <option value="inactive">{t('students.status.inactive')}</option>
-          <option value="graduated">{t('students.status.graduated')}</option>
-        </select>
+          <SelectTrigger className="min-w-[150px]">
+            <SelectValue placeholder={t('students.allStatus')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('students.allStatus')}</SelectItem>
+            <SelectItem value="active">{t('students.status.active')}</SelectItem>
+            <SelectItem value="inactive">{t('students.status.inactive')}</SelectItem>
+            <SelectItem value="graduated">{t('students.status.graduated')}</SelectItem>
+          </SelectContent>
+        </Select>
       </FilterBar>
 
       <Card>
@@ -636,7 +655,7 @@ export default function StudentsPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleViewStudent(student)}
-                            title={t('students.viewDetails')}
+                            aria-label={t('students.viewDetails')}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -644,7 +663,7 @@ export default function StudentsPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEditStudent(student)}
-                            title={t('common.edit')}
+                            aria-label={t('common.edit')}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -652,8 +671,8 @@ export default function StudentsPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteStudent(student)}
-                            className="text-red-600 hover:text-red-700"
-                            title={t('common.delete')}
+                            className="text-destructive hover:text-destructive/80"
+                            aria-label={t('common.delete')}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -841,33 +860,33 @@ export default function StudentsPage() {
                   required
                 />
               </div>
-              <div>
-                <Label htmlFor="edit_group_id">
-                  {t('students.fields.group')} *
-                </Label>
-                <select
-                  id="edit_group_id"
-                  className="w-full border rounded px-3 py-2"
-                  value={newStudent.group_id}
-                  onChange={(e) => {
-                    const groupId = e.target.value;
-                    const offering = offerings.find(o => o.groups.some((g) => g.id === groupId));
-                    setNewStudent(s => ({
-                      ...s,
-                      group_id: groupId,
-                      grade_level: offering?.grade_level?.name || s.grade_level
-                    }));
-                  }}
-                  required
-                >
-                  <option value="">{locale === 'ar' ? 'اختر الفصل' : 'Select Class'}</option>
-                  {offerings.flatMap(o => o.groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {o.subject.name_en} - {g.name}
-                    </option>
-                  )))}
-                </select>
-              </div>
+                <div>
+                  <Label htmlFor="edit_group_id">
+                    {t('students.fields.group')} *
+                  </Label>
+                  <Select
+                    value={newStudent.group_id}
+                    onValueChange={(groupId) => {
+                      const offering = offerings.find(o => o.groups.some((g) => g.id === groupId));
+                      setNewStudent(s => ({
+                        ...s,
+                        group_id: groupId,
+                        grade_level: offering?.grade_level?.name || s.grade_level
+                      }));
+                    }}
+                  >
+                    <SelectTrigger id="edit_group_id">
+                      <SelectValue placeholder={t('students.selectClass')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {offerings.flatMap(o => o.groups.map((g) => (
+                        <SelectItem key={g.id} value={g.id}>
+                          {o.subject.name_en} - {g.name}
+                        </SelectItem>
+                      )))}
+                    </SelectContent>
+                  </Select>
+                </div>
               <div>
                 <Label htmlFor="edit_grade_level">
                   {t('students.fields.gradeLevel')} *
@@ -881,21 +900,24 @@ export default function StudentsPage() {
                   className="bg-gray-50"
                 />
               </div>
-              <div>
-                <Label htmlFor="edit_status">
-                  {t('students.fields.status')}
-                </Label>
-                <select
-                  id="edit_status"
-                  className="w-full border rounded px-3 py-2"
-                  value={newStudent.status}
-                  onChange={(e) => setNewStudent(s => ({ ...s, status: e.target.value as 'active' | 'inactive' | 'graduated' }))}
-                >
-                  <option value="active">{t('students.status.active')}</option>
-                  <option value="inactive">{t('students.status.inactive')}</option>
-                  <option value="graduated">{t('students.status.graduated')}</option>
-                </select>
-              </div>
+                <div>
+                  <Label htmlFor="edit_status">
+                    {t('students.fields.status')}
+                  </Label>
+                  <Select
+                    value={newStudent.status}
+                    onValueChange={(value) => setNewStudent(s => ({ ...s, status: value as 'active' | 'inactive' | 'graduated' }))}
+                  >
+                    <SelectTrigger id="edit_status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">{t('students.status.active')}</SelectItem>
+                      <SelectItem value="inactive">{t('students.status.inactive')}</SelectItem>
+                      <SelectItem value="graduated">{t('students.status.graduated')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
             </div>
             {formError && (
               <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
@@ -921,6 +943,27 @@ export default function StudentsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={alertDialog.open} onOpenChange={(open) => setAlertDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{alertDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{alertDialog.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className={alertDialog.variant === 'destructive' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+              onClick={() => {
+                alertDialog.onConfirm();
+                setAlertDialog(prev => ({ ...prev, open: false }));
+              }}
+            >
+              {t('common.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import apiClient from '@/lib/api';
+import logger from '@/lib/logger';
 
 export default function ClassesPage() {
   const locale = useLocale();
@@ -43,7 +44,7 @@ export default function ClassesPage() {
       const data = await apiClient.getOfferings();
       setOfferings(data);
     } catch (error) {
-      console.error('Failed to fetch classes:', error);
+      logger.error('Failed to fetch classes:', error);
     } finally {
       setLoading(false);
     }

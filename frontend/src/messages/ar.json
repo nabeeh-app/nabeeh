@@ -195,6 +195,8 @@
     "loading": "جاري تحميل الطلاب...",
     "searchPlaceholderShort": "البحث عن الطلاب بالاسم أو الرقم...",
     "allClasses": "جميع الفصول",
+    "selectClass": "اختر الفصل",
+    "selectGender": "اختر الجنس",
     "allStatus": "جميع الحالات",
     "details": "المعلومات",
     "enrollment": "تاريخ التسجيل",
@@ -545,7 +547,10 @@
       "enterPhoneNumber": "أدخل رقم هاتفك (مثال: +201234567890):",
       "enterTestPhoneNumber": "أدخل رقم الهاتف للاختبار (مثال: +201234567890):",
       "testMessageContent": "🤖 رسالة تجريبية من مساعد نبيه الذكي!\n\nهذا اختبار للتحقق من أن تكامل الواتساب يعمل بشكل صحيح.",
-      "version": "الإصدار"
+      "version": "الإصدار",
+      "confirmLogout": "هل أنت متأكد من تسجيل الخروج من الواتساب؟",
+      "logoutFailed": "فشل في تسجيل الخروج",
+      "qrRequestFailed": "فشل في طلب رمز QR"
     }
   },
   "analytics": {

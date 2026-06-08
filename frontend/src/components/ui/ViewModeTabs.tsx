@@ -15,15 +15,20 @@ interface ViewModeTabsProps {
 
 export function ViewModeTabs({ modes, active, onChange }: ViewModeTabsProps) {
   return (
-    <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
+    <div
+      className="flex items-center space-x-1 bg-muted p-1 rounded-lg w-fit"
+      role="tablist"
+    >
       {modes.map((mode) => (
         <Button
           key={mode.id}
           variant={active === mode.id ? 'default' : 'ghost'}
           size="sm"
           onClick={() => onChange(mode.id)}
+          role="tab"
+          aria-selected={active === mode.id}
         >
-          <mode.icon className="w-4 h-4 mr-2" />
+          <mode.icon className="w-4 h-4 me-2" />
           {mode.label}
         </Button>
       ))}

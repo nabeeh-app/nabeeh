@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiClient } from '@/lib/api';
 import { Teacher, LoginRequest } from '@/types';
+import logger from '@/lib/logger';
 
 interface AuthContextType {
   teacher: Teacher | null;
@@ -46,7 +47,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setTeacher(teacherData);
 
     } catch (err: any) {
-      console.error('Auth check failed:', err);
+      logger.error('Auth check failed:', err);
       // Clear invalid token
       apiClient.removeToken();
       setTeacher(null);
@@ -72,7 +73,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // The login page will redirect based on the isAuthenticated state
 
     } catch (err: any) {
-      console.error('Login failed:', err);
+      logger.error('Login failed:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Login failed';
       setError(errorMessage);
       throw new Error(errorMessage);
@@ -102,7 +103,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setTeacher(updatedTeacher);
 
     } catch (err: any) {
-      console.error('Profile update failed:', err);
+      logger.error('Profile update failed:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Profile update failed';
       setError(errorMessage);
       throw new Error(errorMessage);

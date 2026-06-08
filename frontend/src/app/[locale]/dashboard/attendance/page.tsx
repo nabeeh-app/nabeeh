@@ -10,8 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import logger from '@/lib/logger';
 import {
   Table,
   TableBody,
@@ -97,6 +100,14 @@ export default function AttendancePage() {
     to: new Date().toISOString().split('T')[0]
   });
 
+  const [alertDialog, setAlertDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+    variant?: 'default' | 'destructive';
+  }>({ open: false, title: '', description: '', onConfirm: () => {} });
+
   useEffect(() => {
     loadOfferings();
   }, []);
@@ -128,7 +139,7 @@ export default function AttendancePage() {
       const firstGroup = groups[0];
       if (firstGroup) setSelectedGroupId(firstGroup.id);
     } catch (err) {
-      console.error(err);
+      logger.error(err);
     }
   };
 
@@ -173,7 +184,7 @@ export default function AttendancePage() {
 
       setAttendanceRecords(recordsWithStudents);
     } catch (err: any) {
-      console.error('Error loading attendance records:', err);
+      logger.error('Error loading attendance records:', err);
     }
   };
 
@@ -186,7 +197,7 @@ export default function AttendancePage() {
       });
       setAttendanceStats(response);
     } catch (err: any) {
-      console.error('Error loading attendance stats:', err);
+      logger.error('Error loading attendance stats:', err);
       setAttendanceStats(null);
     }
   };
@@ -215,7 +226,7 @@ export default function AttendancePage() {
 
       setDailyAttendance(dailyData);
     } catch (err: any) {
-      console.error('Error loading daily attendance:', err);
+      logger.error('Error loading daily attendance:', err);
       setDailyAttendance({
         date,
         students: students.map(student => ({
@@ -268,8 +279,13 @@ export default function AttendancePage() {
       await loadAttendanceStats();
 
     } catch (err: any) {
-      console.error('Error saving attendance:', err);
-      alert(err.message || 'Failed to save attendance');
+      logger.error('Error saving attendance:', err);
+      setAlertDialog({
+        open: true,
+        title: t('errors.generic'),
+        description: err.message || t('errors.generic'),
+        onConfirm: () => setAlertDialog(prev => ({ ...prev, open: false })),
+      });
     } finally {
       setSaving(false);
     }
@@ -414,20 +430,23 @@ export default function AttendancePage() {
         title={t('attendance.title')}
         description={t('attendance.description')}
       >
-        <select
+        <Select
           value={selectedGroupId}
-          onChange={(e) => setSelectedGroupId(e.target.value)}
-          className="border rounded px-4 py-2 min-w-[250px] bg-white shadow-sm"
+          onValueChange={setSelectedGroupId}
         >
-          <option value="" disabled>{t('attendance.selectClass')}</option>
-          {offerings.flatMap((offering) =>
-            offering.groups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {offering.subject.name_en} - {group.name}
-              </option>
-            ))
-          )}
-        </select>
+          <SelectTrigger className="min-w-[250px]">
+            <SelectValue placeholder={t('attendance.selectClass')} />
+          </SelectTrigger>
+          <SelectContent>
+            {offerings.flatMap((offering) =>
+              offering.groups.map((group) => (
+                <SelectItem key={group.id} value={group.id}>
+                  {offering.subject.name_en} - {group.name}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
         <Button variant="outline" size="sm">
           <Download className="w-4 h-4 mr-2" />
           {t('common.export')}
@@ -533,10 +552,10 @@ export default function AttendancePage() {
                         })}
                       </CardTitle>
                       <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')}>
+                        <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')} aria-label={t('previous')}>
                           <ChevronLeft className="w-4 h-4" />
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => navigateMonth('next')}>
+                        <Button variant="outline" size="sm" onClick={() => navigateMonth('next')} aria-label={t('next')}>
                           <ChevronRight className="w-4 h-4" />
                         </Button>
                       </div>
@@ -555,11 +574,12 @@ export default function AttendancePage() {
                         <button
                           key={index}
                           onClick={() => setSelectedDate(day.dateStr)}
+                          aria-label={day.date.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                           className={`
                             p-2 text-sm rounded-lg border transition-colors
-                            ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
-                            ${day.isToday ? 'bg-primary/10 border-primary/30' : 'border-gray-200'}
-                            ${day.isSelected ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-gray-50'}
+                            ${day.isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'}
+                            ${day.isToday ? 'bg-primary/10 border-primary/30' : 'border-border'}
+                            ${day.isSelected ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'}
                             ${day.hasAttendance ? 'font-semibold' : ''}
                           `}
                         >
@@ -789,17 +809,21 @@ export default function AttendancePage() {
                   onChange={(e) => setStudentFilter(e.target.value)}
                   className="w-64"
                 />
-                <select
+                <Select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="border rounded px-3 py-2"
+                  onValueChange={setStatusFilter}
                 >
-                  <option value="all">{t('attendance.allStatus')}</option>
-                  <option value="present">{t('attendance.status.present')}</option>
-                  <option value="absent">{t('attendance.status.absent')}</option>
-                  <option value="late">{t('attendance.status.late')}</option>
-                  <option value="excused">{t('attendance.status.excused')}</option>
-                </select>
+                  <SelectTrigger className="min-w-[150px]">
+                    <SelectValue placeholder={t('attendance.allStatus')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('attendance.allStatus')}</SelectItem>
+                    <SelectItem value="present">{t('attendance.status.present')}</SelectItem>
+                    <SelectItem value="absent">{t('attendance.status.absent')}</SelectItem>
+                    <SelectItem value="late">{t('attendance.status.late')}</SelectItem>
+                    <SelectItem value="excused">{t('attendance.status.excused')}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardHeader>
@@ -872,6 +896,27 @@ export default function AttendancePage() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={alertDialog.open} onOpenChange={(open) => setAlertDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{alertDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{alertDialog.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className={alertDialog.variant === 'destructive' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+              onClick={() => {
+                alertDialog.onConfirm();
+                setAlertDialog(prev => ({ ...prev, open: false }));
+              }}
+            >
+              {t('common.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

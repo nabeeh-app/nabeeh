@@ -28,12 +28,12 @@ export function FilterBar({
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Search className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={searchPlaceholder}
                 value={searchValue}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-10"
+                className="ps-10"
               />
             </div>
           </div>
@@ -44,8 +44,8 @@ export function FilterBar({
           )}
         </div>
         {resultCount !== undefined && totalCount !== undefined && resultCount !== totalCount && (
-          <p className="text-sm text-gray-600 mt-2">
-            {resultLabel || `Showing ${resultCount} of ${totalCount}`}
+          <p className="text-sm text-muted-foreground mt-2">
+            {resultLabel}
           </p>
         )}
       </CardContent>

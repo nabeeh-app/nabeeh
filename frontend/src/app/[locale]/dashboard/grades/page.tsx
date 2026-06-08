@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
@@ -48,6 +50,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { StatCards } from '@/components/ui/StatCards';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ViewModeTabs } from '@/components/ui/ViewModeTabs';
+import logger from '@/lib/logger';
 
 interface GradeWithStudent extends Grade {
   student: Student;
@@ -133,6 +136,14 @@ export default function GradesPage() {
   });
   const [formError, setFormError] = useState('');
 
+  const [alertDialog, setAlertDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+    variant?: 'default' | 'destructive';
+  }>({ open: false, title: '', description: '', onConfirm: () => {} });
+
   useEffect(() => {
     loadOfferings();
   }, []);
@@ -163,7 +174,7 @@ export default function GradesPage() {
         setSelectedGroupId(groups[0].id);
       }
     } catch (err) {
-      console.error('Error loading offerings:', err);
+      logger.error('Error loading offerings:', err);
     }
   };
 
@@ -224,7 +235,7 @@ export default function GradesPage() {
       setGrades(gradesWithStudents);
 
     } catch (err: any) {
-      console.error('Error loading grades data:', err);
+      logger.error('Error loading grades data:', err);
       setError(err.message || 'Failed to load grades data');
     } finally {
       setLoading(false);
@@ -344,7 +355,7 @@ export default function GradesPage() {
       resetForm();
 
     } catch (err: any) {
-      console.error('Error creating grade:', err);
+      logger.error('Error creating grade:', err);
       setFormError(err.message || 'Failed to create grade');
     } finally {
       setSubmitting(false);
@@ -398,7 +409,7 @@ export default function GradesPage() {
       resetForm();
 
     } catch (err: any) {
-      console.error('Error updating grade:', err);
+      logger.error('Error updating grade:', err);
       setFormError(err.message || 'Failed to update grade');
     } finally {
       setSubmitting(false);
@@ -406,17 +417,26 @@ export default function GradesPage() {
   };
 
   const handleDeleteGrade = async (grade: GradeWithStudent) => {
-    if (!confirm(t('grades.deleteConfirm'))) {
-      return;
-    }
-
-    try {
-      await apiClient.deleteGrade(grade.id);
-      setGrades(prev => prev.filter(g => g.id !== grade.id));
-    } catch (err: any) {
-      console.error('Error deleting grade:', err);
-      alert(err.message || 'Failed to delete grade');
-    }
+    setAlertDialog({
+      open: true,
+      title: t('common.delete'),
+      description: t('grades.deleteConfirm'),
+      variant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await apiClient.deleteGrade(grade.id);
+          setGrades(prev => prev.filter(g => g.id !== grade.id));
+        } catch (err: any) {
+          logger.error('Error deleting grade:', err);
+          setAlertDialog({
+            open: true,
+            title: t('errors.generic'),
+            description: err.message || t('errors.generic'),
+            onConfirm: () => setAlertDialog(prev => ({ ...prev, open: false })),
+          });
+        }
+      },
+    });
   };
 
   const resetForm = () => {
@@ -478,10 +498,10 @@ export default function GradesPage() {
   }
 
   const stats = [
-    { icon: GraduationCap, value: grades.length, label: t('grades.totalGrades'), color: 'text-primary' },
-    { icon: BookOpen, value: uniqueSubjects.length, label: t('grades.subjectsLabel'), color: 'text-green-600' },
-    { icon: Calculator, value: grades.length > 0 ? (grades.reduce((sum, g) => sum + g.percentage, 0) / grades.length).toFixed(1) + '%' : '0%', label: t('grades.overallAverage'), color: 'text-purple-600' },
-    { icon: Award, value: grades.filter(g => g.percentage >= 90).length, label: t('grades.excellentGrades'), color: 'text-yellow-600' },
+    { icon: GraduationCap, value: grades.length, label: t('grades.totalGrades'), color: 'primary' as const },
+    { icon: BookOpen, value: uniqueSubjects.length, label: t('grades.subjectsLabel'), color: 'success' as const },
+    { icon: Calculator, value: grades.length > 0 ? (grades.reduce((sum, g) => sum + g.percentage, 0) / grades.length).toFixed(1) + '%' : '0%', label: t('grades.overallAverage'), color: 'accent' as const },
+    { icon: Award, value: grades.filter(g => g.percentage >= 90).length, label: t('grades.excellentGrades'), color: 'warning' as const },
   ];
 
   const viewModes = [
@@ -495,24 +515,23 @@ export default function GradesPage() {
         title={t('grades.title')}
         description={t('grades.descriptionCount')}
       >
-        <select
-          className="w-[300px] border rounded-md p-2"
+        <Select
           value={selectedGroupId}
-          onChange={(e) => setSelectedGroupId(e.target.value)}
+          onValueChange={setSelectedGroupId}
         >
-          <option value="" disabled>
-            {t('students.fields.group')}
-          </option>
-          {offerings.map((offering) => (
-            <optgroup key={offering.id} label={offering.subject.name_en}>
-              {offering.groups.map((group: any) => (
-                <option key={group.id} value={group.id}>
+          <SelectTrigger className="w-[300px]">
+            <SelectValue placeholder={t('students.fields.group')} />
+          </SelectTrigger>
+          <SelectContent>
+            {offerings.map((offering) => (
+              offering.groups.map((group: any) => (
+                <SelectItem key={group.id} value={group.id}>
                   {offering.subject.name_en} - {group.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+                </SelectItem>
+              ))
+            ))}
+          </SelectContent>
+        </Select>
         <Button variant="outline" size="sm">
           <Download className="w-4 h-4 mr-2" />
           {t('common.export')}
@@ -588,18 +607,19 @@ export default function GradesPage() {
                   <Label htmlFor="student_id">
                     {t('grades.fields.student')} *
                   </Label>
-                  <select
-                    id="student_id"
-                    className="w-full border rounded px-3 py-2"
+                  <Select
                     value={newGrade.student_id}
-                    onChange={(e) => setNewGrade(s => ({ ...s, student_id: e.target.value }))}
-                    required
+                    onValueChange={(value) => setNewGrade(s => ({ ...s, student_id: value }))}
                   >
-                    <option value="">{t('grades.selectStudent')}</option>
-                    {students.map(student => (
-                      <option key={student.id} value={student.id}>{student.name}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger id="student_id">
+                      <SelectValue placeholder={t('grades.selectStudent')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {students.map(student => (
+                        <SelectItem key={student.id} value={student.id}>{student.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="subject">
@@ -618,18 +638,21 @@ export default function GradesPage() {
                   <Label htmlFor="assessment_type">
                     {t('grades.fields.assessmentType')} *
                   </Label>
-                  <select
-                    id="assessment_type"
-                    className="w-full border rounded px-3 py-2"
+                  <Select
                     value={newGrade.assessment_type}
-                    onChange={(e) => setNewGrade(s => ({ ...s, assessment_type: e.target.value }))}
+                    onValueChange={(value) => setNewGrade(s => ({ ...s, assessment_type: value }))}
                   >
-                    {assessmentTypes.map(type => (
-                      <option key={type} value={type}>
-                        {t(`grades.assessmentTypes.${type}`)}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger id="assessment_type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assessmentTypes.map(type => (
+                        <SelectItem key={type} value={type}>
+                          {t(`grades.assessmentTypes.${type}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="assessment_name">
@@ -1010,6 +1033,27 @@ export default function GradesPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={alertDialog.open} onOpenChange={(open) => setAlertDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{alertDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{alertDialog.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className={alertDialog.variant === 'destructive' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+              onClick={() => {
+                alertDialog.onConfirm();
+                setAlertDialog(prev => ({ ...prev, open: false }));
+              }}
+            >
+              {t('common.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

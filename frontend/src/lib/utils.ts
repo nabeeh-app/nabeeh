@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import apiClient from "@/lib/api"
+import logger from "@/lib/logger"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -69,7 +70,7 @@ export const checkWhatsAppStatus = async (phone?: string) => {
       qr: data.data?.qr || null
     };
   } catch (error) {
-    console.error('Check Status Error:', error);
+    logger.error('Check Status Error:', error);
     return {
       success: false,
       status: 'disconnected' as const,
@@ -89,7 +90,7 @@ export const sendWhatsAppMessage = async (phone: string, message: string) => {
       message: data.message || (data.success ? 'Message sent successfully' : 'Failed to send message')
     };
   } catch (error) {
-    console.error('Send message error:', error);
+    logger.error('Send message error:', error);
     return {
       success: false,
       message: 'Error sending message'
