@@ -16,7 +16,7 @@ interface ViewModeTabsProps {
 export function ViewModeTabs({ modes, active, onChange }: ViewModeTabsProps) {
   return (
     <div
-      className="flex items-center space-x-1 bg-muted p-1 rounded-lg w-fit"
+      className="flex items-center space-x-1 bg-surface-cool p-1 rounded-md w-fit"
       role="tablist"
     >
       {modes.map((mode) => (

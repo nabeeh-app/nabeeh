@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useLocale } from 'next-intl';
 import { useAuth } from '@/hooks/useAuth';
-import apiClient from '@/lib/api';
+import apiClient from '@/lib/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ export default function AdminTeachersPage() {
     name: '',
     email: '',
     password: '',
-    role: 'teacher'
+    role: 'teacher' as 'teacher' | 'admin'
   });
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -113,7 +113,7 @@ export default function AdminTeachersPage() {
               </Select>
             </div>
             {status && (
-              <p className="text-sm text-gray-600">{status}</p>
+              <p className="text-sm text-ink/60">{status}</p>
             )}
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (isArabic ? 'جاري الإنشاء...' : 'Creating...') : (isArabic ? 'إنشاء' : 'Create')}

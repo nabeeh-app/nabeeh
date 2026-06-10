@@ -1,10 +1,8 @@
 'use client';
 
-import { useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -14,22 +12,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useEffect, useState } from 'react';
+import apiClient from '@/lib/client';
+import logger from '@/lib/logger';
+import { PageHeader } from '@/components/ui/PageHeader';
 import {
-  PlusCircle,
-  Search,
-  Calendar,
-  Clock,
-  Users,
+  Plus,
   BookOpen,
+  Clock,
   Loader2
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import apiClient from '@/lib/api';
-import logger from '@/lib/logger';
 
 export default function ClassesPage() {
-  const locale = useLocale();
-  const isRTL = locale === 'ar';
+  const t = useTranslations('classes');
+  const tc = useTranslations('common');
   const searchParams = useSearchParams();
   const setupRequired = searchParams.get('setup') === 'required';
   const [offerings, setOfferings] = useState<any[]>([]);
@@ -52,8 +48,8 @@ export default function ClassesPage() {
 
   const getStatusBadge = (isActive: boolean) => {
     return isActive ?
-      { label: 'Active', variant: 'default' as const } :
-      { label: 'Inactive', variant: 'secondary' as const };
+      { label: t('active'), variant: 'default' as const } :
+      { label: t('inactive'), variant: 'secondary' as const };
   };
 
   // Flatten Offerings -> Groups
@@ -72,96 +68,78 @@ export default function ClassesPage() {
   return (
     <div className="space-y-6">
       {setupRequired && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
+        <div className="rounded-lg border border-ink/20 bg-surface-sage p-4 text-ink">
           <p className="text-sm font-semibold">
-            {isRTL ? 'مطلوب إعداد مجموعة' : 'Group setup required'}
+            {t('setupRequired')}
           </p>
-          <p className="text-sm text-amber-700">
-            {isRTL
-              ? 'أنشئ مجموعة واحدة على الأقل قبل تسجيل الحضور أو إدخال الدرجات.'
-              : 'Create at least one group before taking attendance or entering grades.'}
+          <p className="text-sm text-ink/70">
+            {t('setupDescription')}
           </p>
         </div>
       )}
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Class Management
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your course offerings and student groups
-          </p>
-        </div>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add New Class
+      <PageHeader title={t('title')} description={t('description')}>
+        <Button className="gap-2">
+          <Plus className="h-4 w-4" />
+          {t('addClass')}
         </Button>
-      </div>
+      </PageHeader>
 
       {/* Classes Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            Classes List
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
-          ) : (
-            <Table>
-              <TableHeader>
+      <div className="space-y-0">
+        {loading ? (
+          <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('groupName')}</TableHead>
+                <TableHead>{t('subject')}</TableHead>
+                <TableHead>{t('gradeLevel')}</TableHead>
+                <TableHead>{t('schedule')}</TableHead>
+                <TableHead>{t('status')}</TableHead>
+                <TableHead>{t('actions')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {classesList.length === 0 ? (
                 <TableRow>
-                  <TableHead>Class/Group Name</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Grade Level</TableHead>
-                  <TableHead>Schedule</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableCell colSpan={6} className="text-center">{t('noClasses')}</TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {classesList.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center">No classes found.</TableCell>
+              ) : classesList.map((cls) => {
+                const status = getStatusBadge(cls.active);
+                return (
+                  <TableRow key={cls.id}>
+                    <TableCell className="font-medium">
+                      {cls.name}
+                    </TableCell>
+                    <TableCell>{cls.subject}</TableCell>
+                    <TableCell>{cls.grade}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4 text-ink/40" />
+                        {cls.schedule || t('na')}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={status.variant}>
+                        {status.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm">
+                          {tc('edit')}
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                ) : classesList.map((cls) => {
-                  const status = getStatusBadge(cls.active);
-                  return (
-                    <TableRow key={cls.id}>
-                      <TableCell className="font-medium">
-                        {cls.name}
-                      </TableCell>
-                      <TableCell>{cls.subject}</TableCell>
-                      <TableCell>{cls.grade}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          {cls.schedule || 'N/A'}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={status.variant}>
-                          {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
-                            Edit
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
+      </div>
     </div>
   );
 }

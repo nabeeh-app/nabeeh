@@ -3,107 +3,18 @@
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { useState } from 'react';
-import {
-  Users,
-  GraduationCap,
-  BookOpen,
-  Calendar,
-  MessageSquare,
-  Settings,
-  BarChart3,
-  LogOut,
-  Home,
-  Activity,
-  Smartphone,
-  Menu,
-  X,
-  type LucideIcon
-} from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { LogOut, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { useAuth } from '@/hooks/useAuth';
-import { isFeatureEnabled, type FeatureKey } from '@/config/featureFlags';
-
-type NavigationItem = {
-  name: string;
-  href: string;
-  icon: LucideIcon;
-  featureKey?: FeatureKey;
-};
-
-const navigation: NavigationItem[] = [
-  {
-    name: 'dashboard',
-    href: '/dashboard',
-    icon: Home,
-  },
-  {
-    name: 'students',
-    href: '/dashboard/students',
-    icon: Users,
-  },
-  {
-    name: 'attendance',
-    href: '/dashboard/attendance',
-    icon: Calendar,
-  },
-  {
-    name: 'grades',
-    href: '/dashboard/grades',
-    icon: GraduationCap,
-    featureKey: 'grades',
-  },
-  {
-    name: 'courses',
-    href: '/dashboard/courses',
-    icon: BookOpen,
-    featureKey: 'courses',
-  },
-  {
-    name: 'classes',
-    href: '/dashboard/classes',
-    icon: GraduationCap,
-  },
-  {
-    name: 'schedule',
-    href: '/dashboard/schedule',
-    icon: Calendar,
-  },
-  {
-    name: 'messages',
-    href: '/dashboard/messages',
-    icon: MessageSquare,
-    featureKey: 'messaging',
-  },
-  {
-    name: 'whatsapp',
-    href: '/dashboard/whatsapp',
-    icon: Smartphone,
-  },
-  {
-    name: 'reports',
-    href: '/dashboard/reports',
-    icon: BarChart3,
-    featureKey: 'reports',
-  },
-  {
-    name: 'monitor',
-    href: '/dashboard/monitor',
-    icon: Activity,
-    featureKey: 'monitor',
-  },
-  {
-    name: 'settings',
-    href: '/dashboard/settings',
-    icon: Settings,
-  },
-];
+import { getVisibleNavigation } from '@/config/navigation';
 
 export function Sidebar() {
   const t = useTranslations('navigation');
   const tCommon = useTranslations('common');
+  const tRoles = useTranslations('roles');
   const pathname = usePathname();
   const { logout, teacher } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -116,87 +27,114 @@ export function Sidebar() {
     return words[0].charAt(0) + words[0].charAt(1);
   };
 
+  const navItems = useMemo(() => getVisibleNavigation(teacher?.role), [teacher?.role]);
+
   const sidebarContent = (
     <div className="flex h-full w-64 flex-col bg-sidebar border-s border-sidebar-border">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-sidebar-border">
+      <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center">
-            <GraduationCap className="w-5 h-5 text-sidebar-primary-foreground" />
+          <div className="w-12 h-12 flex items-center justify-center overflow-hidden">
+            <svg viewBox="0 0 200 240" fill="none" className="w-10 h-12">
+              <defs>
+                <linearGradient id="sidebarBodyGrad" x1="100" y1="40" x2="100" y2="200" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stopColor="#05c4b8"/>
+                  <stop offset="1" stopColor="#026370"/>
+                </linearGradient>
+              </defs>
+              <path d="M93 44Q85 15 68 12Q82 20 90 40" fill="#05c4b8"/>
+              <path d="M100 40Q108 8 128 8Q112 16 105 38" fill="#05c4b8"/>
+              <ellipse cx="100" cy="112" rx="74" ry="82" fill="url(#sidebarBodyGrad)"/>
+              <ellipse cx="100" cy="108" rx="60" ry="68" fill="#05c4b8" opacity="0.25"/>
+              <rect x="78" y="184" width="44" height="10" rx="4" fill="#026370"/>
+              <rect x="82" y="196" width="36" height="8" rx="3" fill="#083d44"/>
+              <rect x="86" y="206" width="28" height="6" rx="3" fill="#083d44"/>
+              <circle cx="70" cy="110" r="32" stroke="white" strokeWidth="6" fill="none"/>
+              <circle cx="130" cy="110" r="32" stroke="white" strokeWidth="6" fill="none"/>
+              <path d="M102 102Q100 94 98 102" stroke="white" strokeWidth="5" fill="none"/>
+              <path d="M38 104Q24 100 16 104" stroke="white" strokeWidth="5" strokeLinecap="round" fill="none"/>
+              <path d="M162 104Q176 100 184 104" stroke="white" strokeWidth="5" strokeLinecap="round" fill="none"/>
+              <ellipse cx="70" cy="112" rx="11" ry="12" fill="#083d44"/>
+              <circle cx="66" cy="108" r="4" fill="white"/>
+              <ellipse cx="130" cy="112" rx="11" ry="12" fill="#083d44"/>
+              <circle cx="126" cy="108" r="4" fill="white"/>
+              <path d="M86 142Q100 154 114 142" stroke="#083d44" strokeWidth="3.5" strokeLinecap="round" fill="none"/>
+            </svg>
           </div>
-          <h1 className="text-xl font-bold text-sidebar-foreground">
+          <h1 className="text-lg font-bold text-sidebar-foreground font-display">
             {tCommon('dashboard')}
           </h1>
         </div>
-        <LanguageSwitcher />
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
-        {navigation
-          .filter((item) => !item.featureKey || isFeatureEnabled(item.featureKey))
-          .map((item) => {
+      <nav className="flex-1 p-3 space-y-1">
+        {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname.includes(item.href);
-          
+          const isActive = item.href === '/dashboard'
+            ? pathname === '/dashboard' || pathname.endsWith('/dashboard')
+            : pathname.includes(item.href);
+
+          if (item.disabled) {
+            return (
+              <span
+                key={item.name}
+                className="flex items-center gap-3 px-3 py-3 mx-1 rounded-md text-base font-normal font-body uppercase tracking-wider text-sidebar-accent-foreground/40 cursor-not-allowed select-none"
+                title={t(item.name)}
+              >
+                <Icon className="w-4.5 h-4.5" />
+                <span>{t(item.name)}</span>
+              </span>
+            );
+          }
+
           return (
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex items-center gap-3 px-3 py-3 mx-1 rounded-md text-base font-normal transition-colors font-body uppercase tracking-wider ${
                 isActive
-                  ? 'bg-sidebar-accent text-sidebar-primary'
-                  : 'text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                  ? 'bg-sidebar-primary/20 text-sidebar-primary'
+                  : 'text-sidebar-accent-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
               }`}
             >
-              <Icon className="w-5 h-5" />
+              <Icon className="w-4.5 h-4.5" />
               <span>{t(item.name)}</span>
             </Link>
           );
         })}
-        {teacher?.role === 'admin' && (
-          <Link
-            href="/dashboard/admin/teachers"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              pathname.includes('/dashboard/admin/teachers')
-                ? 'bg-sidebar-accent text-sidebar-primary'
-                : 'text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-            }`}
-          >
-            <Users className="w-5 h-5" />
-            <span>{t('settings')}</span>
-          </Link>
-        )}
       </nav>
 
       {/* User Profile */}
       <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center gap-3 mb-4">
-          <Avatar>
-            <AvatarFallback className="bg-sidebar-primary/10 text-sidebar-primary">
+        <div className="flex items-center gap-3 mb-3">
+          <Avatar className="h-9 w-9">
+            <AvatarFallback className="bg-sidebar-primary/10 text-sidebar-primary text-xs rounded-md">
               {teacher?.name ? getTeacherInitials(teacher.name) : 'T'}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">
-              {teacher?.name || t('settings')}
+            <p className="text-base font-semibold text-sidebar-foreground truncate font-body">
+              {teacher?.name || ''}
             </p>
-            <p className="text-xs text-sidebar-accent-foreground truncate">
-              {teacher?.business_name || teacher?.email || ''}
+            <p className="text-xs text-sidebar-primary truncate font-body">
+              {teacher?.role === 'admin' ? tRoles('admin') : teacher?.role === 'teacher' ? tRoles('teacher') : teacher?.role || ''}
             </p>
           </div>
         </div>
         
-        <Button
-          onClick={logout}
-          variant="outline"
-          size="sm"
-          className="w-full gap-2"
-          aria-label={tCommon('logout')}
-        >
-          <LogOut className="w-4 h-4" />
-          {tCommon('logout')}
-        </Button>
+        <div className="flex gap-2">
+          <LanguageSwitcher className="flex-1 justify-start text-sidebar-accent-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent" />
+          <Button
+            onClick={logout}
+            variant="ghost"
+            size="sm"
+            className="gap-2 text-sidebar-accent-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+            aria-label={tCommon('logout')}
+          >
+            <LogOut className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -205,9 +143,9 @@ export function Sidebar() {
     <>
       {/* Mobile hamburger */}
       <button
-        className="fixed top-4 left-4 z-50 md:hidden p-2 rounded-lg bg-sidebar text-sidebar-foreground shadow-lg"
+        className="fixed top-4 left-4 z-50 md:hidden p-3 rounded-none bg-sidebar text-sidebar-foreground"
         onClick={() => setMobileOpen(!mobileOpen)}
-        aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+        aria-label={mobileOpen ? t('closeMenu') : t('openMenu')}
       >
         {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>

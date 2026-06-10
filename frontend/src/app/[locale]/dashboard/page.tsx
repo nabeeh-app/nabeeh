@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAuth, usePermissions } from '@/hooks/useAuth';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 import { DashboardStats } from '@/types';
-import { Users, BarChart3, FileText, MessageSquare, GraduationCap, User, Users2, Zap, BookOpen, ClipboardList, Settings } from 'lucide-react';
+import { Users, BarChart3, FileText, MessageSquare, GraduationCap, User, Users2, Zap, ClipboardList, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { getVisibleNavigation } from '@/config/navigation';
 
 export default function DashboardPage() {
   const { teacher } = useAuth();
@@ -19,6 +20,32 @@ export default function DashboardPage() {
   const tGrades = useTranslations('grades');
   const tMessages = useTranslations('messages');
   const tSettings = useTranslations('settings');
+  const tCourses = useTranslations('courses');
+  const tReports = useTranslations('reports');
+  const tMonitor = useTranslations('monitor');
+  const tRoles = useTranslations('roles');
+
+  const navItems = useMemo(() => getVisibleNavigation(teacher?.role), [teacher?.role]);
+
+  /** Resolve a description from a nav item's descriptionKey + descriptionNs. */
+  const getDescription = (item: (typeof navItems)[number]): string | null => {
+    if (!item.descriptionKey || !item.descriptionNs) return null;
+    const map: Record<string, ReturnType<typeof useTranslations>> = {
+      students: tStudents,
+      attendance: tAttendance,
+      grades: tGrades,
+      messages: tMessages,
+      settings: tSettings,
+      courses: tCourses,
+      reports: tReports,
+      monitor: tMonitor,
+    };
+    const ns = map[item.descriptionNs];
+    return ns ? ns(item.descriptionKey) : null;
+  };
+
+  /** Items that have a description are shown as NavigationCards. */
+  const cardItems = navItems.filter((item) => getDescription(item));
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
@@ -94,29 +121,25 @@ export default function DashboardPage() {
     <div className="space-y-6">
         {/* Header */}
         <header>
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                {t('title')}
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t('welcome')}, {teacher?.name}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${teacher?.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+          <div className="py-6">
+            <h1 className="text-4xl font-bold text-ink font-display">
+              {t('title')}
+            </h1>
+            <p className="mt-2 text-lg text-ink/60 font-body uppercase tracking-wider">
+              {t('welcome')}, {teacher?.name}{' '}
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-pill text-xs font-medium font-mono uppercase tracking-wider ${teacher?.role === 'admin' ? 'bg-surface-sage text-ink' :
                 teacher?.role === 'teacher' ? 'bg-primary/10 text-primary' :
-                  'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                  'bg-accent text-ink'
                 }`}>
-                {teacher?.role}
+                {teacher?.role === 'admin' ? tRoles('admin') : teacher?.role === 'teacher' ? tRoles('teacher') : teacher?.role}
               </span>
-            </div>
+            </p>
           </div>
         </header>
 
         {/* Quick Stats */}
         {statsError && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+          <div className="rounded-md bg-surface-sage px-4 py-3 text-base text-ink font-body">
             {t('statsUnavailable')}
           </div>
         )}
@@ -175,38 +198,21 @@ export default function DashboardPage() {
 
         {/* Navigation Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {cardItems.map((item) => {
+            const Icon = item.icon;
+            const description = getDescription(item);
+            return (
+              <NavigationCard
+                key={item.name}
+                title={tNav(item.name)}
+                description={description!}
+                icon={Icon}
+                href={`/${locale}${item.href}`}
+              />
+            );
+          })}
 
-          {/* Teacher Features */}
-          {isTeacher() && (
-            <>
-              <NavigationCard
-                title={tStudents('title')}
-                description={tStudents('manageDescription')}
-                icon={Users}
-                href={`/${locale}/dashboard/students`}
-              />
-              <NavigationCard
-                title={tAttendance('title')}
-                description={tAttendance('description')}
-                icon={BarChart3}
-                href={`/${locale}/dashboard/attendance`}
-              />
-              <NavigationCard
-                title={tGrades('title')}
-                description={tGrades('descriptionCount')}
-                icon={FileText}
-                href={`/${locale}/dashboard/grades`}
-              />
-              <NavigationCard
-                title={tMessages('title')}
-                description={tMessages('sendViaWhatsApp')}
-                icon={MessageSquare}
-                href={`/${locale}/dashboard/messages`}
-              />
-            </>
-          )}
-
-          {/* Admin Features */}
+          {/* Admin-only cards (not in shared nav config) */}
           {isAdmin() && (
             <>
               <NavigationCard
@@ -229,14 +235,6 @@ export default function DashboardPage() {
               />
             </>
           )}
-
-          {/* Common Features */}
-          <NavigationCard
-            title={tSettings('title')}
-            description={tSettings('preferences')}
-            icon={Settings}
-            href={`/${locale}/dashboard/settings`}
-          />
         </div>
     </div>
   );
@@ -245,22 +243,18 @@ export default function DashboardPage() {
 function StatCard({ title, value, icon }: { title: string; value: string; icon: LucideIcon }) {
   const Icon = icon;
   return (
-    <div className="bg-card overflow-hidden shadow rounded-lg border border-border">
-      <div className="p-5">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <Icon className="h-6 w-6 text-primary" />
-          </div>
-          <div className="ms-5 w-0 flex-1">
-            <dl>
-              <dt className="text-sm font-medium text-muted-foreground truncate">
-                {title}
-              </dt>
-              <dd className="text-lg font-medium text-foreground">
-                {value}
-              </dd>
-            </dl>
-          </div>
+    <div className="bg-surface-sage p-5 rounded-md">
+      <div className="flex items-center gap-4">
+        <div className="flex-shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+          <Icon className="h-4 w-4 text-primary" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-ink/50 truncate font-body uppercase tracking-wider">
+            {title}
+          </p>
+          <p className="text-3xl font-bold text-ink font-display leading-tight">
+            {value}
+          </p>
         </div>
       </div>
     </div>
@@ -282,18 +276,18 @@ function NavigationCard({
   return (
     <a
       href={href}
-      className="bg-card overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200 border border-border"
+      className="block bg-canvas rounded-md shadow-[0_1px_3px_rgba(8,61,68,0.06)] hover:shadow-[0_2px_8px_rgba(8,61,68,0.1)] transition-shadow duration-200"
     >
       <div className="p-6">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <Icon className="h-8 w-8 text-primary" />
+        <div className="flex items-center gap-4">
+          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <Icon className="h-5 w-5 text-primary" />
           </div>
-          <div className="ms-4">
-            <h3 className="text-lg font-medium text-foreground">
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold text-ink font-display">
               {title}
             </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-0.5 text-base text-ink/50 font-body">
               {description}
             </p>
           </div>

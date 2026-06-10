@@ -59,11 +59,27 @@ class TokenService {
 }
 
 /**
+ * Password strength validation
+ */
+class PasswordService {
+    validatePasswordStrength(password) {
+        const errors = [];
+        if (password.length < 8) errors.push('Password must be at least 8 characters');
+        if (password.length > 128) errors.push('Password must not exceed 128 characters');
+        if (!/[A-Z]/.test(password)) errors.push('Password must contain at least one uppercase letter');
+        if (!/[a-z]/.test(password)) errors.push('Password must contain at least one lowercase letter');
+        if (!/[0-9]/.test(password)) errors.push('Password must contain at least one number');
+        return { isValid: errors.length === 0, errors };
+    }
+}
+
+/**
  * Authentication service combining password and token services
  */
 class AuthService {
     constructor() {
         this.tokenService = new TokenService();
+        this.passwordService = new PasswordService();
     }
 
     /**
@@ -92,6 +108,13 @@ class AuthService {
 
             const user = data.user;
 
+            // Generate a local JWT (not Supabase's access_token)
+            const localToken = this.tokenService.generateToken({
+                id: user.id,
+                email: user.email,
+                role: user.user_metadata?.role || 'teacher'
+            });
+
             return {
                 success: true,
                 user: {
@@ -100,7 +123,7 @@ class AuthService {
                     name: user.user_metadata?.name || '',
                     role: user.user_metadata?.role || 'teacher'
                 },
-                token: data.session.access_token,
+                token: localToken,
                 message: 'Login successful',
                 messageAr: 'تم تسجيل الدخول بنجاح'
             };
@@ -117,5 +140,6 @@ class AuthService {
 
 module.exports = {
     TokenService,
+    PasswordService,
     AuthService
 };

@@ -44,8 +44,8 @@ const winstonLogger = require('./lib/logger');
 // Global middleware
 app.use(securityHeaders); // Enhanced security headers
 app.use(cors({
-  origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  origin: (process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || 'http://localhost:3000').split(','),
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 })); // Enable CORS
@@ -76,14 +76,20 @@ app.get('/api/health', (req, res) => {
 });
 
 // API routes with specific rate limiting
-app.use('/api/auth', authRoutes);
-app.use('/api/teachers', teacherRoutes);
-app.use('/api/students', studentRoutes);
-app.use('/api/parents', parentRoutes);
-app.use('/api/attendance', attendanceRoutes);
-app.use('/api/grades', gradeRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/offerings', offeringRoutes);
+if (process.env.USE_MOCK_DB === 'true') {
+  const mockRoutes = require('./routes/mock');
+  app.use('/api', mockRoutes);
+  winstonLogger.info('📦 Using mock data routes (USE_MOCK_DB=true)');
+} else {
+  app.use('/api/auth', authRoutes);
+  app.use('/api/teachers', teacherRoutes);
+  app.use('/api/students', studentRoutes);
+  app.use('/api/parents', parentRoutes);
+  app.use('/api/attendance', attendanceRoutes);
+  app.use('/api/grades', gradeRoutes);
+  app.use('/api/messages', messageRoutes);
+  app.use('/api/offerings', offeringRoutes);
+}
 
 // WhatsApp routes with rate limiting
 app.use('/api/whatsapp', whatsappLimiter, whatsappRoutes);

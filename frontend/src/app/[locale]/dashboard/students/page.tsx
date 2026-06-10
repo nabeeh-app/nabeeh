@@ -2,13 +2,13 @@
 
 import { useTranslations, useLocale } from 'next-intl';
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -36,7 +36,7 @@ import {
   MapPin,
   BookOpen
 } from 'lucide-react';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 import { Student, CreateStudentRequest, Parent, Offering } from '@/types';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -292,12 +292,12 @@ export default function StudentsPage() {
       active: {
         variant: 'default' as const,
         label: t('students.status.active'),
-        color: 'bg-green-100 text-green-800'
+        color: 'bg-surface-sage text-ink'
       },
       inactive: {
         variant: 'secondary' as const,
         label: t('students.status.inactive'),
-        color: 'bg-gray-100 text-gray-800'
+        color: 'bg-surface-cool text-ink/70'
       },
       graduated: {
         variant: 'outline' as const,
@@ -359,7 +359,7 @@ export default function StudentsPage() {
                     id="student_id"
                     value={newStudent.student_id}
                     onChange={(e) => setNewStudent(s => ({ ...s, student_id: e.target.value }))}
-                    placeholder={locale === 'ar' ? 'مثال: ST001' : 'e.g., ST001'}
+                    placeholder={t('students.studentIdPlaceholder')}
                     required
                   />
                 </div>
@@ -371,7 +371,7 @@ export default function StudentsPage() {
                     id="name"
                     value={newStudent.name}
                     onChange={(e) => setNewStudent(s => ({ ...s, name: e.target.value }))}
-                    placeholder={locale === 'ar' ? 'الاسم الكامل' : 'Full name'}
+                    placeholder={t('students.fullNamePlaceholder')}
                     required
                   />
                 </div>
@@ -410,10 +410,10 @@ export default function StudentsPage() {
                     id="grade_level"
                     value={newStudent.grade_level}
                     onChange={(e) => setNewStudent(s => ({ ...s, grade_level: e.target.value }))}
-                    placeholder={locale === 'ar' ? 'مثال: الصف العاشر' : 'e.g., Grade 10'}
+                    placeholder={t('students.gradeLevelPlaceholder')}
                     required
                     readOnly
-                    className="bg-gray-50"
+                    className="bg-surface-cool"
                   />
                 </div>
                 <div>
@@ -450,9 +450,11 @@ export default function StudentsPage() {
                   </Label>
                   <Input
                     id="emergency_contact"
+                    dir="ltr"
+                    className="text-left"
                     value={newStudent.emergency_contact}
                     onChange={(e) => setNewStudent(s => ({ ...s, emergency_contact: e.target.value }))}
-                    placeholder={locale === 'ar' ? '+966xxxxxxxxx' : '+966xxxxxxxxx'}
+                    placeholder="+966xxxxxxxxx"
                   />
                 </div>
               </div>
@@ -467,7 +469,7 @@ export default function StudentsPage() {
                     ...s,
                     subjects: e.target.value.split(',').map(subject => subject.trim()).filter(Boolean)
                   }))}
-                  placeholder={locale === 'ar' ? 'الرياضيات، الفيزياء، الكيمياء' : 'Mathematics, Physics, Chemistry'}
+                  placeholder={t('students.subjectsPlaceholder')}
                 />
               </div>
               <div>
@@ -478,7 +480,7 @@ export default function StudentsPage() {
                   id="address"
                   value={newStudent.address}
                   onChange={(e) => setNewStudent(s => ({ ...s, address: e.target.value }))}
-                  placeholder={locale === 'ar' ? 'العنوان الكامل' : 'Full address'}
+                  placeholder={t('students.addressPlaceholder')}
                 />
               </div>
               <div>
@@ -490,11 +492,11 @@ export default function StudentsPage() {
                   rows={3}
                   value={newStudent.notes}
                   onChange={(e) => setNewStudent(s => ({ ...s, notes: e.target.value }))}
-                  placeholder={locale === 'ar' ? 'ملاحظات إضافية...' : 'Additional notes...'}
+                  placeholder={t('students.notesPlaceholder')}
                 />
               </div>
               {formError && (
-                <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
+                <div className="text-[#c53030] text-sm bg-[#c53030]/10 p-3 rounded">
                   {formError}
                 </div>
               )}
@@ -527,13 +529,13 @@ export default function StudentsPage() {
         searchPlaceholder={t('students.searchPlaceholderShort')}
         resultCount={filteredStudents.length}
         totalCount={students.length}
-        resultLabel={locale === 'ar' ? `عرض ${filteredStudents.length} من ${students.length} طالب` : `Showing ${filteredStudents.length} of ${students.length} students`}
+        resultLabel={t('students.resultLabel', { filtered: filteredStudents.length, total: students.length })}
       >
         <Select
           value={selectedGroupId}
           onValueChange={setSelectedGroupId}
         >
-          <SelectTrigger className="min-w-[200px]">
+          <SelectTrigger className="w-[160px]">
             <SelectValue placeholder={t('students.allClasses')} />
           </SelectTrigger>
           <SelectContent>
@@ -550,7 +552,7 @@ export default function StudentsPage() {
           value={statusFilter}
           onValueChange={setStatusFilter}
         >
-          <SelectTrigger className="min-w-[150px]">
+          <SelectTrigger className="w-[140px]">
             <SelectValue placeholder={t('students.allStatus')} />
           </SelectTrigger>
           <SelectContent>
@@ -562,170 +564,186 @@ export default function StudentsPage() {
         </Select>
       </FilterBar>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
+      <div className="space-y-0">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-ink font-display">
             {t('students.studentList')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {filteredStudents.length === 0 ? (
-            <EmptyState
-              icon={Users}
-              message={
-                searchTerm || statusFilter !== 'all' || gradeFilter !== 'all'
-                  ? t('students.noStudentsMatch')
-                  : t('students.noStudentsYet')
-              }
-            />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('students.student')}</TableHead>
-                  <TableHead>{t('students.details')}</TableHead>
-                  <TableHead>{t('students.fields.subjects')}</TableHead>
-                  <TableHead>{t('students.fields.status')}</TableHead>
-                  <TableHead>{t('students.enrollment')}</TableHead>
-                  <TableHead>{t('students.actionsColumn')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStudents.map((student) => {
-                  const status = getStatusBadge(student.status);
-                  return (
-                    <TableRow key={student.id} className="hover:bg-gray-50">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              {student.name.split(' ')[0].charAt(0)}
-                              {student.name.split(' ')[1]?.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{student.name}</div>
-                            <div className="text-sm text-gray-500">ID: {student.student_id}</div>
-                          </div>
+          </h2>
+        </div>
+        {filteredStudents.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            message={
+              searchTerm || statusFilter !== 'all' || gradeFilter !== 'all'
+                ? t('students.noStudentsMatch')
+                : t('students.noStudentsYet')
+            }
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('students.student')}</TableHead>
+                <TableHead>{t('students.details')}</TableHead>
+                <TableHead>{t('students.fields.subjects')}</TableHead>
+                <TableHead>{t('students.fields.status')}</TableHead>
+                <TableHead>{t('students.enrollment')}</TableHead>
+                <TableHead>{t('students.actionsColumn')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStudents.map((student) => {
+                const status = getStatusBadge(student.status);
+                return (
+                  <TableRow key={student.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {student.name.split(' ')[0].charAt(0)}
+                            {student.name.split(' ')[1]?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{student.name}</div>
+                          <div className="text-sm text-ink/60">ID: {student.student_id}</div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm space-y-1">
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm space-y-1">
+                        <div className="flex items-center gap-1">
+                          <GraduationCap className="h-3 w-3 text-ink/40" />
+                          <span>{student.grade_level}</span>
+                        </div>
+                        {student.emergency_contact && (
                           <div className="flex items-center gap-1">
-                            <GraduationCap className="h-3 w-3 text-gray-400" />
-                            <span>{student.grade_level}</span>
+                            <Phone className="h-3 w-3 text-ink/40" />
+                            <span className="text-ink/60">{student.emergency_contact}</span>
                           </div>
-                          {student.emergency_contact && (
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3 text-gray-400" />
-                              <span className="text-gray-600">{student.emergency_contact}</span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {student.subjects?.slice(0, 2).map((subject, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {subject}
-                            </Badge>
-                          ))}
-                          {student.subjects && student.subjects.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{student.subjects.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={status.variant} className={status.color}>
-                          {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {new Date(student.enrollment_date).toLocaleDateString(
-                            locale === 'ar' ? 'ar-SA' : 'en-US'
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewStudent(student)}
-                            aria-label={t('students.viewDetails')}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditStudent(student)}
-                            aria-label={t('common.edit')}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteStudent(student)}
-                            className="text-destructive hover:text-destructive/80"
-                            aria-label={t('common.delete')}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {student.subjects?.slice(0, 2).map((subject, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {subject}
+                          </Badge>
+                        ))}
+                        {student.subjects && student.subjects.length > 2 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{student.subjects.length - 2}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={status.variant} className={status.color}>
+                        {status.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {new Date(student.enrollment_date).toLocaleDateString(
+                          locale === 'ar' ? 'ar-SA' : 'en-US'
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewStudent(student)}
+                          aria-label={t('students.viewDetails')}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditStudent(student)}
+                          aria-label={t('common.edit')}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteStudent(student)}
+                          className="text-destructive hover:text-destructive/80"
+                          aria-label={t('common.delete')}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
+      </div>
 
       {/* View Student Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setViewModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
+          <DialogClose asChild>
+            <button
+              className="absolute top-4 ltr:right-4 rtl:left-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              aria-label={t('common.close')}
+            >
+              <span className="sr-only">{t('common.close')}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </DialogClose>
+
           <DialogHeader>
             <DialogTitle>
               {t('students.studentDetails')}
             </DialogTitle>
           </DialogHeader>
+
           {selectedStudent && (
             <div className="space-y-6">
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-16 w-16">
+              {/* ── Header: Avatar + Name + Badge ── */}
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16 shrink-0">
                   <AvatarFallback className="bg-primary/10 text-primary text-xl">
                     {selectedStudent.name.split(' ')[0].charAt(0)}
                     {selectedStudent.name.split(' ')[1]?.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <h3 className="text-xl font-semibold">{selectedStudent.name}</h3>
-                  <p className="text-gray-600">ID: {selectedStudent.student_id}</p>
-                  <Badge variant={getStatusBadge(selectedStudent.status).variant}>
-                    {getStatusBadge(selectedStudent.status).label}
-                  </Badge>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-xl font-semibold truncate">{selectedStudent.name}</h3>
+                    <Badge variant={getStatusBadge(selectedStudent.status).variant} className="shrink-0">
+                      {getStatusBadge(selectedStudent.status).label}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-ink/60 mt-0.5" dir="ltr" style={{ direction: 'ltr' }}>
+                    ID: {selectedStudent.student_id}
+                  </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium mb-2">
+              {/* ── Two-column grid ── */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Right column — Basic Info (RTL: right side) */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
                     {t('students.basicInfo')}
                   </h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <GraduationCap className="h-4 w-4 text-gray-400" />
+                  <div className="space-y-2.5 text-sm">
+                    <div className="flex items-center gap-2.5">
+                      <GraduationCap className="h-4 w-4 text-ink/40 shrink-0" />
                       <span>{selectedStudent.grade_level}</span>
                     </div>
                     {selectedStudent.date_of_birth && (
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
+                      <div className="flex items-center gap-2.5">
+                        <Calendar className="h-4 w-4 text-ink/40 shrink-0" />
                         <span>
                           {new Date(selectedStudent.date_of_birth).toLocaleDateString(
                             locale === 'ar' ? 'ar-SA' : 'en-US'
@@ -734,48 +752,57 @@ export default function StudentsPage() {
                       </div>
                     )}
                     {selectedStudent.gender && (
-                      <div>
-                        <strong>{t('students.genderLabel')}</strong> {
-                          selectedStudent.gender === 'male'
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-ink/40">·</span>
+                        <span>
+                          <span className="text-ink/60">{t('students.genderLabel')}</span>{' '}
+                          {selectedStudent.gender === 'male'
                             ? t('students.gender.male')
                             : t('students.gender.female')
-                        }
+                          }
+                        </span>
                       </div>
                     )}
                     {selectedStudent.address && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-gray-400" />
+                      <div className="flex items-center gap-2.5">
+                        <MapPin className="h-4 w-4 text-ink/40 shrink-0" />
                         <span>{selectedStudent.address}</span>
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="font-medium mb-2">
+                {/* Left column — Contact Info (RTL: left side) */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
                     {t('students.contactInfo')}
                   </h4>
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-2.5 text-sm">
                     {selectedStudent.emergency_contact && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-gray-400" />
-                        <span>{selectedStudent.emergency_contact}</span>
+                      <div className="flex items-center gap-2.5">
+                        <Phone className="h-4 w-4 text-ink/40 shrink-0" />
+                        <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
+                          {selectedStudent.emergency_contact}
+                        </span>
                       </div>
                     )}
-                    <div>
-                      <strong>{t('students.enrollmentDateLabel')}</strong>
-                      <br />
-                      {new Date(selectedStudent.enrollment_date).toLocaleDateString(
-                        locale === 'ar' ? 'ar-SA' : 'en-US'
-                      )}
+                    <div className="flex items-center gap-2.5">
+                      <Calendar className="h-4 w-4 text-ink/40 shrink-0" />
+                      <span>
+                        <span className="text-ink/60">{t('students.enrollmentDateLabel')}:</span>{' '}
+                        {new Date(selectedStudent.enrollment_date).toLocaleDateString(
+                          locale === 'ar' ? 'ar-SA' : 'en-US'
+                        )}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* ── Subjects ── */}
               {selectedStudent.subjects && selectedStudent.subjects.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2">
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
                     {t('students.fields.subjects')}
                   </h4>
                   <div className="flex flex-wrap gap-2">
@@ -788,37 +815,42 @@ export default function StudentsPage() {
                 </div>
               )}
 
+              {/* ── Parents ── */}
               {selectedStudent.parents && selectedStudent.parents.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2">
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
                     {t('students.parentsGuardians')}
                   </h4>
                   <div className="space-y-2">
                     {selectedStudent.parents.map((parent) => (
-                      <div key={parent.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                        <div>
-                          <div className="font-medium">{parent.name}</div>
-                          <div className="text-sm text-gray-600">
-                            {parent.relationship} • {parent.phone}
+                      <div key={parent.id} className="flex items-center justify-between p-3 bg-surface-cool rounded gap-3">
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{parent.name}</div>
+                          <div className="text-sm text-ink/60" dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
+                            {parent.phone}
                           </div>
                         </div>
-                        {parent.is_primary && (
-                          <Badge variant="outline" className="text-xs">
-                            {t('students.primary')}
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-ink/60">{parent.relationship}</span>
+                          {parent.is_primary && (
+                            <Badge variant="outline" className="text-xs">
+                              {t('students.primary')}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* ── Notes ── */}
               {selectedStudent.notes && (
-                <div>
-                  <h4 className="font-medium mb-2">
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
                     {t('students.fields.notes')}
                   </h4>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                  <p className="text-sm text-ink/60 bg-surface-cool p-3 rounded">
                     {selectedStudent.notes}
                   </p>
                 </div>
@@ -896,12 +928,12 @@ export default function StudentsPage() {
                   value={newStudent.grade_level}
                   onChange={(e) => setNewStudent(s => ({ ...s, grade_level: e.target.value }))}
                   required
-                  readOnly
-                  className="bg-gray-50"
-                />
-              </div>
-                <div>
-                  <Label htmlFor="edit_status">
+                   readOnly
+                   className="bg-surface-cool"
+                 />
+               </div>
+                 <div>
+                   <Label htmlFor="edit_status">
                     {t('students.fields.status')}
                   </Label>
                   <Select
@@ -920,7 +952,7 @@ export default function StudentsPage() {
                 </div>
             </div>
             {formError && (
-              <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
+              <div className="text-[#c53030] text-sm bg-[#c53030]/10 p-3 rounded">
                 {formError}
               </div>
             )}

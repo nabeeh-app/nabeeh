@@ -1,0 +1,21 @@
+{
+  "name": "nabeeh",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bilingual (AR/EN) smart teaching assistant",
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:mock": "concurrently -n backend,frontend -c blue,green \"npm run dev:backend:mock\" \"npm run dev:frontend:mock\"",
+    "dev:backend:mock": "cd backend && USE_MOCK_DB=true npm run dev",
+    "dev:frontend:mock": "cd frontend && NEXT_PUBLIC_USE_MOCK=true npm run dev",
+    "start": "concurrently -n backend,frontend -c blue,green \"cd backend && node server.js\" \"cd frontend && npm start\"",
+    "start:mock": "concurrently -n backend,frontend -c blue,green \"cd backend && USE_MOCK_DB=true node server.js\" \"cd frontend && NEXT_PUBLIC_USE_MOCK=true npm run build && npm start\"",
+    "stop": "node scripts/stop-services.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "shadcn": "^4.11.0"
+  }
+}

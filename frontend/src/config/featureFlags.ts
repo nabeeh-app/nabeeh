@@ -15,11 +15,11 @@ const parseEnvFlag = (value: string | undefined, defaultValue = false) => {
 };
 
 export const featureFlags = {
-  grades: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_GRADES),
-  reports: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_REPORTS),
+  grades: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_GRADES, true),
+  reports: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_REPORTS, true),
   messaging: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_MESSAGING),
-  courses: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_COURSES),
-  monitor: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_MONITOR),
+  courses: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_COURSES, true),
+  monitor: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_MONITOR, true),
 } as const;
 
 export type FeatureKey = keyof typeof featureFlags;

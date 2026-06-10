@@ -1,13 +1,36 @@
+'use client';
 
-import { redirect } from '@/i18n/routing';
+import { GridPattern } from '@/components/ui/grid-pattern';
+import { LandingNav } from '@/components/landing/LandingNav';
+import { Hero } from '@/components/landing/Hero';
+import { ProblemSection } from '@/components/landing/ProblemSection';
+import { FeaturesSection } from '@/components/landing/FeaturesSection';
+import { ScreenshotCarousel } from '@/components/landing/ScreenshotCarousel';
+import { PricingSection } from '@/components/landing/PricingSection';
+import { FAQSection } from '@/components/landing/FAQSection';
+import { Footer } from '@/components/landing/Footer';
 
-type Props = {
-    params: Promise<{ locale: string }>;
-};
-
-export default async function LocalePage({ params }: Props) {
-    const { locale } = await params;
-
-    // Redirect to login page
-    redirect({ href: '/login', locale: locale });
+export default function LandingPage() {
+  return (
+    <div className="relative min-h-screen bg-canvas">
+      <GridPattern
+        width={30}
+        height={30}
+        squares={[[1, 1], [4, 3], [7, 5], [10, 2], [13, 6]]}
+        className="opacity-50"
+      />
+      <div className="relative z-10">
+        <LandingNav />
+        <main>
+          <Hero />
+          <ProblemSection />
+          <FeaturesSection />
+          <ScreenshotCarousel />
+          <PricingSection />
+          <FAQSection />
+        </main>
+        <Footer />
+      </div>
+    </div>
+  );
 }

@@ -44,15 +44,35 @@ async function processIncomingMessage(phone, messageContent, remoteJid, messageI
     return;
   }
 
-  const teacher = parent.students.teachers;
-  const student = parent.students;
+  // Support multiple students per parent
+  const students = Array.isArray(parent.students) ? parent.students : [parent.students];
+
+  if (students.length === 0) {
+    logger.warn('Parent has no students', { parentId: parent.id });
+    return;
+  }
+
+  // Use first student's teacher for conversation context
+  const firstStudent = students[0];
+  const teacher = firstStudent.enrollments?.[0]?.group?.offering?.teacher;
+  if (!teacher) {
+    logger.warn('No teacher found for parent students', { parentId: parent.id });
+    return;
+  }
+
   const conversation = await whatsappQuery.findOrCreateConversation(parent.id, teacher.id, remoteJid);
   if (!conversation) return;
 
   await whatsappQuery.saveMessage(conversation.id, 'incoming', messageContent, { whatsapp_message_id: messageId });
 
   const language = parent.preferred_language || 'ar';
-  const response = await handleBotMessage(messageContent, parent, student, teacher, language);
+
+  // Try each student until we get a match (e.g. "Ahmed's grades" matches a student name)
+  let response = null;
+  for (const student of students) {
+    response = await handleBotMessage(messageContent, parent, student, teacher, language);
+    if (response) break;
+  }
 
   if (response) {
     await baileysClient.sendMessage(remoteJid, response.text);

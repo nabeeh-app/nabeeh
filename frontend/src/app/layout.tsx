@@ -1,23 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { Cairo } from "next/font/google";
+import { DM_Mono } from "next/font/google";
 import "./globals.css";
 import ErrorBoundary from "@/components/error-boundary";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const dmMono = DM_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const cairo = Cairo({
-  variable: "--font-cairo",
-  subsets: ["arabic", "latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["300", "400", "500"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -32,8 +22,8 @@ export default function RootLayout({
 }>) {
   return (
     <html suppressHydrationWarning>
-      <body 
-        className={`${geistSans.variable} ${geistMono.variable} ${cairo.variable} antialiased`}
+      <body
+        className={`${dmMono.variable} antialiased`}
         suppressHydrationWarning
       >
         <ErrorBoundary>

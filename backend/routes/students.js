@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { validate, createStudentSchema, updateStudentSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
 
 const router = express.Router();
@@ -120,7 +121,7 @@ const getStudent = async (req, res) => {
         grade_records:enrollments (
             grades (
                 score,
-                assessment:assessments (title, total_marks, date)
+                assessment:assessments (name, max_score, date)
             )
         )
       `)
@@ -390,7 +391,7 @@ const getStudentStats = async (req, res) => {
       .from('grades')
       .select(`
             score,
-            assessment:assessments(total_marks)
+            assessment:assessments(max_score)
         `)
       .in('enrollment_id', enrollmentIds);
 
@@ -402,8 +403,8 @@ const getStudentStats = async (req, res) => {
     if (grades && grades.length > 0) {
       let totalPct = 0;
       grades.forEach(g => {
-        if (g.assessment?.total_marks) {
-          totalPct += (g.score / g.assessment.total_marks) * 100;
+        if (g.assessment?.max_score) {
+          totalPct += (g.score / g.assessment.max_score) * 100;
         }
       });
       academicStats.total_assessments = grades.length;
@@ -424,12 +425,12 @@ const getStudentStats = async (req, res) => {
   }
 };
 
-// Route definitions
+// Route definitions (specific routes before parameterized ones)
 router.get('/', authenticateToken, getStudents);
-router.get('/:id', authenticateToken, getStudent);
-router.post('/', authenticateToken, createStudent);
-router.put('/:id', authenticateToken, updateStudent);
-router.delete('/:id', authenticateToken, deleteStudent);
 router.get('/:id/stats', authenticateToken, getStudentStats);
+router.get('/:id', authenticateToken, getStudent);
+router.post('/', authenticateToken, validate(createStudentSchema), createStudent);
+router.put('/:id', authenticateToken, validate(updateStudentSchema), updateStudent);
+router.delete('/:id', authenticateToken, deleteStudent);
 
 module.exports = router;

@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { validate, createGradeSchema, bulkGradeSchema, updateGradeSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
 
 const router = express.Router();
@@ -54,10 +55,11 @@ const getGrades = async (req, res) => {
       .select(`
         id,
         score,
+        notes,
         assessment:assessments!inner (
             id,
-            title,
-            total_marks,
+            name,
+            max_score,
             date,
             offering:offerings!inner (
                 teacher_id,
@@ -99,16 +101,16 @@ const getGrades = async (req, res) => {
     let grades = gradesData.map(g => ({
       id: g.id,
       student_id: g.enrollment.student.id,
-      student_code: g.enrollment.student.student_code, // Return code if needed
+      student_code: g.enrollment.student.student_code,
       student_name: g.enrollment.student.name,
-      student_name: g.enrollment.student.name,
-      subject: g.assessment.offering.subject.name_en, // Return standard name
-      assessment_type: g.assessment.title, // or infer type?
-      assessment_name: g.assessment.title,
+      subject: g.assessment.offering.subject.name_en,
+      subject_code: g.assessment.offering.subject.code,
+      assessment_type: g.assessment.name,
+      assessment_name: g.assessment.name,
       score: g.score,
-      max_score: g.assessment.total_marks,
+      max_score: g.assessment.max_score,
       date: g.assessment.date,
-      percentage: (g.score / g.assessment.total_marks) * 100,
+      percentage: (g.score / g.assessment.max_score) * 100,
       notes: g.notes
     }));
 
@@ -116,8 +118,8 @@ const getGrades = async (req, res) => {
     if (subject) {
       const lowerSub = subject.toLowerCase();
       grades = grades.filter(g =>
-        g.subject.toLowerCase().includes(lowerSub) ||
-        g.assessment.offering.subject.code?.toLowerCase().includes(lowerSub)
+        g.subject?.toLowerCase().includes(lowerSub) ||
+        g.subject_code?.toLowerCase().includes(lowerSub)
       );
     }
 
@@ -173,7 +175,7 @@ const createGrade = async (req, res) => {
       .from('assessments')
       .select('id')
       .eq('offering_id', offering_id)
-      .eq('title', assessment_name)
+      .eq('name', assessment_name)
       .eq('date', assessmentDate)
       .single();
 
@@ -183,8 +185,8 @@ const createGrade = async (req, res) => {
         .from('assessments')
         .insert([{
           offering_id,
-          title: assessment_name,
-          total_marks: max_score,
+          name: assessment_name,
+          max_score: max_score,
           date: assessmentDate
         }])
         .select()
@@ -266,7 +268,7 @@ const createBulkGrades = async (req, res) => {
           .from('assessments')
           .select('id')
           .eq('offering_id', offering_id)
-          .eq('title', assessment_name)
+          .eq('name', assessment_name)
           .eq('date', assessmentDate)
           .single();
 
@@ -275,8 +277,8 @@ const createBulkGrades = async (req, res) => {
             .from('assessments')
             .insert([{
               offering_id,
-              title: assessment_name,
-              total_marks: max_score,
+              name: assessment_name,
+              max_score: max_score,
               date: assessmentDate
             }])
             .select()
@@ -354,11 +356,11 @@ const updateGrade = async (req, res) => {
 
         // Assessment fields
         if (key === 'assessment_name') {
-          assessmentUpdates.title = req.body.assessment_name;
+          assessmentUpdates.name = req.body.assessment_name;
           hasAssessmentUpdates = true;
         }
         if (key === 'max_score') {
-          assessmentUpdates.total_marks = parseFloat(req.body.max_score);
+          assessmentUpdates.max_score = parseFloat(req.body.max_score);
           hasAssessmentUpdates = true;
         }
         if (key === 'date') {
@@ -407,7 +409,7 @@ const updateGrade = async (req, res) => {
       .select(`
             id, score, notes,
             assessment:assessments (
-                title, total_marks, date,
+                name, max_score, date,
                 offering:offerings(subject:subjects(name_en))
             ),
             enrollment:enrollments(
@@ -421,8 +423,8 @@ const updateGrade = async (req, res) => {
       id: updatedGrade.id,
       score: updatedGrade.score,
       notes: updatedGrade.notes,
-      max_score: updatedGrade.assessment.total_marks,
-      assessment_name: updatedGrade.assessment.title,
+      max_score: updatedGrade.assessment.max_score,
+      assessment_name: updatedGrade.assessment.name,
       date: updatedGrade.assessment.date,
       subject: updatedGrade.assessment.offering.subject.name_en,
       student_id: updatedGrade.enrollment.student.id,
@@ -492,8 +494,8 @@ const getGradeStats = async (req, res) => {
       .select(`
         score,
         assessment:assessments!inner (
-           title,
-           total_marks,
+           name,
+           max_score,
            offering:offerings!inner(
                teacher_id,
                subject:subjects(name_en, code)
@@ -538,7 +540,7 @@ const getGradeStats = async (req, res) => {
     let totalPercentage = 0;
 
     grades.forEach(g => {
-      const percentage = (g.score / g.assessment.total_marks) * 100;
+      const percentage = (g.score / g.assessment.max_score) * 100;
       totalPercentage += percentage;
 
       const subjName = g.assessment.offering.subject.name_en;
@@ -586,9 +588,9 @@ const getGradeStats = async (req, res) => {
 
 // Route definitions
 router.get('/', authenticateToken, getGrades);
-router.post('/', authenticateToken, createGrade);
-router.post('/bulk', authenticateToken, createBulkGrades);
-router.put('/:id', authenticateToken, updateGrade);
+router.post('/', authenticateToken, validate(createGradeSchema), createGrade);
+router.post('/bulk', authenticateToken, validate(bulkGradeSchema), createBulkGrades);
+router.put('/:id', authenticateToken, validate(updateGradeSchema), updateGrade);
 router.delete('/:id', authenticateToken, deleteGrade);
 router.get('/stats', authenticateToken, getGradeStats);
 

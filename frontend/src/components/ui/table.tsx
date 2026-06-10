@@ -8,7 +8,7 @@ const Table = React.forwardRef<
   <div className="relative w-full overflow-auto">
     <table
       ref={ref}
-      className={cn("w-full caption-bottom text-sm", className)}
+      className={cn("w-full caption-bottom text-base font-body", className)}
       {...props}
     />
   </div>
@@ -19,7 +19,7 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
+  <thead ref={ref} className={cn("[&_tr]:border-b border-ink/20", className)} {...props} />
 ))
 TableHeader.displayName = "TableHeader"
 
@@ -41,7 +41,7 @@ const TableFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <tfoot
     ref={ref}
-    className={cn("border-t bg-muted/50 font-medium [&>tr]:last:border-b-0", className)}
+    className={cn("border-t border-ink/20 bg-surface-sage font-medium [&>tr]:last:border-b-0 font-mono uppercase tracking-wider", className)}
     {...props}
   />
 ))
@@ -54,7 +54,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+      "border-b border-ink/10 transition-colors hover:bg-surface-cool/50 data-[state=selected]:bg-surface-sage",
       className
     )}
     {...props}
@@ -69,7 +69,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
+      "h-12 px-4 text-start align-middle font-medium text-ink/70 font-mono uppercase tracking-wider [&:has([role=checkbox])]:pr-0",
       className
     )}
     {...props}
@@ -95,7 +95,7 @@ const TableCaption = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <caption
     ref={ref}
-    className={cn("mt-4 text-sm text-muted-foreground", className)}
+    className={cn("mt-4 text-sm text-ink/70 font-mono uppercase tracking-wider", className)}
     {...props}
   />
 ))

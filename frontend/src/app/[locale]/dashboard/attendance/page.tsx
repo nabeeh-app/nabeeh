@@ -41,7 +41,7 @@ import {
   FileText,
   BarChart3
 } from 'lucide-react';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 import { Attendance, BulkAttendanceRequest, Offering, Student } from '@/types';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -294,15 +294,15 @@ export default function AttendancePage() {
   const getStatusIcon = (status: string | null) => {
     switch (status) {
       case 'present':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-[#026370]" />;
       case 'absent':
-        return <XCircle className="h-4 w-4 text-red-600" />;
+        return <XCircle className="h-4 w-4 text-[#c53030]" />;
       case 'late':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
+        return <Clock className="h-4 w-4 text-ink/70" />;
       case 'excused':
         return <AlertCircle className="h-4 w-4 text-primary" />;
       default:
-        return <div className="h-4 w-4 rounded-full border-2 border-gray-300" />;
+        return <div className="h-4 w-4 rounded-pill border-2 border-ink/20" />;
     }
   };
 
@@ -311,17 +311,17 @@ export default function AttendancePage() {
       present: {
         variant: 'default' as const,
         label: t('attendance.status.present'),
-        color: 'bg-green-100 text-green-800'
+        color: 'bg-surface-sage text-ink'
       },
       absent: {
         variant: 'destructive' as const,
         label: t('attendance.status.absent'),
-        color: 'bg-red-100 text-red-800'
+        color: 'bg-[#c53030]/10 text-[#c53030]'
       },
       late: {
         variant: 'outline' as const,
         label: t('attendance.status.late'),
-        color: 'bg-yellow-100 text-yellow-800'
+        color: 'bg-surface-cool text-ink/70'
       },
       excused: {
         variant: 'secondary' as const,
@@ -399,16 +399,16 @@ export default function AttendancePage() {
   if (noGroups) {
     return (
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink/20 bg-surface-sage p-4 text-ink">
           <div className="space-y-1">
             <p className="text-sm font-semibold">
               {t('attendance.noGroups')}
             </p>
-            <p className="text-sm text-amber-700">
+            <p className="text-sm text-ink/70">
               {t('attendance.noGroupsDescription')}
             </p>
           </div>
-          <Button asChild variant="outline" className="border-amber-300 text-amber-900 hover:bg-amber-100">
+          <Button asChild variant="outline" className="border-ink/20 text-ink hover:bg-surface-cool">
             <Link href={`/${locale}/dashboard/classes?setup=required`}>
               {t('attendance.setUpGroups')}
             </Link>
@@ -471,41 +471,41 @@ export default function AttendancePage() {
             {attendanceStats && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-4 bg-primary/5 rounded-lg">
-                    <div className="text-2xl font-bold text-primary">
-                      {attendanceStats.total_sessions}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {t('attendance.totalSessions')}
-                    </div>
-                  </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">
-                      {attendanceStats.attendance_rate}%
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {t('attendance.attendanceRate')}
-                    </div>
-                  </div>
-                </div>
+                   <div className="text-center p-4 bg-surface-sage rounded-lg">
+                     <div className="text-2xl font-bold text-ink">
+                       {attendanceStats.total_sessions}
+                     </div>
+                     <div className="text-sm text-ink/60">
+                       {t('attendance.totalSessions')}
+                     </div>
+                   </div>
+                     <div className="text-center p-4 bg-surface-sage rounded-lg">
+                     <div className="text-2xl font-bold text-[#026370]">
+                       {attendanceStats.attendance_rate}%
+                     </div>
+                     <div className="text-sm text-ink/60">
+                       {t('attendance.attendanceRate')}
+                     </div>
+                   </div>
+                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <CheckCircle className="h-4 w-4 text-[#026370]" />
                       {t('attendance.status.present')}
                     </span>
                     <span className="font-medium">{attendanceStats.present_count}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2">
-                      <XCircle className="h-4 w-4 text-red-600" />
+                      <XCircle className="h-4 w-4 text-[#c53030]" />
                       {t('attendance.status.absent')}
                     </span>
                     <span className="font-medium">{attendanceStats.absent_count}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-yellow-600" />
+                      <Clock className="h-4 w-4 text-ink/70" />
                       {t('attendance.status.late')}
                     </span>
                     <span className="font-medium">{attendanceStats.late_count}</span>
@@ -534,10 +534,10 @@ export default function AttendancePage() {
       {viewMode === 'calendar' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {!selectedGroupId ? (
-            <div className="lg:col-span-3 text-center p-12 bg-gray-50 rounded-lg border border-dashed">
-              <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900">{t('attendance.pleaseSelectClass')}</h3>
-              <p className="text-gray-500">{t('attendance.pleaseSelectClassDescription')}</p>
+            <div className="lg:col-span-3 text-center p-12 bg-surface-cool rounded-lg border border-dashed border-ink/20">
+              <AlertCircle className="h-12 w-12 text-ink/40 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-ink">{t('attendance.pleaseSelectClass')}</h3>
+              <p className="text-ink/60">{t('attendance.pleaseSelectClassDescription')}</p>
             </div>
           ) : (
             <>
@@ -552,40 +552,40 @@ export default function AttendancePage() {
                         })}
                       </CardTitle>
                       <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')} aria-label={t('previous')}>
+                        <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')} aria-label={t('common.previous')}>
                           <ChevronLeft className="w-4 h-4" />
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => navigateMonth('next')} aria-label={t('next')}>
+                        <Button variant="outline" size="sm" onClick={() => navigateMonth('next')} aria-label={t('common.next')}>
                           <ChevronRight className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-7 gap-1 mb-4">
+                    <div className="grid grid-cols-7 gap-1.5 mb-4">
                       {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                        <div key={day} className="p-2 text-center text-sm font-medium text-gray-500">
+                        <div key={day} className="p-2 text-center text-sm font-medium text-ink/60">
                           {t(`attendance.days.${day.toLowerCase()}`)}
                         </div>
                       ))}
                     </div>
-                    <div className="grid grid-cols-7 gap-1">
+                    <div className="grid grid-cols-7 gap-1.5">
                       {generateCalendarDays().map((day, index) => (
                         <button
                           key={index}
                           onClick={() => setSelectedDate(day.dateStr)}
                           aria-label={day.date.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                           className={`
-                            p-2 text-sm rounded-lg border transition-colors
-                            ${day.isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'}
-                            ${day.isToday ? 'bg-primary/10 border-primary/30' : 'border-border'}
-                            ${day.isSelected ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'}
+                            p-2 min-h-[44px] text-sm rounded-lg border transition-colors
+                            ${day.isCurrentMonth ? 'text-ink' : 'text-ink/40'}
+                            ${day.isToday ? 'bg-primary/10 border-primary/30' : 'border-ink/20'}
+                            ${day.isSelected ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-surface-cool'}
                             ${day.hasAttendance ? 'font-semibold' : ''}
                           `}
                         >
                           <div>{day.date.getDate()}</div>
                           {day.hasAttendance && (
-                            <div className="w-1 h-1 bg-green-500 rounded-full mx-auto mt-1"></div>
+                            <div className="w-1 h-1 bg-[#026370] rounded-full mx-auto mt-1"></div>
                           )}
                         </button>
                       ))}
@@ -600,7 +600,7 @@ export default function AttendancePage() {
                     <CardTitle>
                       {t('attendance.todayAttendance')}
                     </CardTitle>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-ink/60">
                       {new Date(selectedDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}
                     </p>
                   </CardHeader>
@@ -611,7 +611,7 @@ export default function AttendancePage() {
                           <div key={student.student_id} className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
                               <Avatar className="h-8 w-8">
-                                <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
+                                <AvatarFallback className="bg-surface-cool text-ink/60 text-xs">
                                   {student.name.split(' ')[0].charAt(0)}
                                   {student.name.split(' ')[1]?.charAt(0)}
                                 </AvatarFallback>
@@ -644,10 +644,10 @@ export default function AttendancePage() {
 
       {/* Bulk Entry View */}
       {viewMode === 'bulk' && !selectedGroupId ? (
-        <div className="text-center p-12 bg-gray-50 rounded-lg border border-dashed">
-          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900">{t('attendance.pleaseSelectClass')}</h3>
-          <p className="text-gray-500">{t('attendance.pleaseSelectClassDescription')}</p>
+        <div className="text-center p-12 bg-surface-cool rounded-lg border border-dashed border-ink/20">
+          <AlertCircle className="h-12 w-12 text-ink/40 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-ink">{t('attendance.pleaseSelectClass')}</h3>
+          <p className="text-ink/60">{t('attendance.pleaseSelectClassDescription')}</p>
         </div>
       ) : viewMode === 'bulk' && (
         <Card>
@@ -657,7 +657,7 @@ export default function AttendancePage() {
                 <CardTitle>
                   {t('attendance.bulkAttendanceEntry')}
                 </CardTitle>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-ink/60 mt-1">
                   {new Date(selectedDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
                     weekday: 'long',
                     year: 'numeric',
@@ -686,7 +686,7 @@ export default function AttendancePage() {
                   ) : (
                     <>
                       <UserCheck className="w-4 h-4" />
-                      {t('attendance.saveAttendance')}
+                      {t('attendance.actions.saveAttendance')}
                     </>
                   )}
                 </Button>
@@ -696,7 +696,7 @@ export default function AttendancePage() {
           <CardContent>
             {dailyAttendance && (
               <div className="space-y-4">
-                <div className="flex items-center space-x-2 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-2 p-4 bg-surface-cool rounded-lg">
                   <span className="text-sm font-medium">
                     {t('attendance.quickActions')}
                   </span>
@@ -740,7 +740,7 @@ export default function AttendancePage() {
                           </Avatar>
                           <div>
                             <div className="font-medium">{student.name}</div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-ink/60">
                               {studentData?.grade_level}
                             </div>
                           </div>
@@ -796,105 +796,101 @@ export default function AttendancePage() {
 
       {/* List View */}
       {viewMode === 'list' && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>
-                {t('attendance.attendanceRecords')}
-              </CardTitle>
-              <div className="flex items-center space-x-2">
-                <Input
-                  placeholder={t('attendance.searchStudent')}
-                  value={studentFilter}
-                  onChange={(e) => setStudentFilter(e.target.value)}
-                  className="w-64"
-                />
-                <Select
-                  value={statusFilter}
-                  onValueChange={setStatusFilter}
-                >
-                  <SelectTrigger className="min-w-[150px]">
-                    <SelectValue placeholder={t('attendance.allStatus')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('attendance.allStatus')}</SelectItem>
-                    <SelectItem value="present">{t('attendance.status.present')}</SelectItem>
-                    <SelectItem value="absent">{t('attendance.status.absent')}</SelectItem>
-                    <SelectItem value="late">{t('attendance.status.late')}</SelectItem>
-                    <SelectItem value="excused">{t('attendance.status.excused')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {filteredRecords.length === 0 ? (
-              <EmptyState
-                icon={Calendar}
-                message={t('attendance.noRecords')}
+        <div className="space-y-0">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-ink font-display">
+              {t('attendance.attendanceRecords')}
+            </h2>
+            <div className="flex items-center space-x-2">
+              <Input
+                placeholder={t('attendance.searchStudent')}
+                value={studentFilter}
+                onChange={(e) => setStudentFilter(e.target.value)}
+                className="w-64"
               />
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('attendance.student')}</TableHead>
-                    <TableHead>{t('attendance.date')}</TableHead>
-                    <TableHead>{t('attendance.status')}</TableHead>
-                    <TableHead>{t('attendance.notes')}</TableHead>
-                    <TableHead>{t('attendance.recordedAt')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRecords.map((record) => {
-                    const status = getStatusBadge(record.status);
-                    return (
-                      <TableRow key={record.id}>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="bg-gray-100 text-gray-600">
-                                {record.student?.name?.split(' ')[0]?.charAt(0)}
-                                {record.student?.name?.split(' ')[1]?.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium">{record.student?.name || t('attendance.unknown')}</div>
-                              <div className="text-sm text-gray-500">
-                                {record.student?.grade_level}
-                              </div>
+              <Select
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+              >
+                <SelectTrigger className="min-w-[150px]">
+                  <SelectValue placeholder={t('attendance.allStatus')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('attendance.allStatus')}</SelectItem>
+                  <SelectItem value="present">{t('attendance.status.present')}</SelectItem>
+                  <SelectItem value="absent">{t('attendance.status.absent')}</SelectItem>
+                  <SelectItem value="late">{t('attendance.status.late')}</SelectItem>
+                  <SelectItem value="excused">{t('attendance.status.excused')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {filteredRecords.length === 0 ? (
+            <EmptyState
+              icon={Calendar}
+              message={t('attendance.noRecords')}
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('attendance.student')}</TableHead>
+                  <TableHead>{t('attendance.date')}</TableHead>
+                  <TableHead>{t('attendance.statusLabel')}</TableHead>
+                  <TableHead>{t('attendance.notes')}</TableHead>
+                  <TableHead>{t('attendance.recordedAt')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRecords.map((record) => {
+                  const status = getStatusBadge(record.status);
+                  return (
+                    <TableRow key={record.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-surface-cool text-ink/60">
+                              {record.student?.name?.split(' ')[0]?.charAt(0)}
+                              {record.student?.name?.split(' ')[1]?.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{record.student?.name || t('attendance.unknown')}</div>
+                            <div className="text-sm text-ink/60">
+                              {record.student?.grade_level}
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(record.date).toLocaleDateString(
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(record.date).toLocaleDateString(
+                          locale === 'ar' ? 'ar-SA' : 'en-US'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={status.variant} className={status.color}>
+                          {status.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-ink/60">
+                          {record.notes || '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-ink/60">
+                          {new Date(record.created_at).toLocaleString(
                             locale === 'ar' ? 'ar-SA' : 'en-US'
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={status.variant} className={status.color}>
-                            {status.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm text-gray-600">
-                            {record.notes || '-'}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm text-gray-500">
-                            {new Date(record.created_at).toLocaleString(
-                              locale === 'ar' ? 'ar-SA' : 'en-US'
-                            )}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </div>
       )}
 
       <AlertDialog open={alertDialog.open} onOpenChange={(open) => setAlertDialog(prev => ({ ...prev, open }))}>

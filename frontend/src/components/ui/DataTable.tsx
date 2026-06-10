@@ -43,8 +43,8 @@ export function DataTable<T>({
       <CardContent>
         {data.length === 0 && EmptyIcon && emptyMessage ? (
           <div className="text-center py-8">
-            <EmptyIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">{emptyMessage}</p>
+            <EmptyIcon className="h-12 w-12 text-ink/30 mx-auto mb-4" />
+            <p className="text-ink/50 font-body">{emptyMessage}</p>
           </div>
         ) : (
           <Table>

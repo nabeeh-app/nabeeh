@@ -116,11 +116,11 @@ export default function SendMessageModal({
               placeholder={t('phonePlaceholder')}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className={errors.phone ? 'border-red-500' : ''}
+              className={errors.phone ? 'border-[#c53030]' : ''}
               disabled={isLoading}
             />
             {errors.phone && (
-              <p className="text-sm text-red-500">{errors.phone}</p>
+              <p className="text-sm text-[#c53030]">{errors.phone}</p>
             )}
           </div>
 
@@ -134,13 +134,13 @@ export default function SendMessageModal({
               placeholder={t('messagePlaceholder')}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className={`min-h-[100px] resize-none ${errors.message ? 'border-red-500' : ''}`}
+              className={`min-h-[100px] resize-none ${errors.message ? 'border-[#c53030]' : ''}`}
               disabled={isLoading}
             />
             {errors.message && (
-              <p className="text-sm text-red-500">{errors.message}</p>
+              <p className="text-sm text-[#c53030]">{errors.message}</p>
             )}
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-ink/60">
               {message.length}/1000 {t('characters')}
             </p>
           </div>

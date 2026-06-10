@@ -21,11 +21,11 @@ export default function ComingSoon({
     <div className="flex min-h-[60vh] items-center justify-center">
       <Card className="w-full max-w-lg">
         <CardContent className="space-y-3 p-6 text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-widest text-ink/50 font-mono">
             {badgeLabel}
           </p>
-          <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <h1 className="text-2xl font-semibold text-ink font-display">{title}</h1>
+          <p className="text-base text-ink/60 font-body">{description}</p>
           <Button asChild className="mt-2">
             <Link href={backHref}>{backLabel}</Link>
           </Button>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 import { Teacher, LoginRequest } from '@/types';
 import logger from '@/lib/logger';
 

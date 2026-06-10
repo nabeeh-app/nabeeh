@@ -27,9 +27,9 @@ const authenticateToken = async (req, res, next) => {
         const decoded = tokenService.verifyToken(token);
 
         // Get fresh user data to ensure user is still active
-        const { data: user, error } = await supabase
+        const { data: user, error } = await supabaseAdmin
             .from('teachers')
-            .select('id, email, name, role, subject_id, preferred_language, is_active')
+            .select('id, email, name, role, preferred_language, is_active')
             .eq('id', decoded.user_id)
             .single();
 
@@ -150,9 +150,9 @@ const optionalAuth = async (req, res, next) => {
             try {
                 const decoded = tokenService.verifyToken(token);
                 
-                const { data: user } = await supabase
+                const { data: user } = await supabaseAdmin
                     .from('teachers')
-                    .select('id, email, name, role, subject_id, preferred_language, is_active')
+                    .select('id, email, name, role, preferred_language, is_active')
                     .eq('id', decoded.user_id)
                     .single();
 

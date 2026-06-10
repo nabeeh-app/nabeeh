@@ -23,7 +23,8 @@
     "multer": "^2.0.2",
     "node-cron": "^4.2.1",
     "qrcode": "^1.5.4",
-    "winston": "^3.19.0"
+    "winston": "^3.19.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "jest": "^30.2.0",

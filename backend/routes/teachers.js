@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { validate, updateProfileSchema, updateSettingsSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
 
 const router = express.Router();
@@ -12,7 +13,7 @@ const getProfile = async (req, res) => {
   try {
     const { data: teacher, error } = await supabase
       .from('teachers')
-      .select('*')
+      .select('id, email, name, phone, business_name, bio, subjects, address, city, country, timezone, whatsapp_number, telegram_username, preferred_language, role, is_active, created_at, updated_at')
       .eq('id', req.user.id)
       .single();
 
@@ -142,7 +143,7 @@ const getDashboardStats = async (req, res) => {
     // Transform recentGrades to flat format
     const formattedGrades = recentGrades?.map(g => ({
       score: g.score,
-      assessment_name: g.assessment.title,
+      assessment_name: g.assessment.name,
       student_name: g.enrollment.student.name,
       date: g.assessment.date
     })) || [];
@@ -176,25 +177,20 @@ const getSettings = async (req, res) => {
   try {
     const { data: settings, error } = await supabase
       .from('teacher_settings')
-      .select('*')
-      .eq('teacher_id', req.user.id);
+      .select('notifications, theme, language')
+      .eq('teacher_id', req.user.id)
+      .single();
 
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: error.message
+    if (error || !settings) {
+      return res.status(200).json({
+        success: true,
+        data: { notifications: { attendance: true, grades: true, messages: true }, theme: 'system', language: 'en' }
       });
     }
 
-    // Convert to key-value object
-    const settingsObj = {};
-    settings.forEach(setting => {
-      settingsObj[setting.setting_key] = setting.setting_value;
-    });
-
     res.status(200).json({
       success: true,
-      data: settingsObj
+      data: settings
     });
   } catch (error) {
     logger.error('Get settings error', { error: error.message });
@@ -210,28 +206,29 @@ const getSettings = async (req, res) => {
 // @access  Private
 const updateSettings = async (req, res) => {
   try {
-    const settings = req.body;
+    const { notifications, theme, language } = req.body;
     const teacherId = req.user.id;
 
-    // Prepare settings for upsert
-    const settingsArray = Object.keys(settings).map(key => ({
-      teacher_id: teacherId,
-      setting_key: key,
-      setting_value: settings[key]
-    }));
+    const updates = {};
+    if (notifications !== undefined) updates.notifications = notifications;
+    if (theme !== undefined) updates.theme = theme;
+    if (language !== undefined) updates.language = language;
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, message: 'No settings provided' });
+    }
 
     const { data: updatedSettings, error } = await supabase
       .from('teacher_settings')
-      .upsert(settingsArray, {
-        onConflict: 'teacher_id,setting_key'
-      })
-      .select();
+      .upsert({
+        teacher_id: teacherId,
+        ...updates
+      }, { onConflict: 'teacher_id' })
+      .select('notifications, theme, language')
+      .single();
 
     if (error) {
-      return res.status(400).json({
-        success: false,
-        message: error.message
-      });
+      return res.status(400).json({ success: false, message: error.message });
     }
 
     res.status(200).json({
@@ -252,6 +249,6 @@ const updateSettings = async (req, res) => {
 router.get('/profile', authenticateToken, getProfile);
 router.get('/dashboard', authenticateToken, getDashboardStats);
 router.get('/settings', authenticateToken, getSettings);
-router.put('/settings', authenticateToken, updateSettings);
+router.put('/settings', authenticateToken, validate(updateSettingsSchema), updateSettings);
 
 module.exports = router;

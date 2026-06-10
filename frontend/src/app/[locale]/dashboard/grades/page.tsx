@@ -5,7 +5,6 @@ import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -41,7 +40,7 @@ import {
   FileSpreadsheet,
   Target
 } from 'lucide-react';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 import { Student, Grade, CreateGradeRequest, Offering } from '@/types';
 import { AlertCircle, ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -313,9 +312,9 @@ export default function GradesPage() {
   };
 
   const getGradeColor = (percentage: number): string => {
-    if (percentage >= 85) return 'text-green-600 bg-green-100';
-    if (percentage >= 70) return 'text-yellow-600 bg-yellow-100';
-    return 'text-red-600 bg-red-100';
+    if (percentage >= 85) return 'text-[#026370] bg-surface-sage';
+    if (percentage >= 70) return 'text-ink/70 bg-surface-cool';
+    return 'text-[#c53030] bg-[#c53030]/10';
   };
 
   const handleAddGrade = async (e: React.FormEvent) => {
@@ -478,16 +477,16 @@ export default function GradesPage() {
   if (noGroups) {
     return (
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink/20 bg-surface-sage p-4 text-ink">
           <div className="space-y-1">
             <p className="text-sm font-semibold">
               {t('grades.noGroups')}
             </p>
-            <p className="text-sm text-amber-700">
+            <p className="text-sm text-ink/70">
               {t('grades.noGroupsDescription')}
             </p>
           </div>
-          <Button asChild variant="outline" className="border-amber-300 text-amber-900 hover:bg-amber-100">
+          <Button asChild variant="outline" className="border-ink/20 text-ink hover:bg-surface-cool">
             <Link href={`/${locale}/dashboard/classes?setup=required`}>
               {t('grades.setUpGroups')}
             </Link>
@@ -555,34 +554,32 @@ export default function GradesPage() {
             </DialogHeader>
             <div className="space-y-4">
               {subjectStats.map((stat, index) => (
-                <Card key={index}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold">{stat.subject}</h3>
-                      <Badge variant="outline">
-                        {t('grades.studentsCount', { count: stat.student_count })}
-                      </Badge>
+                <div key={index} className="p-4 bg-surface-sage/50 rounded-md">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold">{stat.subject}</h3>
+                    <Badge variant="outline">
+                      {t('grades.studentsCount', { count: stat.student_count })}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <div className="text-ink/60">{t('grades.averageLabel')}</div>
+                      <div className="font-medium">{stat.average_score.toFixed(1)}%</div>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <div className="text-gray-600">{t('grades.averageLabel')}</div>
-                        <div className="font-medium">{stat.average_score.toFixed(1)}%</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-600">{t('grades.stats.highestScore')}</div>
-                        <div className="font-medium text-green-600">{stat.highest_score}%</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-600">{t('grades.stats.lowestScore')}</div>
-                        <div className="font-medium text-red-600">{stat.lowest_score}%</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-600">{t('grades.stats.totalAssessments')}</div>
-                        <div className="font-medium">{stat.total_assessments}</div>
-                      </div>
+                    <div>
+                      <div className="text-ink/60">{t('grades.stats.highestScore')}</div>
+                      <div className="font-medium text-[#026370]">{stat.highest_score}%</div>
                     </div>
-                  </CardContent>
-                </Card>
+                    <div>
+                      <div className="text-ink/60">{t('grades.stats.lowestScore')}</div>
+                      <div className="font-medium text-[#c53030]">{stat.lowest_score}%</div>
+                    </div>
+                    <div>
+                      <div className="text-ink/60">{t('grades.stats.totalAssessments')}</div>
+                      <div className="font-medium">{stat.total_assessments}</div>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </DialogContent>
@@ -720,7 +717,7 @@ export default function GradesPage() {
                 />
               </div>
               {formError && (
-                <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
+                <div className="text-[#c53030] text-sm bg-[#c53030]/10 p-3 rounded">
                   {formError}
                 </div>
               )}
@@ -766,196 +763,194 @@ export default function GradesPage() {
 
       {/* Gradebook View */}
       {viewMode === 'gradebook' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
+        <div className="space-y-0">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-ink font-display">
               {t('grades.gradebook')}
               {currentSubjectName && ` - ${currentSubjectName}`}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {gradebook.length === 0 ? (
-              <EmptyState
-                icon={GraduationCap}
-                message={t('grades.noGradesDisplay')}
-              />
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[200px]">
-                        {t('grades.fields.student')}
-                      </TableHead>
-                      {uniqueAssessments.slice(0, 5).map(assessment => (
-                        <TableHead key={assessment} className="text-center min-w-[120px]">
-                          {assessment}
-                        </TableHead>
-                      ))}
-                      <TableHead className="text-center min-w-[100px]">
-                        {t('grades.averageLabel')}
-                      </TableHead>
-                      <TableHead className="text-center min-w-[80px]">
-                        {t('grades.gradeLabel')}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {gradebook.map((entry) => (
-                      <TableRow key={entry.student_id}>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="bg-primary/10 text-primary">
-                                {entry.student_name.split(' ')[0].charAt(0)}
-                                {entry.student_name.split(' ')[1]?.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">{entry.student_name}</span>
-                          </div>
-                        </TableCell>
-                        {uniqueAssessments.slice(0, 5).map(assessment => (
-                          <TableCell key={assessment} className="text-center">
-                            {entry.grades[assessment] ? (
-                              <div className="space-y-1">
-                                <div className="font-medium">
-                                  {entry.grades[assessment].score}/{entry.grades[assessment].max_score}
-                                </div>
-                                <div className={`text-xs px-2 py-1 rounded ${getGradeColor(entry.grades[assessment].percentage)}`}>
-                                  {entry.grades[assessment].percentage}%
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </TableCell>
-                        ))}
-                        <TableCell className="text-center">
-                          <div className={`font-bold px-3 py-1 rounded ${getGradeColor(entry.average)}`}>
-                            {entry.average}%
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className={getGradeColor(entry.average)}>
-                            {entry.letter_grade}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* List View */}
-      {viewMode === 'list' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('grades.gradeList')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {filteredGrades.length === 0 ? (
-              <EmptyState
-                icon={GraduationCap}
-                message={t('grades.noGradesMatch')}
-              />
-            ) : (
+            </h2>
+          </div>
+          {gradebook.length === 0 ? (
+            <EmptyState
+              icon={GraduationCap}
+              message={t('grades.noGradesDisplay')}
+            />
+          ) : (
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('grades.fields.student')}</TableHead>
-                    <TableHead>{t('grades.fields.subject')}</TableHead>
-                    <TableHead>{t('grades.assessment')}</TableHead>
-                    <TableHead>{t('grades.fields.score')}</TableHead>
-                    <TableHead>{t('grades.percentageLabel')}</TableHead>
-                    <TableHead>{t('grades.gradeLabel')}</TableHead>
-                    <TableHead>{t('grades.fields.date')}</TableHead>
-                    <TableHead>{t('grades.actions')}</TableHead>
+                    <TableHead className="min-w-[200px]">
+                      {t('grades.fields.student')}
+                    </TableHead>
+                    {uniqueAssessments.slice(0, 5).map(assessment => (
+                      <TableHead key={assessment} className="text-center min-w-[120px]">
+                        {assessment}
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-center min-w-[100px]">
+                      {t('grades.averageLabel')}
+                    </TableHead>
+                    <TableHead className="text-center min-w-[80px]">
+                      {t('grades.gradeLabel')}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredGrades.map((grade) => (
-                    <TableRow key={grade.id}>
+                  {gradebook.map((entry) => (
+                    <TableRow key={entry.student_id}>
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-gray-100 text-gray-600">
-                              {grade.student?.name?.split(' ')[0]?.charAt(0)}
-                              {grade.student?.name?.split(' ')[1]?.charAt(0)}
+                            <AvatarFallback className="bg-primary/10 text-primary">
+                              {entry.student_name.split(' ')[0].charAt(0)}
+                              {entry.student_name.split(' ')[1]?.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <div className="font-medium">{grade.student?.name || 'Unknown'}</div>
-                            <div className="text-sm text-gray-500">
-                              {grade.student?.grade_level}
+                          <span className="font-medium">{entry.student_name}</span>
+                        </div>
+                      </TableCell>
+                      {uniqueAssessments.slice(0, 5).map(assessment => (
+                        <TableCell key={assessment} className="text-center">
+                          {entry.grades[assessment] ? (
+                            <div className="space-y-1">
+                              <div className="font-medium">
+                                {entry.grades[assessment].score}/{entry.grades[assessment].max_score}
+                              </div>
+                              <div className={`text-xs px-2 py-1 rounded ${getGradeColor(entry.grades[assessment].percentage)}`}>
+                                {entry.grades[assessment].percentage}%
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{grade.subject}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{grade.assessment_name}</div>
-                          <div className="text-sm text-gray-500 capitalize">
-                            {grade.assessment_type}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium">
-                          {grade.score}/{grade.max_score}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className={`font-medium px-2 py-1 rounded text-center ${getGradeColor(grade.percentage)}`}>
-                          {grade.percentage}%
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={getGradeColor(grade.percentage)}>
-                          {grade.letter_grade || getLetterGrade(grade.percentage)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {new Date(grade.date).toLocaleDateString(
-                            locale === 'ar' ? 'ar-SA' : 'en-US'
+                          ) : (
+                            <span className="text-ink/40">-</span>
                           )}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditGrade(grade)}
-                            title={t('common.edit')}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteGrade(grade)}
-                            className="text-red-600 hover:text-red-700"
-                            title={t('common.delete')}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                        </TableCell>
+                      ))}
+                      <TableCell className="text-center">
+                        <div className={`font-bold px-3 py-1 rounded ${getGradeColor(entry.average)}`}>
+                          {entry.average}%
                         </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className={getGradeColor(entry.average)}>
+                          {entry.letter_grade}
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* List View */}
+      {viewMode === 'list' && (
+        <div className="space-y-0">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-ink font-display">
+              {t('grades.gradeList')}
+            </h2>
+          </div>
+          {filteredGrades.length === 0 ? (
+            <EmptyState
+              icon={GraduationCap}
+              message={t('grades.noGradesMatch')}
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('grades.fields.student')}</TableHead>
+                  <TableHead>{t('grades.fields.subject')}</TableHead>
+                  <TableHead>{t('grades.assessment')}</TableHead>
+                  <TableHead>{t('grades.fields.score')}</TableHead>
+                  <TableHead>{t('grades.percentageLabel')}</TableHead>
+                  <TableHead>{t('grades.gradeLabel')}</TableHead>
+                  <TableHead>{t('grades.fields.date')}</TableHead>
+                  <TableHead>{t('grades.actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredGrades.map((grade) => (
+                  <TableRow key={grade.id}>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-surface-cool text-ink/60">
+                            {grade.student?.name?.split(' ')[0]?.charAt(0)}
+                            {grade.student?.name?.split(' ')[1]?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{grade.student?.name || 'Unknown'}</div>
+                          <div className="text-sm text-ink/60">
+                            {grade.student?.grade_level}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{grade.subject}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{grade.assessment_name}</div>
+                        <div className="text-sm text-ink/60 capitalize">
+                          {grade.assessment_type}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium">
+                        {grade.score}/{grade.max_score}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className={`font-medium px-2 py-1 rounded text-center ${getGradeColor(grade.percentage)}`}>
+                        {grade.percentage}%
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={getGradeColor(grade.percentage)}>
+                        {grade.letter_grade || getLetterGrade(grade.percentage)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">
+                        {new Date(grade.date).toLocaleDateString(
+                          locale === 'ar' ? 'ar-SA' : 'en-US'
+                        )}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditGrade(grade)}
+                          title={t('common.edit')}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteGrade(grade)}
+                          className="text-[#c53030] hover:text-[#c53030]/80"
+                          title={t('common.delete')}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
       )}
 
       {/* Edit Grade Modal */}
@@ -1010,7 +1005,7 @@ export default function GradesPage() {
               />
             </div>
             {formError && (
-              <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
+              <div className="text-[#c53030] text-sm bg-[#c53030]/10 p-3 rounded">
                 {formError}
               </div>
             )}

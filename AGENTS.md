@@ -69,7 +69,6 @@ nabeeh/
 │   ├── lib/
 │   │   ├── auth.js             # PasswordService, TokenService, AuthService
 │   │   ├── baileys.js          # WhatsApp socket client wrapper
-│   │   ├── permissions.js      # RBAC definitions
 │   │   └── emailTemplates.js   # Bilingual HTML email templates
 │   ├── scripts/                # Seed, fix, test utilities
 │   ├── database/               # Schema files (reference only — use migrations/)
@@ -254,6 +253,17 @@ Both modes share the same DB query layer in `lib/whatsappQuery.js`.
 
 ## Build, Test, and Development Commands
 
+### All-in-one (`dev.sh` — root)
+```bash
+./dev.sh start       # Start backend + frontend with health checks
+./dev.sh stop        # Graceful shutdown (SIGTERM, fallback SIGKILL after 10s)
+./dev.sh restart     # Stop then start
+./dev.sh status      # PIDs, memory, health, log sizes
+./dev.sh backend     # Start backend only
+./dev.sh frontend    # Start frontend only
+./dev.sh logs        # Tail all logs (backend|frontend|all)
+```
+
 ### Backend (`backend/`)
 ```bash
 npm run dev          # Start with Nodemon (hot reload)
@@ -336,12 +346,9 @@ Each PR must include:
 
 ### Dead Code — Delete Immediately
 - Empty files (e.g., `lib/aiServices.js`)
-- Unused components (e.g., `components/auth/LoginForm.tsx`)
+- Unused components
 - Abandoned queries (e.g., old code blocks left in files)
 - Duplicate routes (e.g., `/send-test` same as `/send-to-number`)
-- `components/auth/LoginForm.tsx` — references deleted `useAuth` hook
-- `app/(auth)/layout.tsx` — references deleted `useAuth` hook
-- `app/(auth)/login/page.tsx` — references deleted `useAuth` hook
 
 ### Schema Files
 - `database/schema.sql` — OLD flat schema, retired. Reference only.

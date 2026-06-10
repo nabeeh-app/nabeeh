@@ -1,7 +1,8 @@
 const express = require('express');
-const { supabaseAdmin } = require('../config/database');
+const { supabase, supabaseAdmin } = require('../config/database');
 const { TokenService, AuthService } = require('../lib/auth');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { validate, registerSchema, loginSchema, requestResetSchema, resetPasswordSchema, updateProfileSchema, createTeacherSchema } = require('../middleware/validate');
 const rateLimit = require('express-rate-limit');
 const logger = require('../lib/logger');
 
@@ -9,8 +10,8 @@ const router = express.Router();
 
 // Auth routes initialized
 
-// Initialize Supabase client
-let supabase = supabaseAdmin;
+// Use anon client for reads, admin for auth operations
+let supabaseClient = supabase;
 try {
     logger.info('Supabase client initialized successfully');
 } catch (error) {
@@ -100,7 +101,7 @@ const registerLimiter = rateLimit({
  * Helper function to get user by email
  */
 async function getUserByEmail(email) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('teachers')
         .select(teacherSelectFields)
         .eq('email', email)
@@ -118,7 +119,7 @@ async function getUserByEmail(email) {
  * Helper function to update user last login
  */
 async function updateLastLogin(userId) {
-    const { error } = await supabase
+    const { error } = await supabaseClient
         .from('teachers')
         .update({
             updated_at: new Date().toISOString()
@@ -134,15 +135,14 @@ async function updateLastLogin(userId) {
  * Helper function to log authentication events
  */
 async function logAuthEvent(userId, action, success, ipAddress, userAgent, details = {}) {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
         .from('auth_audit_log')
         .insert({
-            user_id: userId,
-            action,
-            success,
+            teacher_id: userId,
+            event_type: action,
             ip_address: ipAddress,
             user_agent: userAgent,
-            details
+            metadata: { success, ...details }
         });
 
     if (error) {
@@ -175,16 +175,8 @@ async function provisionTeacherAccount(payload) {
         throw conflict;
     }
 
-    const passwordValidation = authService.passwordService.validatePasswordStrength(password);
-    if (!passwordValidation.isValid) {
-        const validationError = new Error(passwordValidation.errors.join(', '));
-        validationError.status = 400;
-        throw validationError;
-    }
-
-    const hashedPassword = await authService.passwordService.hashPassword(password);
-
-    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+    // Supabase Auth handles password hashing and strength validation
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: normalizedEmail,
         password,
         email_confirm: true,
@@ -205,7 +197,7 @@ async function provisionTeacherAccount(payload) {
 
     const userId = authUser.user.id;
 
-    const { data: teacher, error } = await supabase
+    const { data: teacher, error } = await supabaseAdmin
         .from('teachers')
         .insert({
             id: userId,
@@ -220,7 +212,7 @@ async function provisionTeacherAccount(payload) {
         .single();
 
     if (error) {
-        await supabase.auth.admin.deleteUser(userId);
+        await supabaseAdmin.auth.admin.deleteUser(userId);
         throw error;
     }
 
@@ -231,7 +223,7 @@ async function provisionTeacherAccount(payload) {
  * POST /api/auth/register
  * Create a new teacher account
  */
-router.post('/register', registerLimiter, async (req, res) => {
+router.post('/register', registerLimiter, validate(registerSchema), async (req, res) => {
     try {
         const teacher = await provisionTeacherAccount(req.body);
 
@@ -266,7 +258,7 @@ router.post('/register', registerLimiter, async (req, res) => {
     }
 });
 
-router.post('/admin/create-teacher', authenticateToken, requireRole('admin'), async (req, res) => {
+router.post('/admin/create-teacher', authenticateToken, requireRole('admin'), validate(createTeacherSchema), async (req, res) => {
     try {
         const teacher = await provisionTeacherAccount(req.body);
         res.status(201).json({
@@ -289,7 +281,7 @@ router.post('/admin/create-teacher', authenticateToken, requireRole('admin'), as
  * Authenticate user with email and password
  */
 
-router.post('/login', loginLimiter, async (req, res) => {
+router.post('/login', loginLimiter, validate(loginSchema), async (req, res) => {
     try {
         const { email, password } = req.body;
         const normalizedEmail = email?.toLowerCase().trim();
@@ -309,7 +301,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 
         if (result.success) {
             // Get teacher profile from database
-            const { data: teacherProfile } = await supabase
+            const { data: teacherProfile } = await supabaseClient
                 .from('teachers')
                 .select(teacherSelectFields)
                 .eq('id', result.user.id)
@@ -472,7 +464,7 @@ router.get('/verify-token', async (req, res) => {
  */
 router.get('/me', authenticateToken, async (req, res) => {
     try {
-        const { data: teacher, error } = await supabase
+        const { data: teacher, error } = await supabaseClient
             .from('teachers')
             .select(teacherSelectFields)
             .eq('id', req.user.id)
@@ -504,7 +496,7 @@ router.get('/me', authenticateToken, async (req, res) => {
  * PUT /api/auth/profile
  * Update current teacher profile
  */
-router.put('/profile', authenticateToken, async (req, res) => {
+router.put('/profile', authenticateToken, validate(updateProfileSchema), async (req, res) => {
     try {
         const allowedFields = [
             'name',
@@ -537,7 +529,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
 
         updates.updated_at = new Date().toISOString();
 
-        const { data: teacher, error } = await supabase
+        const { data: teacher, error } = await supabaseClient
             .from('teachers')
             .update(updates)
             .eq('id', req.user.id)
@@ -572,7 +564,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
  * POST /api/auth/request-reset
  * Request password reset
  */
-router.post('/request-reset', resetLimiter, async (req, res) => {
+router.post('/request-reset', resetLimiter, validate(requestResetSchema), async (req, res) => {
     try {
         const { email } = req.body;
         const ipAddress = req.ip || req.connection.remoteAddress;
@@ -602,10 +594,10 @@ router.post('/request-reset', resetLimiter, async (req, res) => {
             const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
             // Store reset token in database
-            const { error } = await supabase
+            const { error } = await supabaseAdmin
                 .from('password_reset_tokens')
                 .insert({
-                    user_id: user.id,
+                    teacher_id: user.id,
                     token: resetToken,
                     expires_at: expiresAt.toISOString()
                 });
@@ -647,9 +639,9 @@ router.get('/reset/:token', async (req, res) => {
         const { token } = req.params;
 
         // Check if token exists and is not expired
-        const { data: resetToken, error } = await supabase
+        const { data: resetToken, error } = await supabaseAdmin
             .from('password_reset_tokens')
-            .select('id, user_id, expires_at, used_at')
+            .select('id, teacher_id, expires_at, used')
             .eq('token', token)
             .single();
 
@@ -661,7 +653,7 @@ router.get('/reset/:token', async (req, res) => {
             });
         }
 
-        if (resetToken.used_at) {
+        if (resetToken.used) {
             return res.status(400).json({
                 success: false,
                 message: 'Reset token has already been used',
@@ -697,7 +689,7 @@ router.get('/reset/:token', async (req, res) => {
  * POST /api/auth/reset-password
  * Reset password with token
  */
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', validate(resetPasswordSchema), async (req, res) => {
     try {
         const { token, newPassword } = req.body;
         const ipAddress = req.ip || req.connection.remoteAddress;
@@ -722,13 +714,13 @@ router.post('/reset-password', async (req, res) => {
         }
 
         // Validate reset token (same logic as GET /reset/:token)
-        const { data: resetToken, error } = await supabase
+        const { data: resetToken, error } = await supabaseAdmin
             .from('password_reset_tokens')
-            .select('id, user_id, expires_at, used_at')
+            .select('id, teacher_id, expires_at, used')
             .eq('token', token)
             .single();
 
-        if (error || !resetToken || resetToken.used_at || new Date() > new Date(resetToken.expires_at)) {
+        if (error || !resetToken || resetToken.used || new Date() > new Date(resetToken.expires_at)) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid or expired reset token',
@@ -736,28 +728,25 @@ router.post('/reset-password', async (req, res) => {
             });
         }
 
-        // Hash new password
-        const hashedPassword = await authService.passwordService.hashPassword(newPassword);
-
-        // Update user password
-        const { error: updateError } = await supabase
-            .from('teachers')
-            .update({ password_hash: hashedPassword })
-            .eq('id', resetToken.user_id);
+        // Update user password via Supabase Auth
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+            resetToken.teacher_id,
+            { password: newPassword }
+        );
 
         if (updateError) {
             throw updateError;
         }
 
         // Mark reset token as used
-        await supabase
+        await supabaseAdmin
             .from('password_reset_tokens')
-            .update({ used_at: new Date().toISOString() })
+            .update({ used: true })
             .eq('id', resetToken.id);
 
         // Log password reset completion
         await logAuthEvent(
-            resetToken.user_id,
+            resetToken.teacher_id,
             'password_reset_complete',
             true,
             ipAddress,

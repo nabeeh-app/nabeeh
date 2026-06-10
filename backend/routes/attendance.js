@@ -1,13 +1,11 @@
 const express = require('express');
 const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { validate, markAttendanceSchema, updateAttendanceSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
 
 const router = express.Router();
 
-// @desc    Get attendance for date range
-// @route   GET /api/attendance
-// @access  Private
 // @desc    Get attendance for date range
 // @route   GET /api/attendance
 // @access  Private
@@ -31,12 +29,15 @@ const getAttendance = async (req, res) => {
                 id, name,
                 offering:offerings!inner ( teacher_id, subject:subjects(*) )
             )
+        ),
+        session:sessions!inner (
+            date
         )
       `)
-      .gte('date', start_date)
-      .lte('date', end_date)
+      .gte('sessions.date', start_date)
+      .lte('sessions.date', end_date)
       .eq('enrollment.group.offering.teacher_id', req.user.id)
-      .order('date', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (student_id) {
       // Filter via enrollment
@@ -54,7 +55,7 @@ const getAttendance = async (req, res) => {
     // Transform result to flatter structure if helpful for frontend
     const flatAttendance = attendance.map(a => ({
       id: a.id,
-      date: a.date,
+      date: a.session?.date,
       status: a.status,
       notes: a.notes,
       student_id: a.enrollment.student.id,
@@ -117,9 +118,10 @@ const markAttendance = async (req, res) => {
 
     const { data: enrollments } = await supabase
       .from('enrollments')
-      .select('id, student_id, group_id')
+      .select('id, student_id, group_id, group:groups!inner(offering:offerings!inner(teacher_id))')
       .in('group_id', groupIds)
-      .in('student_id', studentIds);
+      .in('student_id', studentIds)
+      .eq('group.offering.teacher_id', req.user.id);
 
     const enrollmentMap = {};
     enrollments?.forEach(e => {
@@ -195,10 +197,13 @@ const getAttendanceSummary = async (req, res) => {
              group:groups!inner (
                  offering:offerings!inner ( teacher_id )
              )
+        ),
+        session:sessions!inner (
+            date
         )
       `)
-      .gte('date', start_date)
-      .lte('date', end_date)
+      .gte('sessions.date', start_date)
+      .lte('sessions.date', end_date)
       .eq('enrollment.group.offering.teacher_id', req.user.id);
 
     if (error) throw error;
@@ -227,9 +232,62 @@ const getAttendanceSummary = async (req, res) => {
   }
 };
 
+// @desc    Update a single attendance record
+// @route   PATCH /api/attendance/:id
+// @access  Private
+const updateAttendance = async (req, res) => {
+  try {
+    const { status, notes } = req.body;
+
+    // Verify ownership via enrollment chain
+    const { data: record, error: fetchError } = await supabase
+      .from('attendance')
+      .select(`
+        id,
+        enrollment:enrollments!inner (
+          group:groups!inner (
+            offering:offerings!inner ( teacher_id )
+          )
+        )
+      `)
+      .eq('id', req.params.id)
+      .single();
+
+    if (fetchError || !record) {
+      return res.status(404).json({ success: false, message: 'Attendance record not found' });
+    }
+
+    if (record.enrollment.group.offering.teacher_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const updates = {};
+    if (status) updates.status = status;
+    if (notes !== undefined) updates.notes = notes;
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update' });
+    }
+
+    const { data: updated, error } = await supabase
+      .from('attendance')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    logger.error('Update attendance error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Server error updating attendance' });
+  }
+};
+
 // Route definitions
 router.get('/', authenticateToken, getAttendance);
-router.post('/', authenticateToken, markAttendance);
+router.post('/', authenticateToken, validate(markAttendanceSchema), markAttendance);
 router.get('/summary', authenticateToken, getAttendanceSummary);
+router.patch('/:id', authenticateToken, validate(updateAttendanceSchema), updateAttendance);
 
 module.exports = router;

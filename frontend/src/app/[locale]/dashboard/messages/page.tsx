@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import SendMessageModal from '@/components/SendMessageModal';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 import { getStatusBadge } from '@/lib/utils';
 import { useWhatsAppStatus } from '@/hooks/useWhatsAppStatus';
 import { Conversation, Message } from '@/types';
@@ -169,7 +169,7 @@ export default function MessagesPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold">{t('title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('messageHistory')}</p>
+          <p className="text-sm text-ink/60">{t('messageHistory')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -193,27 +193,23 @@ export default function MessagesPage() {
       </div>
 
       {!isWhatsAppConnected && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="text-base">{tWhatsApp('statusDisconnectedTitle')}</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {whatsappStatus.message || tWhatsApp('statusDisconnectedDescription')}
-              </p>
-            </div>
-            <Button asChild>
-              <a href={`/${locale}/dashboard/whatsapp`}>{tWhatsApp('connectWhatsApp')}</a>
-            </Button>
-          </CardHeader>
-        </Card>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between bg-surface-sage p-4 rounded-md">
+          <div>
+            <p className="text-base font-medium text-ink">{tWhatsApp('statusDisconnectedTitle')}</p>
+            <p className="text-sm text-ink/60">
+              {whatsappStatus.message || tWhatsApp('statusDisconnectedDescription')}
+            </p>
+          </div>
+          <Button asChild>
+            <a href={`/${locale}/dashboard/whatsapp`}>{tWhatsApp('connectWhatsApp')}</a>
+          </Button>
+        </div>
       )}
 
       {sendStatus && (
-        <Card className={sendStatus.type === 'success' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
-          <CardContent className="py-4 text-sm">
-            {sendStatus.message}
-          </CardContent>
-        </Card>
+        <div className={`p-4 rounded-md text-sm ${sendStatus.type === 'success' ? 'bg-surface-sage text-ink' : 'bg-[#c53030]/10 text-[#c53030]'}`}>
+          {sendStatus.message}
+        </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
@@ -221,7 +217,7 @@ export default function MessagesPage() {
           <CardHeader className="space-y-3">
             <CardTitle className="text-base">{t('conversations')}</CardTitle>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
               <Input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
@@ -232,9 +228,9 @@ export default function MessagesPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {isLoadingConversations ? (
-              <p className="text-sm text-muted-foreground">{t('checkingStatus')}</p>
+              <p className="text-sm text-ink/60">{t('checkingStatus')}</p>
             ) : filteredConversations.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t('noMessages')}</p>
+              <p className="text-sm text-ink/60">{t('noMessages')}</p>
             ) : (
               filteredConversations.map(conversation => {
                 const label = getConversationLabel(conversation, t('unknown'));
@@ -245,7 +241,7 @@ export default function MessagesPage() {
                     key={conversation.id}
                     type="button"
                     onClick={() => setSelectedConversationId(conversation.id)}
-                    className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition ${isActive ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/30'}`}
+                    className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition ${isActive ? 'border-primary bg-primary/5' : 'border-ink/20 hover:bg-surface-cool/30'}`}
                   >
                     <Avatar>
                       <AvatarFallback>{getInitials(label)}</AvatarFallback>
@@ -257,12 +253,12 @@ export default function MessagesPage() {
                           <Badge variant="secondary">{conversation.message_count}</Badge>
                         )}
                       </div>
-                      {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+                      {subtitle && <p className="text-xs text-ink/60">{subtitle}</p>}
                       {conversation.latest_message && (
-                        <p className="text-xs text-muted-foreground line-clamp-1">{conversation.latest_message}</p>
+                        <p className="text-xs text-ink/60 line-clamp-1">{conversation.latest_message}</p>
                       )}
                       {conversation.last_message_at && (
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-[11px] text-ink/60">
                           {formatDateTime(conversation.last_message_at, locale)}
                         </p>
                       )}
@@ -279,7 +275,7 @@ export default function MessagesPage() {
             <div>
               <CardTitle className="text-base">{t('messageHistory')}</CardTitle>
               {selectedConversation && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-ink/60">
                   {getConversationLabel(selectedConversation, t('unknown'))}
                 </p>
               )}
@@ -292,14 +288,14 @@ export default function MessagesPage() {
           </CardHeader>
           <CardContent>
             {error && (
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              <div className="mb-4 rounded-lg border border-[#c53030]/20 bg-[#c53030]/10 p-3 text-sm text-[#c53030]">
                 {error}
               </div>
             )}
             {isLoadingMessages ? (
-              <p className="text-sm text-muted-foreground">{t('checkingStatus')}</p>
+              <p className="text-sm text-ink/60">{t('checkingStatus')}</p>
             ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+              <div className="flex flex-col items-center justify-center gap-2 py-12 text-sm text-ink/60">
                 <MessageCircle className="h-8 w-8" />
                 {t('noMessages')}
               </div>
@@ -313,7 +309,7 @@ export default function MessagesPage() {
                       className={`flex flex-col gap-1 ${isFromParent ? 'items-start' : 'items-end'}`}
                     >
                       <div
-                        className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${isFromParent ? 'bg-muted text-foreground' : 'bg-primary text-primary-foreground'}`}
+                        className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${isFromParent ? 'bg-surface-cool text-ink' : 'bg-primary text-primary-foreground'}`}
                       >
                         <p>{message.content}</p>
                         {message.message_type !== 'text' && (
@@ -322,7 +318,7 @@ export default function MessagesPage() {
                           </p>
                         )}
                       </div>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-[11px] text-ink/60">
                         {message.sender_name || message.sender_phone}
                         {' · '}
                         {formatDateTime(message.created_at, locale)}

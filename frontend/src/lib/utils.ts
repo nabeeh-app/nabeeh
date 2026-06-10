@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import apiClient from "@/lib/api"
+import apiClient from "@/lib/client"
 import logger from "@/lib/logger"
 
 export function cn(...inputs: ClassValue[]) {

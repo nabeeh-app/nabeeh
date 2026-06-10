@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import apiClient from '@/lib/api';
+import apiClient from '@/lib/client';
 
 vi.mock('axios', () => {
   const mockAxios = {

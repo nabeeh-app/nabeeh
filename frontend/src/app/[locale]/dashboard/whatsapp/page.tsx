@@ -3,12 +3,27 @@
 import { useTranslations, useLocale } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo } from 'react';
 import { useWhatsAppStatus } from '@/hooks/useWhatsAppStatus';
 import { sendWhatsAppMessage } from '@/lib/utils';
-import apiClient from '@/lib/api';
+import apiClient from '@/lib/client';
 import logger from '@/lib/logger';
+import {
+  QrCode,
+  RefreshCw,
+  Link2,
+  Unlink,
+  MessageSquare,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  Smartphone,
+  AlertCircle,
+} from 'lucide-react';
+
+const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
 
 export default function WhatsAppDashboardPage() {
   const t = useTranslations('whatsapp');
@@ -26,33 +41,6 @@ export default function WhatsAppDashboardPage() {
     onConfirm?: () => void;
     variant?: 'default' | 'destructive';
   }>({ open: false, title: '', description: '' });
-
-  const statusDetails = useMemo(() => {
-    const detailsMap: Record<string, { title: string; description: string }> = {
-      connected: {
-        title: t('statusConnectedTitle'),
-        description: t('statusConnectedDescription')
-      },
-      qr_ready: {
-        title: t('statusQrTitle'),
-        description: t('statusQrDescription')
-      },
-      connecting: {
-        title: t('statusConnectingTitle'),
-        description: t('statusConnectingDescription')
-      },
-      error: {
-        title: t('statusErrorTitle'),
-        description: t('statusErrorDescription')
-      },
-      disconnected: {
-        title: t('statusDisconnectedTitle'),
-        description: t('statusDisconnectedDescription')
-      }
-    };
-
-    return detailsMap[whatsappStatus.status] || detailsMap.disconnected;
-  }, [t, whatsappStatus.status]);
 
   const handleLogout = async () => {
     setAlertDialog({
@@ -84,6 +72,16 @@ export default function WhatsAppDashboardPage() {
   };
 
   const requestQrCode = async () => {
+    if (isMockMode) {
+      setAlertDialog({
+        open: true,
+        title: isRTL ? 'وضع العرض التجريبي' : 'Mock Mode',
+        description: isRTL
+          ? 'الواتساب غير متاح في وضع العرض التجريبي. عيّن NEXT_PUBLIC_USE_MOCK=false وأعد تشغيل الخادم.'
+          : 'WhatsApp is unavailable in mock mode. Set NEXT_PUBLIC_USE_MOCK=false and restart the dev server.',
+      });
+      return;
+    }
     setIsPairing(true);
     try {
       await apiClient.startWhatsAppPairing();
@@ -136,143 +134,187 @@ export default function WhatsAppDashboardPage() {
     }
   };
 
-  const statusSummary = useMemo(() => {
-    const toneMap: Record<string, { label: string; tone: string }> = {
-      connected: { label: t('connected'), tone: 'text-green-700 bg-green-50' },
-      qr_ready: { label: t('scanQR'), tone: 'text-primary bg-primary/10' },
-      connecting: { label: t('connecting'), tone: 'text-amber-700 bg-amber-50' },
-      error: { label: t('error'), tone: 'text-red-700 bg-red-50' },
-      disconnected: { label: t('disconnected'), tone: 'text-gray-700 bg-gray-100' }
-    };
-
-    const fallback = toneMap.disconnected;
-    return toneMap[whatsappStatus.status] || fallback;
-  }, [whatsappStatus.status, t]);
-
-  const statusMessage = whatsappStatus.message || statusDetails.description;
-  const canRetry = whatsappStatus.status === 'error' || whatsappStatus.status === 'disconnected';
+  const isConnected = whatsappStatus.status === 'connected';
+  const isDisconnected = whatsappStatus.status === 'disconnected' || whatsappStatus.status === 'error';
+  const hasQr = !!whatsappStatus.qr;
+  const isPreparing = whatsappStatus.status === 'qr_ready' && !hasQr;
+  const isTransitioning = whatsappStatus.status === 'connecting';
 
   return (
-    <div
-      className="space-y-6 w-full max-w-4xl mx-auto text-left"
-      dir="ltr"
-    >
-      <section className="space-y-3">
-        <h1 className="text-3xl font-semibold text-gray-900">
+    <div className="space-y-6 w-full max-w-2xl mx-auto">
+      {/* Page header */}
+      <section className="space-y-1">
+        <h1 className="text-3xl font-semibold text-ink font-display">
           {t('title')}
         </h1>
-        <p className="text-sm text-gray-600 max-w-2xl">
+        <p className="text-sm text-ink/60 font-body">
           {t('description')}
         </p>
-        <Button
-          onClick={refreshStatus}
-          disabled={whatsappStatus.isLoading}
-          variant="outline"
-          className="w-fit self-start"
-        >
-          {whatsappStatus.isLoading ? t('checking') : t('refreshStatus')}
-        </Button>
       </section>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card className="h-full">
-          <CardHeader className="space-y-4">
-            <div className="flex flex-col gap-1">
-              <CardTitle className="text-base font-semibold text-gray-900">
+      {isMockMode && (
+        <div className="flex items-start gap-3 p-4 bg-[#e5ff97]/30 border border-[#e5ff97]/50 rounded-lg">
+          <AlertCircle className="h-4 w-4 text-ink/60 mt-0.5 shrink-0" />
+          <div className="text-sm text-ink/70 font-body">
+            <p className="font-medium text-ink">{isRTL ? 'وضع العرض التجريبي' : 'Mock Mode Active'}</p>
+            <p className="mt-1">{isRTL ? 'الواتساب غير متاح في وضع العرض التجريبي. عيّن NEXT_PUBLIC_USE_MOCK=false في .local.env وأعد تشغيل الخادم.' : 'WhatsApp is unavailable in mock mode. Set NEXT_PUBLIC_USE_MOCK=false in .env.local and restart the dev server.'}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Connected state — compact card with actions */}
+      {isConnected && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-surface-sage flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-[#026370]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-ink">{t('statusConnectedTitle')}</p>
+                <p className="text-xs text-ink/50 font-body">{t('statusConnectedDescription')}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={testMessage}
+                  disabled={isLoading}
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  {t('testMessage')}
+                </Button>
+                <Button
+                  onClick={handleLogout}
+                  disabled={isLoading}
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 border-[#c53030]/20 text-[#c53030] hover:bg-[#c53030]/10"
+                >
+                  <Unlink className="h-3.5 w-3.5" />
+                  {t('logout')}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Disconnected / transitioning / error — main connection flow */}
+      {!isConnected && (
+        <>
+          {/* Connection card — status + primary action */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-semibold text-ink font-display flex items-center gap-2">
+                <Smartphone className="h-4 w-4 text-ink/40" />
                 {t('connectionStatus')}
               </CardTitle>
-              <p className="text-sm text-gray-500">
-                {t('whenDisconnected')}
-              </p>
-            </div>
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusSummary.tone}`}>
-              {statusSummary.label}
-            </span>
-            <p className="text-sm text-gray-600">
-              {statusMessage}
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 text-sm text-gray-600">
-              <div className="space-y-1">
-                <p className="text-gray-500">{t('quickActions')}</p>
-                <p className="text-gray-900">{whatsappStatus.sessionExists ? t('connected') : t('disconnected')}</p>
-              </div>
-              <div className={`rounded-lg px-4 py-3 ${statusSummary.tone}`}>
-                <p className="text-sm font-semibold">{statusDetails.title}</p>
-                <p className="text-sm">{statusDetails.description}</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {whatsappStatus.status !== 'connected' && (
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Primary action — large, prominent */}
+              {(isDisconnected || hasQr) && (
                 <Button
                   onClick={requestQrCode}
-                  disabled={isPairing}
-                  size="sm"
-                  variant="default"
+                  disabled={isPairing || isTransitioning}
+                  className="w-full gap-2 h-11"
+                  size="lg"
                 >
-                  {isPairing ? t('checking') : t('connectWhatsApp')}
+                  {isPairing || isTransitioning ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {t('checking')}
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="h-4 w-4" />
+                      {t('connectWhatsApp')}
+                    </>
+                  )}
                 </Button>
               )}
-              {canRetry && (
+
+              {isPreparing && (
+                <div className="flex items-center gap-2 text-sm text-ink/60">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t('preparingConnection')}
+                </div>
+              )}
+
+              {/* Error state — only shown on actual errors */}
+              {whatsappStatus.status === 'error' && (
+                <div className="flex items-start gap-3 p-3 bg-[#c53030]/5 border border-[#c53030]/10 rounded-lg">
+                  <AlertCircle className="h-4 w-4 text-[#c53030] mt-0.5 shrink-0" />
+                  <p className="text-sm text-[#c53030]">{t('statusErrorDescription')}</p>
+                </div>
+              )}
+
+              {/* Refresh — secondary, inline */}
+              <div className="flex justify-end">
                 <Button
                   onClick={refreshStatus}
                   disabled={whatsappStatus.isLoading}
+                  variant="ghost"
                   size="sm"
-                  variant="outline"
+                  className="gap-1.5 text-ink/50 hover:text-ink"
                 >
-                  {whatsappStatus.isLoading ? t('checking') : t('retryStatus')}
+                  <RefreshCw className={`h-3.5 w-3.5 ${whatsappStatus.isLoading ? 'animate-spin' : ''}`} />
+                  {whatsappStatus.isLoading ? t('checking') : t('refreshStatus')}
                 </Button>
-              )}
-              {whatsappStatus.status === 'connected' && (
-                <>
-                  <Button
-                    onClick={handleLogout}
-                    disabled={isLoading}
-                    size="sm"
-                    variant="outline"
-                    className="border-red-200 text-red-600 hover:bg-red-50"
-                  >
-                    {t('logout')}
-                  </Button>
-                  <Button
-                    onClick={testMessage}
-                    disabled={isLoading}
-                    size="sm"
-                    variant="secondary"
-                  >
-                    {t('testMessage')}
-                  </Button>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="h-full border-primary/20 bg-primary/5">
-          <CardHeader className="space-y-2">
-            <CardTitle className="text-base font-semibold text-blue-900">
-              {t('scanQR')}
-            </CardTitle>
-            <p className="text-sm text-blue-700">
-              {t('scanWithWhatsApp')}
-            </p>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center gap-4 py-6">
-            {whatsappStatus.qr ? (
-              <div className="bg-white p-4 rounded-lg shadow-sm">
-                <img src={whatsappStatus.qr} alt="WhatsApp QR Code" className="w-64 h-64" />
+          {/* QR Code + Steps — side by side on large screens */}
+          <Card className="border-primary/10">
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* Steps */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-ink font-display">
+                    {t('connectionStepsTitle')}
+                  </h3>
+                  <ol className="space-y-3 text-sm text-ink/70 font-body list-none">
+                    <li className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">1</span>
+                      <span>{t('stepOpenWhatsApp')}</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">2</span>
+                      <span>{t('stepGoToLinkedDevices')}</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">3</span>
+                      <span>{t('stepScanQR')}</span>
+                    </li>
+                  </ol>
+                </div>
+
+                {/* QR Code display area */}
+                <div className="flex items-center justify-center">
+                  {hasQr ? (
+                    <div className="bg-canvas p-4 rounded-lg border border-ink/10">
+                      <img
+                        src={whatsappStatus.qr ?? undefined}
+                        alt="WhatsApp QR Code"
+                        className="w-56 h-56"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-56 rounded-lg border border-dashed border-ink/15 bg-surface-cool/30 flex flex-col items-center justify-center gap-3">
+                      <QrCode className="h-10 w-10 text-ink/20" />
+                      <p className="text-xs text-ink/40 font-body text-center px-4">
+                        {t('qrWillAppearHere')}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div className="w-full rounded-lg border border-dashed border-blue-200 bg-white p-6 text-center text-sm text-blue-700">
-                {whatsappStatus.status === 'qr_ready'
-                  ? t('preparingConnection')
-                  : t('scanQR')}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       <AlertDialog open={alertDialog.open} onOpenChange={(open) => setAlertDialog(prev => ({ ...prev, open }))}>
         <AlertDialogContent>

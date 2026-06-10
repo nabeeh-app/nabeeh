@@ -24,27 +24,25 @@ export function FilterBar({
 }: FilterBarProps) {
   return (
     <Card>
-      <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={searchPlaceholder}
-                value={searchValue}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="ps-10"
-              />
-            </div>
+      <CardContent className="p-4">
+        <div className="flex flex-row items-center gap-3">
+          <div className="relative flex-1 min-w-0 max-w-sm">
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink/50" />
+            <Input
+              placeholder={searchPlaceholder}
+              value={searchValue}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="ps-10"
+            />
           </div>
           {children && (
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex flex-row items-center gap-2 shrink-0">
               {children}
             </div>
           )}
         </div>
         {resultCount !== undefined && totalCount !== undefined && resultCount !== totalCount && (
-          <p className="text-sm text-muted-foreground mt-2">
+          <p className="text-sm text-ink/60 mt-2 font-mono uppercase tracking-wider">
             {resultLabel}
           </p>
         )}

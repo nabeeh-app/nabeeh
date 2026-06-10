@@ -81,14 +81,21 @@ const getConversationMessages = async (req, res) => {
       });
     }
 
+    const { count: total } = await supabase
+      .from('messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('conversation_id', req.params.id);
+
+    const totalPages = Math.ceil((total || 0) / limit);
+
     res.status(200).json({
       success: true,
       data: messages.reverse(), // Show oldest first
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
-        total: 0, // TODO: Add count query for accurate total
-        pages: 0
+        total: total || 0,
+        pages: totalPages
       }
     });
   } catch (error) {

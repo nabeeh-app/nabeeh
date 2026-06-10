@@ -283,9 +283,31 @@ class ApiClient {
     return response.data.data;
   }
 
+  async getOffering(id: string): Promise<Offering> {
+    const response: AxiosResponse<ApiResponse<Offering>> = await this.api.get(`/offerings/${id}`);
+    return response.data.data;
+  }
+
+  async deleteOffering(id: string): Promise<void> {
+    await this.api.delete(`/offerings/${id}`);
+  }
+
   async createGroup(offeringId: string, data: CreateGroupRequest): Promise<OfferingGroup> {
     const response: AxiosResponse<ApiResponse<OfferingGroup>> = await this.api.post(`/offerings/${offeringId}/groups`, data);
     return response.data.data;
+  }
+
+  async updateGroup(offeringId: string, groupId: string, data: Partial<CreateGroupRequest>): Promise<OfferingGroup> {
+    const response: AxiosResponse<ApiResponse<OfferingGroup>> = await this.api.put(`/offerings/${offeringId}/groups/${groupId}`, data);
+    return response.data.data;
+  }
+
+  async enrollStudent(offeringId: string, groupId: string, studentId: string): Promise<void> {
+    await this.api.post(`/offerings/${offeringId}/groups/${groupId}/enroll`, { student_id: studentId });
+  }
+
+  async unenrollStudent(offeringId: string, groupId: string, studentId: string): Promise<void> {
+    await this.api.delete(`/offerings/${offeringId}/groups/${groupId}/enroll/${studentId}`);
   }
 
   // Settings API
@@ -324,6 +346,7 @@ class ApiClient {
   }
 }
 
-// Export singleton instance
+// Export class and singleton instance
+export { ApiClient };
 export const apiClient = new ApiClient();
 export default apiClient;

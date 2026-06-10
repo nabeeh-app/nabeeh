@@ -1,5 +1,6 @@
 {
   "common": {
+    "appName": "Nabeeh",
     "loading": "Loading...",
     "save": "Save",
     "cancel": "Cancel",
@@ -48,6 +49,7 @@
     "passwordRequired": "Password is required",
     "passwordTooShort": "Password must be at least 6 characters",
     "invalidEmail": "Please enter a valid email address",
+    "copyright": "© 2026 Nabeeh. All rights reserved.",
     "loginSuccess": "Successfully signed in!",
     "logoutSuccess": "Successfully signed out!",
     "sessionExpired": "Your session has expired. Please sign in again.",
@@ -69,7 +71,31 @@
     "hidePassword": "Hide password",
     "networkError": "Network error occurred. Please check your connection.",
     "serverError": "Server error occurred. Please try again later.",
-    "logoutSuccess": "Successfully signed out!"
+    "logoutSuccess": "Successfully signed out!",
+    "registerTitle": "Create Teacher Account",
+    "registerSubtitle": "Fill in the details below to create your account and start using Nabeeh",
+    "teacherInfo": "Teacher Information",
+    "teacherInfoDescription": "Enter your personal and contact information",
+    "fullName": "Full Name *",
+    "emailAddress": "Email Address *",
+    "phoneNumber": "Phone Number *",
+    "phoneHint": "Must start with + and country code",
+    "whatsappNumber": "WhatsApp Number",
+    "whatsappPlaceholder": "Leave empty to use same as phone",
+    "passwordPlaceholder": "Strong password",
+    "confirmPasswordPlaceholder": "Repeat password",
+    "additionalInfoOptional": "Additional Information (Optional)",
+    "institutionName": "Institution Name",
+    "subjectsYouTeach": "Subjects You Teach",
+    "subjectsHint": "Separate subjects with commas",
+    "creatingAccount": "Creating Account...",
+    "createTeacherAccount": "Create Teacher Account",
+    "phoneRequired": "Phone number is required",
+    "phoneInvalid": "Phone must start with + and contain 10-15 digits",
+    "confirmPasswordRequired": "Password confirmation is required",
+    "whatsappInvalid": "Invalid WhatsApp number format",
+    "registerSuccess": "Account created successfully! Redirecting to login...",
+    "registerFailed": "Registration failed"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -86,7 +112,24 @@
     "parents": "Parents",
     "analytics": "Analytics",
     "monitor": "System Monitor",
-    "help": "Help"
+    "help": "Help",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "roles": {
+    "admin": "Admin",
+    "teacher": "Teacher"
+  },
+  "comingSoon": {
+    "title": "Coming soon",
+    "description": "This feature is not available yet. Enable it when it is ready to launch.",
+    "backLabel": "Back to dashboard"
+  },
+  "reportsStatus": {
+    "total": "Total",
+    "assessments": "assessments",
+    "commonIntents": "Common Intents",
+    "automated": "Automated"
   },
   "dashboard": {
     "title": "Teacher Dashboard",
@@ -149,6 +192,13 @@
     "noStudentsMatch": "No students found matching your search",
     "noStudentsYet": "No students registered yet",
     "loading": "Loading students...",
+    "studentIdPlaceholder": "e.g., ST001",
+    "fullNamePlaceholder": "Full name",
+    "gradeLevelPlaceholder": "e.g., Grade 10",
+    "subjectsPlaceholder": "Mathematics, Physics, Chemistry",
+    "addressPlaceholder": "Full address",
+    "notesPlaceholder": "Additional notes...",
+    "resultLabel": "Showing {filtered} of {total} students",
     "fields": {
       "name": "Full Name",
       "arabicName": "Arabic Name",
@@ -210,6 +260,25 @@
       "selectClass": "Please select a class"
     }
   },
+  "classes": {
+    "title": "Class Management",
+    "description": "Manage your course offerings and student groups",
+    "addClass": "Add New Class",
+    "classList": "Classes List",
+    "noClasses": "No classes found.",
+    "groupName": "Class/Group Name",
+    "subject": "Subject",
+    "gradeLevel": "Grade Level",
+    "schedule": "Schedule",
+    "status": "Status",
+    "actions": "Actions",
+    "active": "Active",
+    "inactive": "Inactive",
+    "edit": "Edit",
+    "na": "N/A",
+    "setupRequired": "Group setup required",
+    "setupDescription": "Create at least one group before taking attendance or entering grades."
+  },
   "attendance": {
     "title": "Attendance Tracking",
     "description": "Manage and track daily student attendance",
@@ -255,7 +324,7 @@
     },
     "student": "Student",
     "date": "Date",
-    "status": "Status",
+    "statusLabel": "Status",
     "notes": "Notes",
     "unknown": "Unknown",
     "status": {
@@ -508,32 +577,11 @@
     "scanWithWhatsApp": "Scan with WhatsApp",
     "preparingConnection": "Preparing WhatsApp connection...",
     "mayTakeFewSeconds": "This may take a few seconds",
-    "dashboardFeatures": "Dashboard Features:",
-    "sessionManagement": "• Session management and monitoring",
-    "qrGeneration": "• QR code generation and scanning",
-    "messageHistory": "• Message history and logs",
-    "webhookConfig": "• Webhook configuration",
-    "apiTesting": "• API testing and documentation",
-    "accessCredentials": "Access Credentials:",
-    "url": "URL",
-    "username": "Username",
-    "password": "Password",
-    "quickSetup": "Quick Setup",
-    "quickSetupDescription": "Simple steps to get WhatsApp working",
-    "whatYouGet": "What you get:",
-    "automatedCommunication": "• Automated parent communication",
-    "aiResponses": "• AI-powered responses to questions",
-    "instantNotifications": "• Instant grade and attendance notifications",
-    "conversationHistory": "• Complete conversation history",
-    "howToConnect": "How to connect:",
-    "whenDisconnected": "When disconnected: QR code and pairing code will appear above",
-    "scanQR": "Scan QR: Use WhatsApp → Settings → Linked Devices",
-    "needHelp": "Need Help?",
-    "quickTips": "Quick Tips:",
-    "disconnectedTip": "• Disconnected? Use QR code or pairing code above",
-    "cantScanTip": "• Can't scan? Try the 8-digit pairing code instead",
-    "stillIssuesTip": "• Still issues? Click \"Restart Session\" button",
-    "testWorkingTip": "• Test working? Use \"Test Message\" to verify",
+    "connectionStepsTitle": "How to connect",
+    "stepOpenWhatsApp": "Open WhatsApp on your phone",
+    "stepGoToLinkedDevices": "Go to Settings \u2192 Linked Devices",
+    "stepScanQR": "Tap \"Link a Device\" and scan the code",
+    "qrWillAppearHere": "QR code will appear here once generated",
     "alerts": {
       "sessionRestarted": "Session restarted successfully!",
       "sessionRestartFailed": "Failed to restart session",
@@ -552,6 +600,90 @@
       "logoutFailed": "Logout failed",
       "qrRequestFailed": "Failed to request QR code"
     }
+  },
+  "courses": {
+    "title": "Course Management",
+    "description": "Manage your course offerings, groups, and enrollments",
+    "addOffering": "Add New Offering",
+    "noOfferings": "No course offerings found",
+    "noOfferingsDescription": "Create your first course offering to start managing students.",
+    "subject": "Subject",
+    "gradeLevel": "Grade Level",
+    "academicYear": "Academic Year",
+    "groups": "Groups",
+    "students": "Students",
+    "status": "Status",
+    "actions": "Actions",
+    "active": "Active",
+    "inactive": "Inactive",
+    "addGroup": "Add Group",
+    "groupName": "Group Name",
+    "schedule": "Schedule",
+    "capacity": "Capacity",
+    "enrolled": "Enrolled",
+    "viewGroups": "View Groups",
+    "noGroups": "No groups yet",
+    "noGroupsDescription": "Add a group to this offering to start enrolling students.",
+    "enrollStudent": "Enroll Student",
+    "unenroll": "Remove",
+    "unenrollConfirm": "Are you sure you want to remove this student from the group?",
+    "saveSuccess": "Course offering saved successfully",
+    "deleteSuccess": "Course offering deleted successfully",
+    "loading": "Loading courses...",
+    "totalOfferings": "Total Offerings",
+    "totalGroups": "Total Groups",
+    "totalEnrolled": "Total Enrolled",
+    "searchPlaceholder": "Search by subject or grade...",
+    "allStatus": "All Status",
+    "groupNamePlaceholder": "e.g., Group A",
+    "schedulePlaceholder": "e.g., Sun & Wed 5-7 PM"
+  },
+  "reports": {
+    "title": "Reports & Analytics",
+    "description": "View comprehensive reports on attendance, grades, and messaging",
+    "overview": "Overview",
+    "attendanceReport": "Attendance Report",
+    "gradeReport": "Grade Report",
+    "messageReport": "Message Report",
+    "dateRange": "Date Range",
+    "selectPeriod": "Select Period",
+    "lastWeek": "Last Week",
+    "lastMonth": "Last Month",
+    "lastSemester": "Last Semester",
+    "customRange": "Custom Range",
+    "loading": "Loading reports...",
+    "totalStudents": "Total Students",
+    "attendanceRate": "Attendance Rate",
+    "averageScore": "Average Score",
+    "totalMessages": "Total Messages",
+    "topSubjects": "Top Subjects",
+    "recentActivity": "Recent Activity",
+    "noData": "No report data available yet",
+    "exportReport": "Export Report"
+  },
+  "monitor": {
+    "title": "System Monitor",
+    "description": "Monitor system health, WhatsApp connection, and API status",
+    "loading": "Loading system status...",
+    "systemHealth": "System Health",
+    "status": "Status",
+    "apiStatus": "API Status",
+    "whatsappStatus": "WhatsApp Status",
+    "databaseStatus": "Database Status",
+    "uptime": "Uptime",
+    "responseTime": "Response Time",
+    "activeConnections": "Active Connections",
+    "totalRequests": "Total Requests",
+    "errorRate": "Error Rate",
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "down": "Down",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "connection": "Connection",
+    "lastChecked": "Last Checked",
+    "refresh": "Refresh",
+    "noData": "Monitoring data is not available yet"
   },
   "analytics": {
     "title": "Analytics & Reports",
@@ -606,5 +738,192 @@
     "scanQr": "Scan QR Code",
     "connected": "Connected",
     "disconnected": "Disconnected"
+  },
+  "landing": {
+    "nav": {
+      "features": "Features",
+      "pricing": "Pricing",
+      "faq": "FAQ",
+      "login": "Sign In",
+      "startFree": "Start Free"
+    },
+    "hero": {
+      "title": "The smart way to manage your tutoring business",
+      "subtitle": "Track attendance, manage grades, and communicate with parents — all through WhatsApp. Built for private tutors and tutoring centers in Egypt.",
+      "cta": {
+        "start": "Start Free",
+        "login": "Sign In"
+      }
+    },
+    "problem": {
+      "title": "Tutoring shouldn't feel this hard",
+      "subtitle": "You became a teacher to educate, not to wrestle with spreadsheets and lost messages.",
+      "points": {
+        "spreadsheets": {
+          "title": "Spreadsheet chaos",
+          "description": "Tracking attendance and grades in endless Excel files leads to errors and wasted time."
+        },
+        "whatsapp": {
+          "title": "WhatsApp overload",
+          "description": "Dozens of parent conversations scattered across groups and individual chats."
+        },
+        "tracking": {
+          "title": "No visibility",
+          "description": "Hard to know which students are falling behind without real-time data."
+        }
+      },
+      "solution": {
+        "title": "Meet Nabeeh",
+        "description": "One platform that brings order to your teaching business. Attendance, grades, and parent communication — unified."
+      }
+    },
+    "features": {
+      "title": "Everything you need in one place",
+      "subtitle": "Stop juggling multiple tools. Nabeeh handles it all.",
+      "attendance": {
+        "title": "Attendance Tracking",
+        "description": "Mark attendance in seconds. Track patterns and identify at-risk students automatically."
+      },
+      "grades": {
+        "title": "Grade Management",
+        "description": "Enter grades, calculate averages, and generate reports for any assessment type."
+      },
+      "whatsapp": {
+        "title": "WhatsApp Bot",
+        "description": "Parents can ask about attendance, grades, and schedules via WhatsApp — the bot answers instantly."
+      },
+      "communication": {
+        "title": "Parent Communication",
+        "description": "Send updates, reports, and announcements to parents directly through WhatsApp."
+      },
+      "reports": {
+        "title": "Performance Reports",
+        "description": "Visual dashboards showing student progress, attendance trends, and grade distributions."
+      },
+      "groups": {
+        "title": "Multi-Group Management",
+        "description": "Manage multiple classes, subjects, and student groups from a single dashboard."
+      }
+    },
+    "screenshots": {
+      "title": "See Nabeeh in action",
+      "subtitle": "A clean, intuitive interface designed for teachers."
+    },
+    "pricing": {
+      "title": "Simple, transparent pricing",
+      "subtitle": "Start for free. Upgrade when you're ready.",
+      "comingSoon": "Coming Soon",
+      "tiers": {
+        "free": {
+          "name": "Basic",
+          "price": "Free",
+          "period": "forever",
+          "description": "Perfect for individual tutors getting started.",
+          "features": [
+            "Up to 20 students",
+            "1 group",
+            "Attendance tracking",
+            "Basic grade management",
+            "WhatsApp bot (basic)"
+          ],
+          "cta": "Get Started"
+        },
+        "pro": {
+          "name": "Pro",
+          "price": "Coming Soon",
+          "period": "",
+          "description": "For growing tutoring businesses.",
+          "features": [
+            "Unlimited students",
+            "Unlimited groups",
+            "Advanced reports",
+            "Parent communication",
+            "Priority support"
+          ],
+          "cta": "Coming Soon"
+        },
+        "center": {
+          "name": "Center",
+          "price": "Coming Soon",
+          "period": "",
+          "description": "For tutoring centers with multiple teachers.",
+          "features": [
+            "Everything in Pro",
+            "Multi-teacher support",
+            "Institution branding",
+            "Custom WhatsApp bot",
+            "Dedicated support"
+          ],
+          "cta": "Coming Soon"
+        }
+      }
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "subtitle": "Everything you need to know about Nabeeh.",
+      "questions": {
+        "what": {
+          "question": "What is Nabeeh?",
+          "answer": "Nabeeh is a smart teaching assistant designed for private tutors and tutoring centers. It helps you manage attendance, grades, student information, and parent communication — all in one place."
+        },
+        "whatsapp": {
+          "question": "How does the WhatsApp integration work?",
+          "answer": "Parents can send messages to your Nabeeh WhatsApp number asking about their child's attendance, grades, or schedule. The bot automatically responds with the relevant information from your database."
+        },
+        "pricing": {
+          "question": "Is Nabeeh really free?",
+          "answer": "Yes! The free tier includes everything an individual tutor needs to get started — up to 20 students, attendance tracking, grade management, and the WhatsApp bot. Premium tiers are coming soon."
+        },
+        "setup": {
+          "question": "How long does it take to set up?",
+          "answer": "You can get started in minutes. Simply create an account, add your students and groups, and you're ready to go. No technical knowledge required."
+        },
+        "data": {
+          "question": "Is my data secure?",
+          "answer": "Absolutely. Nabeeh uses enterprise-grade security with encrypted data storage. Your students' information is protected and never shared with third parties."
+        },
+        "support": {
+          "question": "Do you offer support in Arabic?",
+          "answer": "Yes! Nabeeh is fully bilingual (Arabic and English). You can switch between languages at any time, and our support team communicates in both languages."
+        }
+      }
+    },
+    "cta": {
+      "title": "Ready to transform your teaching?",
+      "button": "Get started free"
+    },
+    "footer": {
+      "tagline": "Smart teaching assistant for private tutors.",
+      "quickLinks": "Quick Links",
+      "legal": "Legal",
+      "contact": "Contact",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "copyright": "© 2026 Nabeeh. All rights reserved.",
+      "whatsapp": "WhatsApp us",
+      "email": "Email us"
+    },
+    "demo": {
+      "pickName": "Pick a child's name to start the demo",
+      "ahmed": "Ahmed",
+      "omar": "Omar",
+      "salma": "Salma",
+      "scenarios": {
+        "attendance": {
+          "parentMessage": "Hi, what was Ahmed's attendance this week?",
+          "botResponse": "Here's Ahmed's attendance this week:\n\n📅 Sunday: ✅ Present\n📅 Monday: ✅ Present\n📅 Tuesday: ❌ Absent\n📅 Wednesday: ✅ Present\n📅 Thursday: ✅ Present\n\nAttendance rate: 80%"
+        },
+        "grades": {
+          "parentMessage": "How did Ahmed do on his last exam?",
+          "botResponse": "Here are Ahmed's recent grades:\n\n📝 Midterm Math: 85/100 (A)\n📝 Quiz Science: 92/100 (A+)\n📝 Homework English: 78/100 (B+)\n\nOverall average: 85%"
+        },
+        "schedule": {
+          "parentMessage": "What classes does Ahmed have this week?",
+          "botResponse": "Ahmed's schedule this week:\n\n🕐 Sunday: Math 5-7 PM\n🕐 Monday: Science 4-6 PM\n🕐 Wednesday: Math 5-7 PM\n🕐 Thursday: English 4-6 PM\n\nNext class: Math, Sunday 5 PM"
+        }
+      },
+      "typing": "Type a message... (try: attendance, grades, schedule)",
+      "botName": "Nabeeh Bot"
+    }
   }
 }

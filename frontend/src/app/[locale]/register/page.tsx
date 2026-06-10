@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations, useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { validateEmail, formatPhoneNumber } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Phone, Mail, User, Building, BookOpen } from 'lucide-react';
+import { GridPattern } from '@/components/ui/grid-pattern';
 import logger from '@/lib/logger';
 
 interface RegisterFormData {
@@ -46,9 +48,9 @@ export default function RegisterPage({ params }: Props) {
   const [successMessage, setSuccessMessage] = useState('');
 
   const router = useRouter();
+  const t = useTranslations('auth');
   const isRTL = locale === 'ar';
 
-  // Initialize locale from params
   useEffect(() => {
     params.then(({ locale: paramLocale }) => setLocale(paramLocale));
   }, [params]);
@@ -56,42 +58,36 @@ export default function RegisterPage({ params }: Props) {
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    // Name validation
     if (!formData.name.trim()) {
-      newErrors.name = isRTL ? 'الاسم مطلوب' : 'Name is required';
+      newErrors.name = t('nameRequired');
     }
 
-    // Email validation
     if (!formData.email.trim()) {
-      newErrors.email = isRTL ? 'البريد الإلكتروني مطلوب' : 'Email is required';
+      newErrors.email = t('emailRequired');
     } else if (!validateEmail(formData.email)) {
-      newErrors.email = isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email format';
+      newErrors.email = t('invalidEmail');
     }
 
-    // Phone validation
     if (!formData.phone.trim()) {
-      newErrors.phone = isRTL ? 'رقم الهاتف مطلوب' : 'Phone number is required';
+      newErrors.phone = t('phoneRequired');
     } else if (!/^\+\d{10,15}$/.test(formData.phone)) {
-      newErrors.phone = isRTL ? 'رقم الهاتف يجب أن يبدأ بـ + ويحتوي على 10-15 رقم' : 'Phone must start with + and contain 10-15 digits';
+      newErrors.phone = t('phoneInvalid');
     }
 
-    // Password validation
     if (!formData.password) {
-      newErrors.password = isRTL ? 'كلمة المرور مطلوبة' : 'Password is required';
+      newErrors.password = t('passwordRequired');
     } else if (formData.password.length < 6) {
-      newErrors.password = isRTL ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters';
+      newErrors.password = t('passwordTooShort');
     }
 
-    // Confirm password validation
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = isRTL ? 'تأكيد كلمة المرور مطلوب' : 'Password confirmation is required';
+      newErrors.confirmPassword = t('confirmPasswordRequired');
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = isRTL ? 'كلمات المرور غير متطابقة' : 'Passwords do not match';
+      newErrors.confirmPassword = t('passwordMismatch');
     }
 
-    // WhatsApp number validation (if provided)
     if (formData.whatsapp_number && !/^\+\d{10,15}$/.test(formData.whatsapp_number)) {
-      newErrors.whatsapp_number = isRTL ? 'رقم الواتساب غير صحيح' : 'Invalid WhatsApp number format';
+      newErrors.whatsapp_number = t('whatsappInvalid');
     }
 
     setErrors(newErrors);
@@ -100,7 +96,6 @@ export default function RegisterPage({ params }: Props) {
 
   const handleInputChange = (field: keyof RegisterFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -142,22 +137,18 @@ export default function RegisterPage({ params }: Props) {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccessMessage(
-          isRTL 
-            ? 'تم إنشاء الحساب بنجاح! سيتم توجيهك لصفحة تسجيل الدخول...' 
-            : 'Account created successfully! Redirecting to login...'
-        );
+        setSuccessMessage(t('registerSuccess'));
         
         setTimeout(() => {
           router.push(`/${locale}/login`);
         }, 2000);
       } else {
-        setErrors({ general: data.message || (isRTL ? 'حدث خطأ أثناء التسجيل' : 'Registration failed') });
+        setErrors({ general: data.message || t('registerFailed') });
       }
     } catch (error) {
       logger.error('Registration error:', error);
       setErrors({ 
-        general: isRTL ? 'خطأ في الاتصال بالخادم' : 'Network error. Please try again.' 
+        general: t('networkError')
       });
     } finally {
       setIsLoading(false);
@@ -166,23 +157,27 @@ export default function RegisterPage({ params }: Props) {
 
   return (
     <div className={cn(
-      "min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8",
+      "relative min-h-screen flex items-center justify-center bg-canvas py-12 px-4 sm:px-6 lg:px-8",
       isRTL && "font-arabic"
     )} dir={isRTL ? 'rtl' : 'ltr'}>
-      <div className="max-w-2xl w-full space-y-8">
-        {/* Header */}
+      <GridPattern
+        width={30}
+        height={30}
+        squares={[[1, 1], [4, 3], [7, 5], [10, 2], [13, 6]]}
+        className="opacity-50"
+      />
+      <div className="relative z-10 max-w-2xl w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold text-primary">
+            <h1 className="text-3xl font-bold text-primary font-display">
               {isRTL ? 'نبيه - Nabeeh' : 'Nabeeh - نبيه'}
             </h1>
-            {/* Language switcher */}
             <div className="flex gap-2">
               <Link 
                 href={`/en/register`}
                 className={cn(
-                  "px-2 py-1 rounded text-sm",
-                  locale === 'en' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-primary"
+                  "px-2 py-1 rounded-none text-sm",
+                  locale === 'en' ? "bg-primary/10 text-primary" : "text-ink/60 hover:text-primary"
                 )}
               >
                 EN
@@ -190,61 +185,51 @@ export default function RegisterPage({ params }: Props) {
               <Link 
                 href={`/ar/register`}
                 className={cn(
-                  "px-2 py-1 rounded text-sm",
-                  locale === 'ar' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-primary"
+                  "px-2 py-1 rounded-none text-sm",
+                  locale === 'ar' ? "bg-primary/10 text-primary" : "text-ink/60 hover:text-primary"
                 )}
               >
                 عربي
               </Link>
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            {isRTL ? 'إنشاء حساب معلم جديد' : 'Create Teacher Account'}
+          <h2 className="text-2xl font-bold text-ink font-display">
+            {t('registerTitle')}
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            {isRTL 
-              ? 'قم بملء البيانات التالية لإنشاء حسابك والبدء في استخدام نبيه' 
-              : 'Fill in the details below to create your account and start using Nabeeh'
-            }
+          <p className="mt-2 text-base text-ink/70 font-body">
+            {t('registerSubtitle')}
           </p>
         </div>
 
-        {/* Success Message */}
         {successMessage && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+          <div className="bg-surface-sage border border-ink/20 text-ink px-4 py-3 rounded-none font-body">
             {successMessage}
           </div>
         )}
 
-        {/* General Error */}
         {errors.general && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <div className="bg-[#c53030]/10 border border-[#c53030]/20 text-[#c53030] px-4 py-3 rounded-none font-body">
             {errors.general}
           </div>
         )}
 
-        {/* Registration Form */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-display">
               <User className="h-5 w-5" />
-              {isRTL ? 'بيانات المعلم' : 'Teacher Information'}
+              {t('teacherInfo')}
             </CardTitle>
-            <CardDescription>
-              {isRTL 
-                ? 'أدخل بياناتك الشخصية ومعلومات التواصل' 
-                : 'Enter your personal and contact information'
-              }
+            <CardDescription className="font-body">
+              {t('teacherInfoDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Basic Information */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="flex items-center gap-2">
+                  <Label htmlFor="name" className="flex items-center gap-2 font-mono uppercase tracking-wider">
                     <User className="h-4 w-4" />
-                    {isRTL ? 'الاسم الكامل *' : 'Full Name *'}
+                    {t('fullName')}
                   </Label>
                   <Input
                     id="name"
@@ -253,16 +238,16 @@ export default function RegisterPage({ params }: Props) {
                     placeholder={isRTL ? 'أحمد محمد حسن' : 'John Smith'}
                     className={cn(
                       isRTL && 'text-right',
-                      errors.name && 'border-red-500'
+                      errors.name && 'border-[#c53030]'
                     )}
                   />
-                  {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+                  {errors.name && <p className="text-base text-[#c53030]">{errors.name}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="flex items-center gap-2">
+                  <Label htmlFor="email" className="flex items-center gap-2 font-mono uppercase tracking-wider">
                     <Mail className="h-4 w-4" />
-                    {isRTL ? 'البريد الإلكتروني *' : 'Email Address *'}
+                    {t('emailAddress')}
                   </Label>
                   <Input
                     id="email"
@@ -270,53 +255,51 @@ export default function RegisterPage({ params }: Props) {
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder={isRTL ? 'ahmed@example.com' : 'john@example.com'}
-                    className={errors.email ? 'border-red-500' : ''}
+                    className={errors.email ? 'border-[#c53030]' : ''}
                   />
-                  {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+                  {errors.email && <p className="text-base text-[#c53030]">{errors.email}</p>}
                 </div>
               </div>
 
-              {/* Phone Numbers */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="flex items-center gap-2">
+                  <Label htmlFor="phone" className="flex items-center gap-2 font-mono uppercase tracking-wider">
                     <Phone className="h-4 w-4" />
-                    {isRTL ? 'رقم الهاتف *' : 'Phone Number *'}
+                    {t('phoneNumber')}
                   </Label>
                   <Input
                     id="phone"
                     value={formData.phone}
                     onChange={(e) => handlePhoneChange('phone', e.target.value)}
                     placeholder="+201234567890"
-                    className={errors.phone ? 'border-red-500' : ''}
+                    className={errors.phone ? 'border-[#c53030]' : ''}
                   />
-                  {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
-                  <p className="text-xs text-gray-500">
-                    {isRTL ? 'يجب أن يبدأ بـ + ورمز الدولة' : 'Must start with + and country code'}
+                  {errors.phone && <p className="text-base text-[#c53030]">{errors.phone}</p>}
+                  <p className="text-xs text-ink/60 font-mono uppercase tracking-wider">
+                    {t('phoneHint')}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="whatsapp_number" className="flex items-center gap-2">
+                  <Label htmlFor="whatsapp_number" className="flex items-center gap-2 font-mono uppercase tracking-wider">
                     <Phone className="h-4 w-4" />
-                    {isRTL ? 'رقم الواتساب' : 'WhatsApp Number'}
+                    {t('whatsappNumber')}
                   </Label>
                   <Input
                     id="whatsapp_number"
                     value={formData.whatsapp_number}
                     onChange={(e) => handlePhoneChange('whatsapp_number', e.target.value)}
-                    placeholder={isRTL ? 'اتركه فارغاً لاستخدام نفس رقم الهاتف' : 'Leave empty to use same as phone'}
-                    className={errors.whatsapp_number ? 'border-red-500' : ''}
+                    placeholder={t('whatsappPlaceholder')}
+                    className={errors.whatsapp_number ? 'border-[#c53030]' : ''}
                   />
-                  {errors.whatsapp_number && <p className="text-sm text-red-500">{errors.whatsapp_number}</p>}
+                  {errors.whatsapp_number && <p className="text-base text-[#c53030]">{errors.whatsapp_number}</p>}
                 </div>
               </div>
 
-              {/* Password Fields */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="password">
-                    {isRTL ? 'كلمة المرور *' : 'Password *'}
+                  <Label htmlFor="password" className="font-mono uppercase tracking-wider">
+                    {t('password')} *
                   </Label>
                   <div className="relative">
                     <Input
@@ -324,26 +307,26 @@ export default function RegisterPage({ params }: Props) {
                       type={showPassword ? 'text' : 'password'}
                       value={formData.password}
                       onChange={(e) => handleInputChange('password', e.target.value)}
-                      placeholder={isRTL ? 'كلمة مرور قوية' : 'Strong password'}
+                      placeholder={t('passwordPlaceholder')}
                       className={cn(
                         'pr-10',
-                        errors.password && 'border-red-500'
+                        errors.password && 'border-[#c53030]'
                       )}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/60 hover:text-ink/80"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+                  {errors.password && <p className="text-base text-[#c53030]">{errors.password}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">
-                    {isRTL ? 'تأكيد كلمة المرور *' : 'Confirm Password *'}
+                  <Label htmlFor="confirmPassword" className="font-mono uppercase tracking-wider">
+                    {t('confirmPassword')} *
                   </Label>
                   <div className="relative">
                     <Input
@@ -351,36 +334,35 @@ export default function RegisterPage({ params }: Props) {
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={formData.confirmPassword}
                       onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                      placeholder={isRTL ? 'أعد كتابة كلمة المرور' : 'Repeat password'}
+                      placeholder={t('confirmPasswordPlaceholder')}
                       className={cn(
                         'pr-10',
-                        errors.confirmPassword && 'border-red-500'
+                        errors.confirmPassword && 'border-[#c53030]'
                       )}
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/60 hover:text-ink/80"
                     >
                       {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
+                  {errors.confirmPassword && <p className="text-base text-[#c53030]">{errors.confirmPassword}</p>}
                 </div>
               </div>
 
-              {/* Optional Information */}
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+              <div className="border-t border-ink/20 pt-6">
+                <h3 className="text-lg font-medium mb-4 flex items-center gap-2 font-display">
                   <Building className="h-5 w-5" />
-                  {isRTL ? 'معلومات إضافية (اختيارية)' : 'Additional Information (Optional)'}
+                  {t('additionalInfoOptional')}
                 </h3>
                 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="business_name" className="flex items-center gap-2">
+                    <Label htmlFor="business_name" className="flex items-center gap-2 font-mono uppercase tracking-wider">
                       <Building className="h-4 w-4" />
-                      {isRTL ? 'اسم المؤسسة التعليمية' : 'Institution Name'}
+                      {t('institutionName')}
                     </Label>
                     <Input
                       id="business_name"
@@ -392,9 +374,9 @@ export default function RegisterPage({ params }: Props) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="subjects" className="flex items-center gap-2">
+                    <Label htmlFor="subjects" className="flex items-center gap-2 font-mono uppercase tracking-wider">
                       <BookOpen className="h-4 w-4" />
-                      {isRTL ? 'المواد التي تدرسها' : 'Subjects You Teach'}
+                      {t('subjectsYouTeach')}
                     </Label>
                     <Input
                       id="subjects"
@@ -403,14 +385,13 @@ export default function RegisterPage({ params }: Props) {
                       placeholder={isRTL ? 'الرياضيات، الفيزياء، الكيمياء' : 'Mathematics, Physics, Chemistry'}
                       className={isRTL ? 'text-right' : ''}
                     />
-                    <p className="text-xs text-gray-500">
-                      {isRTL ? 'فصل بين المواد بفاصلة' : 'Separate subjects with commas'}
+                    <p className="text-xs text-ink/60 font-mono uppercase tracking-wider">
+                      {t('subjectsHint')}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Submit Button */}
               <div className="flex flex-col space-y-4">
                 <Button 
                   type="submit" 
@@ -419,22 +400,22 @@ export default function RegisterPage({ params }: Props) {
                 >
                   {isLoading ? (
                     <span className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      {isRTL ? 'جاري إنشاء الحساب...' : 'Creating Account...'}
+                      <div className="animate-spin h-4 w-4 border-b-2 border-ink"></div>
+                      {t('creatingAccount')}
                     </span>
                   ) : (
-                    isRTL ? 'إنشاء حساب معلم' : 'Create Teacher Account'
+                    t('createTeacherAccount')
                   )}
                 </Button>
 
                 <div className="text-center">
-                  <p className="text-sm text-gray-600">
-                    {isRTL ? 'لديك حساب بالفعل؟' : 'Already have an account?'}{' '}
+                  <p className="text-base text-ink/70 font-body">
+                    {t('alreadyHaveAccount')}{' '}
                     <Link 
                       href={`/${locale}/login`}
                       className="text-primary hover:text-primary/80 font-medium"
                     >
-                      {isRTL ? 'تسجيل الدخول' : 'Sign in'}
+                      {t('signInButton')}
                     </Link>
                   </p>
                 </div>
@@ -445,4 +426,4 @@ export default function RegisterPage({ params }: Props) {
       </div>
     </div>
   );
-} 
+}

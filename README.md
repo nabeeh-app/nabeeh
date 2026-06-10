@@ -33,6 +33,14 @@ cp .env.example .env.local
 npm run dev            # Starts with Turbopack
 ```
 
+### Quick Start (all-in-one)
+```bash
+./dev.sh start         # Start both services with health checks
+./dev.sh status        # Check PIDs, memory, health
+./dev.sh stop          # Graceful shutdown
+./dev.sh logs          # Tail all logs
+```
+
 ## Tech Stack
 
 | Layer | Technology |

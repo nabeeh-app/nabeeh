@@ -1,14 +1,21 @@
 import { LucideIcon } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 
 type StatColor = 'primary' | 'success' | 'warning' | 'destructive' | 'accent';
 
-const colorMap: Record<StatColor, string> = {
+const bgMap: Record<StatColor, string> = {
+  primary: 'bg-surface-sage',
+  success: 'bg-surface-sage',
+  warning: 'bg-surface-cool',
+  destructive: 'bg-[#c53030]/10',
+  accent: 'bg-surface-cool',
+};
+
+const textMap: Record<StatColor, string> = {
   primary: 'text-primary',
-  success: 'text-green-600 dark:text-green-400',
-  warning: 'text-yellow-600 dark:text-yellow-400',
+  success: 'text-[#026370]',
+  warning: 'text-ink/60',
   destructive: 'text-destructive',
-  accent: 'text-purple-600 dark:text-purple-400',
+  accent: 'text-ink/70',
 };
 
 interface StatCard {
@@ -25,19 +32,20 @@ interface StatCardsProps {
 export function StatCards({ stats }: StatCardsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-      {stats.map((stat, index) => (
-        <Card key={index}>
-          <CardContent className="p-4">
+      {stats.map((stat, index) => {
+        const color = stat.color || 'primary';
+        return (
+          <div key={index} className={`${bgMap[color]} p-4 rounded-md`}>
             <div className="flex items-center space-x-2">
-              <stat.icon className={`h-8 w-8 ${colorMap[stat.color || 'primary']}`} />
+              <stat.icon className={`h-8 w-8 ${textMap[color]}`} />
               <div>
-                <p className="text-2xl font-bold">{stat.value}</p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
+                <p className="text-2xl font-bold font-display">{stat.value}</p>
+                <p className="text-sm text-ink/60 font-mono uppercase tracking-wider">{stat.label}</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      ))}
+          </div>
+        );
+      })}
     </div>
   );
 }

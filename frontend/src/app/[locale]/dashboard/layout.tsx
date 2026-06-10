@@ -1,20 +1,13 @@
 'use client';
 
-import Link from 'next/link';
 import { Sidebar } from '@/components/sidebar';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { isFeatureEnabled, type FeatureKey } from '@/config/featureFlags';
-
-const featureRouteMap: Record<string, FeatureKey> = {
-  grades: 'grades',
-  reports: 'reports',
-  messages: 'messaging',
-  courses: 'courses',
-  monitor: 'monitor',
-};
+import { GridPattern } from '@/components/ui/grid-pattern';
+import { isFeatureEnabled } from '@/config/featureFlags';
+import { routeFeatureMap } from '@/config/navigation';
+import ComingSoon from '@/components/ComingSoon';
 
 const getBlockedFeature = (pathname: string | null) => {
   if (!pathname) {
@@ -28,7 +21,7 @@ const getBlockedFeature = (pathname: string | null) => {
   }
 
   const section = segments[dashboardIndex + 1];
-  const featureKey = section ? featureRouteMap[section] : undefined;
+  const featureKey = section ? routeFeatureMap[section] : undefined;
   if (!featureKey) {
     return null;
   }
@@ -42,6 +35,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const locale = useLocale();
+  const t = useTranslations('comingSoon');
+  const tCommon = useTranslations('common');
   const pathname = usePathname();
   const blockedFeature = getBlockedFeature(pathname);
   const redirectTo = `/${locale}/login`;
@@ -52,28 +47,29 @@ export default function DashboardLayout({
       fallback={(
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+            <div className="animate-spin h-12 w-12 border-b-2 border-ink mx-auto"></div>
+            <p className="mt-4 text-ink/60 font-mono uppercase tracking-wider">{tCommon('loading')}</p>
           </div>
         </div>
       )}
     >
-      <div className="flex h-screen bg-background">
+      <div className="flex h-screen bg-canvas">
         <Sidebar />
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6">
+        <div className="flex-1 overflow-y-auto relative">
+          <GridPattern
+            width={30}
+            height={30}
+            squares={[[1, 1], [4, 3], [7, 5], [10, 2], [13, 6]]}
+            className="opacity-50"
+          />
+          <div className="p-6 relative z-10">
             {blockedFeature ? (
-              <div className="flex min-h-[60vh] items-center justify-center">
-                <div className="max-w-md text-center space-y-4">
-                  <h2 className="text-2xl font-semibold text-foreground">Coming soon</h2>
-                  <p className="text-muted-foreground">
-                    This feature is not available yet. Enable it when it is ready to launch.
-                  </p>
-                  <Button asChild>
-                    <Link href={`/${locale}/dashboard`}>Back to dashboard</Link>
-                  </Button>
-                </div>
-              </div>
+              <ComingSoon
+                title={t('title')}
+                description={t('description')}
+                backHref={`/${locale}/dashboard`}
+                backLabel={t('backLabel')}
+              />
             ) : (
               children
             )}

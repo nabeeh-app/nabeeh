@@ -11,7 +11,17 @@ async function getParentByPhone(phone) {
       *,
       students (
         *,
-        teachers (id, name, business_name)
+        enrollments (
+          id,
+          group:groups (
+            id,
+            offering:offerings (
+              id,
+              teacher_id,
+              teacher:teachers (id, name, business_name)
+            )
+          )
+        )
       )
     `)
     .eq('phone', phone)
@@ -78,9 +88,9 @@ async function getStudentAttendance(studentId) {
   const today = new Date().toISOString().split('T')[0];
   const { data: attendance } = await supabase
     .from('attendance')
-    .select('*')
-    .eq('student_id', studentId)
-    .eq('date', today)
+    .select('*, session:sessions!inner(date)')
+    .eq('enrollment.student_id', studentId)
+    .eq('session.date', today)
     .single();
 
   return attendance;
@@ -92,25 +102,31 @@ async function getStudentAttendance(studentId) {
 async function getStudentGrades(studentId, subject) {
   let query = supabase
     .from('grades')
-    .select('*')
-    .eq('student_id', studentId)
-    .eq('is_published', true)
-    .order('date', { ascending: false });
+    .select(`
+      *,
+      assessment:assessments!inner(name, max_score, date, type),
+      enrollment:enrollments!inner(student_id, group:groups!inner(offering:offerings!inner(subject:subjects!inner(name_en, name_ar, code))))
+    `)
+    .eq('enrollment.student_id', studentId)
+    .order('created_at', { ascending: false });
 
   if (subject) {
-    query = query.eq('subject', subject);
+    query = query.or(`enrollment.group.offering.subject.name_en.ilike.${subject},enrollment.group.offering.subject.name_ar.ilike.${subject},enrollment.group.offering.subject.code.ilike.${subject}`);
   }
 
   const { data: recentGrades } = await query.limit(5);
 
   let allQuery = supabase
     .from('grades')
-    .select('subject, percentage, assessment_type')
-    .eq('student_id', studentId)
-    .eq('is_published', true);
+    .select(`
+      score,
+      assessment:assessments!inner(max_score, type),
+      enrollment:enrollments!inner(student_id, group:groups!inner(offering:offerings!inner(subject:subjects!inner(name_en, code))))
+    `)
+    .eq('enrollment.student_id', studentId);
 
   if (subject) {
-    allQuery = allQuery.eq('subject', subject);
+    allQuery = allQuery.or(`enrollment.group.offering.subject.name_en.ilike.${subject},enrollment.group.offering.subject.code.ilike.${subject}`);
   }
 
   const { data: allGrades } = await allQuery;

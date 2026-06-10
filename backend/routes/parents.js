@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { validate, createParentSchema, updateParentSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
 
 const router = express.Router();
@@ -83,6 +84,43 @@ const getParents = async (req, res) => {
       success: false,
       message: 'Server error fetching parents'
     });
+  }
+};
+
+// @desc    Get single parent by ID
+// @route   GET /api/parents/:id
+// @access  Private
+const getParent = async (req, res) => {
+  try {
+    const { data: parent, error } = await supabase
+      .from('parents')
+      .select(`
+        *,
+        student:students (id, name, student_id)
+      `)
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !parent) {
+      return res.status(404).json({ success: false, message: 'Parent not found' });
+    }
+
+    // Verify ownership via enrollment
+    const { data: enrollment } = await supabase
+      .from('enrollments')
+      .select('groups!inner(offerings!inner(teacher_id))')
+      .eq('student_id', parent.student_id)
+      .eq('groups.offerings.teacher_id', req.user.id)
+      .limit(1);
+
+    if (!enrollment || enrollment.length === 0) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    res.status(200).json({ success: true, data: parent });
+  } catch (error) {
+    logger.error('Get parent error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Server error fetching parent' });
   }
 };
 
@@ -322,8 +360,9 @@ const deleteParent = async (req, res) => {
 
 // Route definitions
 router.get('/', authenticateToken, getParents);
-router.post('/', authenticateToken, createParent);
-router.put('/:id', authenticateToken, updateParent);
+router.get('/:id', authenticateToken, getParent);
+router.post('/', authenticateToken, validate(createParentSchema), createParent);
+router.put('/:id', authenticateToken, validate(updateParentSchema), updateParent);
 router.delete('/:id', authenticateToken, deleteParent);
 
 module.exports = router;
