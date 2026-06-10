@@ -2,7 +2,7 @@
 
 ## Context
 
-Extended grilling session with Mustafa (project owner) covering: teacher-assistant model, concurrent access, Google login, AI/agentic features, deployment strategy, monetization/pricing, and onboarding UX. All decisions below were made interactively and are final.
+Extended grilling session with Mustafa (project owner) covering: teacher-assistant model, concurrent access, Google login, AI/agentic features, deployment strategy, monetization/pricing, onboarding UX, admin panel, student data import, and LLM cost optimization. All decisions below were made interactively and are final.
 
 ---
 
@@ -19,6 +19,8 @@ Extended grilling session with Mustafa (project owner) covering: teacher-assista
 | `docs/onboarding-ux-flow.md` | Onboarding flow, demo data, progressive unlock, feature gating, empty states |
 | `docs/admin-panel-telemetry.md` | Admin panel architecture, user management, subscription management, payment logging, telemetry, system health, support tools |
 | `docs/student-data-import.md` | Student import methods (manual, Excel, paste, self-register), column auto-detection, validation, configurable required fields |
+| `docs/llm-cost-optimization.md` | LLM comparison: Gemini vs self-hosted (Qwen 3 8B, SILMA Kashif 2B), hybrid strategy, pattern matching first, cost analysis |
+
 | `docs/llm-cost-optimization.md` | LLM comparison: Gemini vs self-hosted (Qwen 3 8B, SILMA Kashif 2B), hybrid strategy, pattern matching first, cost analysis |
 
 ### Documentation (Modified)
@@ -108,6 +110,7 @@ States: `pending` → `active` → `deactivated` | `removed`
 - **Cron over streaming**: Simpler, predictable costs
 - **AI analysis frequency**: Weekly only (Sundays), not daily or real-time
 - **AI cost control**: Daily token budget per teacher (Free: 0, Basic: 5K, Pro: 20K, Center: 50K)
+- **LLM cost optimization**: Hybrid strategy — pattern matching first (60-70% queries), small model (Qwen 3 8B) for simple analysis, Gemini for complex tasks. See `docs/llm-cost-optimization.md`
 
 ### 12. Teacher & Assistant AI Workflows
 - **Attendance**: Real-time sync between teacher and assistant. Assistant marks, teacher sees live.
@@ -359,3 +362,4 @@ ALTER TABLE parents ADD COLUMN is_demo BOOLEAN DEFAULT false;
 - `tdd` — testing lock mechanism and permission checks
 - `improve-codebase-architecture` — integrating audit logging across routes
 - `hallmark` — onboarding UX design and empty states
+- `hf-cli` — deploying small LLMs (Qwen 3 8B) via Ollama if pursuing self-hosted route
