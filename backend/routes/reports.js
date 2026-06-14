@@ -49,6 +49,17 @@ const generateComment = async (req, res) => {
       .from('students').select('id, name').eq('id', student_id).single();
     if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
 
+    const { data: enrollment } = await supabaseAdmin
+      .from('enrollments')
+      .select('id, groups!inner(id, offerings!inner(teacher_id))')
+      .eq('student_id', student_id)
+      .eq('groups.offerings.teacher_id', teacherId)
+      .limit(1)
+      .maybeSingle();
+    if (!enrollment) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
     const { data: teacher } = await supabaseAdmin
       .from('teachers').select('name, business_name, preferred_language').eq('id', teacherId).single();
 
@@ -243,6 +254,16 @@ const bulkGenerate = async (req, res) => {
   try {
     const teacherId = req.user.teacherId || req.user.id;
     const { group_id } = req.body;
+
+    const { data: group } = await supabaseAdmin
+      .from('groups')
+      .select('id, offerings!inner(teacher_id)')
+      .eq('id', group_id)
+      .eq('offerings.teacher_id', teacherId)
+      .maybeSingle();
+    if (!group) {
+      return res.status(404).json({ success: false, message: 'Group not found' });
+    }
 
     const { data: enrollments } = await supabaseAdmin
       .from('enrollments')
