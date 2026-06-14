@@ -1,15 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, AlertCircle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { SEVERITY_CONFIG } from '@/lib/severityConfig';
 import type { AtRiskStudent } from '@/types';
-
-const SEVERITY_CONFIG = {
-  warning: { icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-500/10', variant: 'warning' as const },
-  critical: { icon: AlertCircle, color: 'text-destructive', bg: 'bg-destructive/10', variant: 'destructive' as const },
-};
 
 interface AtRiskStudentsProps {
   data: AtRiskStudent[];

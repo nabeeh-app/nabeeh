@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiClient } from '@/lib/api';
+import { SEVERITY_CONFIG } from '@/lib/severityConfig';
 
 interface Anomaly {
   student_id: string;
@@ -18,11 +19,6 @@ interface Anomaly {
 interface AnomalyIndicatorProps {
   offeringId?: string;
 }
-
-const SEVERITY_CONFIG = {
-  warning: { icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-500/10', variant: 'warning' as const },
-  critical: { icon: AlertCircle, color: 'text-destructive', bg: 'bg-destructive/10', variant: 'destructive' as const },
-};
 
 export function AnomalyIndicator({ offeringId }: AnomalyIndicatorProps) {
   const t = useTranslations('attendance');

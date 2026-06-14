@@ -3,9 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import {
-  AlertTriangle,
-  Info,
-  AlertCircle,
   CheckCheck,
   Filter,
   Bell,
@@ -22,13 +19,8 @@ import {
 } from '@/components/ui/select';
 import { apiClient } from '@/lib/api';
 import { timeAgo } from '@/lib/utils';
+import { SEVERITY_CONFIG } from '@/lib/severityConfig';
 import type { Alert } from '@/types';
-
-const SEVERITY_CONFIG = {
-  info: { icon: Info, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-  warning: { icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-  critical: { icon: AlertCircle, color: 'text-destructive', bg: 'bg-destructive/10' },
-} as const;
 
 export function AlertDisplay() {
   const t = useTranslations('alerts');
