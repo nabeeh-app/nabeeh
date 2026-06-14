@@ -17,12 +17,12 @@ honor its STOP conditions, and update your row when done.
 | 007 | Batch N+1 queries in anomaly/digest | P2 | M | — | DONE |
 | 008 | Add error feedback to silent catches | P2 | M | — | DONE |
 | 009 | Make bulk report generation non-blocking | P2 | L | 009 | DONE |
-| 010 | Extract duplicated validate() middleware | P2 | S | — | TODO |
-| 011 | Localize timeAgo() and fix missing i18n | P2 | M | — | TODO |
-| 012 | Extract duplicated SEVERITY_CONFIG | P3 | S | — | TODO |
-| 013 | Wire up GradeDistribution/TrendChart or gate | P3 | M | — | TODO |
-| 014 | Merge duplicate onboarding i18n keys | P3 | S | — | TODO |
-| 015 | Extract duplicated DataSourcesBadges | P3 | S | — | TODO |
+| 010 | Extract duplicated validate() middleware | P2 | S | — | DONE |
+| 011 | Localize timeAgo() and fix missing i18n | P2 | M | — | DONE |
+| 012 | Extract duplicated SEVERITY_CONFIG | P3 | S | — | DONE |
+| 013 | Wire up GradeDistribution/TrendChart or gate | P3 | M | — | DONE |
+| 014 | Merge duplicate onboarding i18n keys | P3 | S | — | DONE |
+| 015 | Extract duplicated DataSourcesBadges | P3 | S | — | DONE |
 | D1 | Batch data-fetching layer | P2 | M | 007 | TODO |
 | D2 | Background job queue for AI operations | P2 | L | 009 | TODO |
 | D3 | Migrate frontend to React Query/SWR | P3 | L | — | TODO |
