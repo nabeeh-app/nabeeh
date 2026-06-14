@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { apiClient } from '@/lib/api';
+import { featureFlags } from '@/config/featureFlags';
 import { GroupComparison } from './GroupComparison';
 import { AtRiskStudents } from './AtRiskStudents';
 import { GradeDistribution } from './GradeDistribution';
@@ -148,8 +149,14 @@ export function GradeAnalysis() {
         <div className="grid gap-6 lg:grid-cols-2">
           <GroupComparison data={groupData} />
           <AtRiskStudents data={atRisk} />
-          <GradeDistribution data={distribution} />
-          <TrendChart data={trends} />
+          {/* TODO: Add assessment selector to populate distribution data */}
+          {/* TODO: Add student selector to populate trend data */}
+          {featureFlags.gradeAnalysis && (
+            <>
+              <GradeDistribution data={distribution} />
+              <TrendChart data={trends} />
+            </>
+          )}
         </div>
       )}
     </div>
