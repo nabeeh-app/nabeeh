@@ -22,7 +22,8 @@ export interface Teacher {
   email: string;
   phone: string;
   name: string;
-  role: 'teacher' | 'admin' | 'parent';
+  role: 'teacher' | 'admin' | 'parent' | 'assistant';
+  teacherId?: string;
   preferred_language: string;
   business_name: string | null;
   logo_url: string | null;
@@ -37,6 +38,10 @@ export interface Teacher {
   is_active: boolean;
   subscription_plan: string | null;
   subscription_expires_at: string | null;
+  settings?: {
+    notification_preferences?: Record<string, boolean>;
+    [key: string]: unknown;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -340,6 +345,134 @@ export interface UpdateParentRequest {
   preferred_language?: string;
   telegram_username?: string | null;
   communication_preferences?: unknown;
+}
+
+// Assistant Types
+export interface Assistant {
+  id: string;
+  name: string;
+  email: string;
+  status: 'active' | 'inactive' | 'pending' | 'removed';
+  permissions: Record<string, boolean>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssistantInvite {
+  id: string;
+  email: string;
+  permissions: Record<string, boolean>;
+  status: string;
+  created_at: string;
+  expires_at: string;
+}
+
+// Notification Types
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+// Alert Types
+export interface AlertRule {
+  id: string;
+  alert_type: 'attendance_threshold' | 'grade_threshold' | 'trend_anomaly';
+  threshold_value: number;
+  comparison: 'gt' | 'lt' | 'gte' | 'lte';
+  notification_method: 'in_app' | 'whatsapp' | 'both';
+  is_enabled: boolean;
+  created_at: string;
+}
+
+export interface Alert {
+  id: string;
+  alert_type: string;
+  title: string;
+  message: string;
+  severity: 'info' | 'warning' | 'critical';
+  is_read: boolean;
+  student_id: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+// Report Draft Types
+export interface ReportDraft {
+  id: string;
+  student_id: string;
+  group_id: string | null;
+  draft_text: string;
+  data_sources: Record<string, unknown> | null;
+  status: 'pending' | 'approved' | 'edited' | 'rejected' | 'sent';
+  edited_text: string | null;
+  sent_at: string | null;
+  created_at: string;
+  student?: { name: string };
+}
+
+// Weekly Digest Types
+export interface WeeklyDigest {
+  id: string;
+  week_start: string;
+  week_end: string;
+  digest_data: {
+    improved: Array<{ student_name: string; metric: string; detail: string }>;
+    declining: Array<{ student_name: string; metric: string; detail: string }>;
+    action_items: string[];
+  };
+  created_at: string;
+}
+
+// Grade Analysis Types
+export interface GroupComparison {
+  group_id: string;
+  group_name: string;
+  average_score: number;
+  student_count: number;
+}
+
+export interface AtRiskStudent {
+  student_id: string;
+  student_name: string;
+  average_grade: number;
+  attendance_rate: number;
+  severity: 'warning' | 'critical';
+}
+
+export interface GradeDistribution {
+  range: string;
+  count: number;
+}
+
+export interface GradeTrend {
+  assessment_name: string;
+  score: number;
+  date: string;
+}
+
+export interface GradeOverview {
+  total_students: number;
+  average_score: number;
+  highest_score: number;
+  lowest_score: number;
+  total_assessments: number;
+}
+
+// Notification Preferences
+export interface NotificationPreferences {
+  attendance_marked: boolean;
+  grade_entered: boolean;
+  whatsapp_sent: boolean;
+  assistant_action: boolean;
+  digest: boolean;
+  quiet_hours_start: string | null;
+  quiet_hours_end: string | null;
 }
 
 // Settings Types

@@ -12,6 +12,7 @@ import { LanguageSwitcher } from '@/components/language-switcher';
 import { validateEmail, cn } from '@/lib/utils';
 import { GridPattern } from '@/components/ui/grid-pattern';
 import { Eye, EyeOff } from 'lucide-react';
+import { GoogleSignInButton } from '@/components/auth/google-sign-in-button';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,7 +21,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
 
-  const { login, error, isAuthenticated } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations('auth');
@@ -216,6 +217,17 @@ export default function LoginPage() {
             >
               {isLoading ? t('signingIn') : t('signInButton')}
             </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-ink/20" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-3 bg-canvas text-ink/60 font-body">{t('orContinueWith')}</span>
+              </div>
+            </div>
+
+            <GoogleSignInButton mode="login" />
 
             <p className="text-center text-sm text-ink/60 font-body">
               {t('dontHaveAccount')}{' '}

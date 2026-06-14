@@ -64,7 +64,7 @@ function ok<T>(data: T, message?: string): ApiResponse<T> {
 const delay = (ms = 100) => new Promise((r) => setTimeout(r, ms));
 
 class MockApiClient extends ApiClient {
-  async login(data: LoginRequest): Promise<AuthResponse> {
+  async login(_data: LoginRequest): Promise<AuthResponse> {
     await delay();
     const token = 'mock-jwt-token-' + Date.now();
     this.setToken(token);

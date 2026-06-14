@@ -16,9 +16,9 @@ import { useEffect, useState } from 'react';
 import apiClient from '@/lib/client';
 import logger from '@/lib/logger';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Offering } from '@/types';
 import {
   Plus,
-  BookOpen,
   Clock,
   Loader2
 } from 'lucide-react';
@@ -28,12 +28,8 @@ export default function ClassesPage() {
   const tc = useTranslations('common');
   const searchParams = useSearchParams();
   const setupRequired = searchParams.get('setup') === 'required';
-  const [offerings, setOfferings] = useState<any[]>([]);
+  const [offerings, setOfferings] = useState<Offering[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchClasses();
-  }, []);
 
   const fetchClasses = async () => {
     try {
@@ -46,6 +42,12 @@ export default function ClassesPage() {
     }
   };
 
+  useEffect(() => {
+    void (async () => {
+      await fetchClasses();
+    })();
+  }, []);
+
   const getStatusBadge = (isActive: boolean) => {
     return isActive ?
       { label: t('active'), variant: 'default' as const } :
@@ -55,7 +57,7 @@ export default function ClassesPage() {
   // Flatten Offerings -> Groups
   // Each Group is a "Class" to display
   const classesList = offerings.flatMap(offering =>
-    offering.groups.map((group: any) => ({
+    offering.groups.map((group) => ({
       id: group.id,
       name: group.name,
       subject: offering.subject.name_en, // Or localized

@@ -10,8 +10,10 @@
     "create-admin": "node scripts/create_admin.js"
   },
   "dependencies": {
+    "@langchain/core": "^1.1.48",
+    "@langchain/google-genai": "^2.1.31",
     "@supabase/supabase-js": "^2.90.1",
-    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "@whiskeysockets/baileys": "^7.0.0-rc13",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
@@ -20,10 +22,17 @@
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
+    "langchain": "^1.4.4",
     "multer": "^2.0.2",
     "node-cron": "^4.2.1",
+    "papaparse": "^5.5.3",
     "qrcode": "^1.5.4",
+    "resend": "^6.12.4",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^14.0.0",
     "winston": "^3.19.0",
+    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {

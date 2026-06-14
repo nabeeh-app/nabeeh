@@ -7,6 +7,7 @@ export interface WhatsAppStatus {
   sessionExists: boolean;
   isLoading: boolean;
   qr?: string | null;
+  phone?: string | null;
 }
 
 export const useWhatsAppStatus = (phone?: string, autoCheck = true) => {
@@ -15,7 +16,8 @@ export const useWhatsAppStatus = (phone?: string, autoCheck = true) => {
     message: 'Checking WhatsApp connection...',
     sessionExists: false,
     isLoading: false,
-    qr: null
+    qr: null,
+    phone: null
   });
 
   const checkStatus = useCallback(async () => {
@@ -30,32 +32,63 @@ export const useWhatsAppStatus = (phone?: string, autoCheck = true) => {
         message: result.message,
         sessionExists: result.status === 'connected',
         isLoading: false,
-        qr: result.qr
+        qr: result.qr,
+        phone: result.phone
       });
-    } catch (error) {
+    } catch {
       setWhatsappStatus({
         status: 'error',
         message: 'Error checking WhatsApp status',
         sessionExists: false,
         isLoading: false,
-        qr: null
+        qr: null,
+        phone: null
       });
     }
-  }, [phone, autoCheck]);
+  }, [phone]);
 
   useEffect(() => {
     if (!autoCheck) return;
 
-    checkStatus();
+    void (async () => {
+      await checkStatus();
+    })();
 
-    // Only keep polling while we are not connected
+    // Don't poll if already connected
     if (whatsappStatus.status === 'connected') {
       return;
     }
 
-    const interval = setInterval(checkStatus, 5000);
+    // Adaptive polling: faster when QR is ready (3s), slower otherwise (30s)
+    const pollInterval = whatsappStatus.status === 'qr_ready' ? 3000 : 30000;
+
+    const interval = setInterval(async () => {
+      const result = await checkWhatsAppStatus(phone);
+      if (result.status === 'connected') {
+        clearInterval(interval);
+        setWhatsappStatus({
+          status: result.status,
+          message: result.message,
+          sessionExists: true,
+          isLoading: false,
+          qr: result.qr,
+          phone: result.phone
+        });
+      } else {
+        setWhatsappStatus(prev => ({
+          ...prev,
+          status: result.status,
+          message: result.message,
+          sessionExists: result.status === 'connected',
+          isLoading: false,
+          qr: result.qr,
+          phone: result.phone
+        }));
+      }
+    }, pollInterval);
+    
     return () => clearInterval(interval);
-  }, [checkStatus, autoCheck, whatsappStatus.status]);
+  }, [checkStatus, whatsappStatus.status, autoCheck, phone]);
 
   return {
     whatsappStatus,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { apiClient } from '@/lib/client';
 import { Teacher, LoginRequest } from '@/types';
 import logger from '@/lib/logger';
@@ -26,40 +26,96 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Check for existing authentication on mount
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
+  // Refs to prevent race conditions
+  const checkingRef = useRef(false);           // Prevent concurrent checkAuthStatus calls
+  const abortRef = useRef<AbortController | null>(null);  // Cancel stale requests
 
   const checkAuthStatus = async () => {
+    // Prevent concurrent calls — if a check is already in progress, skip this one
+    if (checkingRef.current) return;
+    checkingRef.current = true;
+
+    // Cancel any previous in-flight request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
       setLoading(true);
       setError(null);
 
       const token = apiClient.getToken();
       if (!token) {
+        setTeacher(null);
         setLoading(false);
         return;
       }
 
       // Verify token and get teacher data
+      // The Axios interceptor handles 401 by removing token + hard redirect,
+      // so we don't remove token here to avoid re-triggering via auth:token-changed.
       const teacherData = await apiClient.getMe();
-      setTeacher(teacherData);
+      if (!controller.signal.aborted) {
+        setTeacher(teacherData);
+      }
 
-    } catch (err: any) {
-      logger.error('Auth check failed:', err);
-      // Clear invalid token
-      apiClient.removeToken();
-      setTeacher(null);
+    } catch (err: unknown) {
+      // Don't log abort errors
+      const error = err as { name?: string; response?: { status?: number }; message?: string };
+      if (error.name !== 'CanceledError' && error.name !== 'AbortError') {
+        logger.error('Auth check failed:', err);
+      }
 
-      // Don't show error for initial auth check
-      if (err.response?.status !== 401) {
-        setError(err.message || 'Authentication check failed');
+      // Only clear teacher for actual auth errors (401/403).
+      // For network errors or 5xx, keep existing state to avoid logout flicker.
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        // Don't call removeToken() here — the Axios 401 interceptor already does it.
+        // Calling it here would fire auth:token-changed → re-trigger checkAuthStatus → loop.
+        setTeacher(null);
+      } else if (!controller.signal.aborted) {
+        // Network error or 5xx — don't clear teacher, just show error
+        setError(error.message || 'Authentication check failed');
       }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
+      checkingRef.current = false;
     }
   };
+
+  useEffect(() => {
+    void (async () => {
+      await checkAuthStatus();
+    })();
+
+    const handleTokenChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.action === 'remove') {
+        setTeacher(null);
+        setLoading(false);
+        setError(null);
+        return;
+      }
+      checkAuthStatus();
+    };
+
+    window.addEventListener('auth:token-changed', handleTokenChange);
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'nabeeh_token' && !e.newValue) {
+        setTeacher(null);
+        setLoading(false);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('auth:token-changed', handleTokenChange);
+      window.removeEventListener('storage', handleStorageChange);
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const login = async (credentials: LoginRequest) => {
     try {
@@ -72,9 +128,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Don't redirect here - let the login page handle it
       // The login page will redirect based on the isAuthenticated state
 
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
       logger.error('Login failed:', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Login failed';
+      const errorMessage = error.response?.data?.message || error.message || 'Login failed';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -102,9 +159,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const updatedTeacher = await apiClient.updateProfile(data);
       setTeacher(updatedTeacher);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
       logger.error('Profile update failed:', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Profile update failed';
+      const errorMessage = error.response?.data?.message || error.message || 'Profile update failed';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {

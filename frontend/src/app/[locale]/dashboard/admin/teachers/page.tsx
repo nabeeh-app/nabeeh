@@ -56,8 +56,9 @@ export default function AdminTeachersPage() {
         password: '',
         role: 'teacher'
       });
-    } catch (error: any) {
-      setStatus(error.response?.data?.message || (isArabic ? 'فشل في إنشاء حساب المعلم.' : 'Failed to create teacher account.'));
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      setStatus(err.response?.data?.message || err.message || (isArabic ? 'فشل في إنشاء حساب المعلم.' : 'Failed to create teacher account.'));
     } finally {
       setIsSubmitting(false);
     }

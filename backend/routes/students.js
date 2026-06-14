@@ -1,6 +1,6 @@
 const express = require('express');
-const { supabase } = require('../config/database');
-const { authenticateToken } = require('../middleware/auth');
+const supabase = require('../config/database').supabaseAdmin;
+const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createStudentSchema, updateStudentSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
 
@@ -26,14 +26,14 @@ const getStudents = async (req, res) => {
         enrollments!inner (
             id,
             status,
+            teacher_id,
             group:groups!inner (
                 id,
                 name,
                 offering:offerings!inner (
                     id, 
                     academic_year,
-                    subject:subjects(name_en, name_ar),
-                    teacher_id
+                    subject:subjects(name_en, name_ar)
                 )
             )
         ),
@@ -46,7 +46,7 @@ const getStudents = async (req, res) => {
           preferred_language
         )
       `)
-      .eq('enrollments.group.offering.teacher_id', req.user.id) // Filter by logged-in teacher
+      .eq('enrollments.teacher_id', req.user.id)
       .order('created_at', { ascending: false });
 
     // Optional: Filter by specific Group
@@ -126,7 +126,7 @@ const getStudent = async (req, res) => {
         )
       `)
       .eq('id', req.params.id)
-      .eq('enrollments.group.offering.teacher_id', req.user.id)
+      .eq('enrollments.teacher_id', req.user.id)
       .single();
 
     if (error || !student) {
@@ -186,6 +186,7 @@ const createStudent = async (req, res) => {
     const { data: student, error: studentError } = await supabase
       .from('students')
       .insert([{
+        teacher_id: req.user.id,
         student_code: student_id || `ST-${Date.now()}`,
         name,
         phone
@@ -253,9 +254,9 @@ const updateStudent = async (req, res) => {
     // But strict check:
     const { count } = await supabase
       .from('enrollments')
-      .select('id, group:groups!inner(offering:offerings!inner(teacher_id))', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('student_id', req.params.id)
-      .eq('group.offering.teacher_id', req.user.id);
+      .eq('teacher_id', req.user.id);
 
     if (count === 0) return res.status(403).json({ success: false, message: 'Unauthorized' });
 
@@ -296,9 +297,9 @@ const deleteStudent = async (req, res) => {
     // Find enrollments for this teacher
     const { data: enrollments } = await supabase
       .from('enrollments')
-      .select('id, group:groups!inner(offering:offerings!inner(teacher_id))')
+      .select('id, teacher_id')
       .eq('student_id', req.params.id)
-      .eq('group.offering.teacher_id', req.user.id);
+      .eq('teacher_id', req.user.id);
 
     if (!enrollments || enrollments.length === 0) {
       return res.status(404).json({ success: false, message: 'Student not found in your classes' });
@@ -341,14 +342,9 @@ const getStudentStats = async (req, res) => {
     // Student -> Enrollment -> Group -> Offering -> Teacher
     const { data: enrollments, error: enrollError } = await supabase
       .from('enrollments')
-      .select(`
-            id,
-            group:groups!inner(
-                offering:offerings!inner(teacher_id)
-            )
-        `)
+      .select('id, teacher_id')
       .eq('student_id', id)
-      .eq('groups.offerings.teacher_id', req.user.id);
+      .eq('teacher_id', req.user.id);
 
     if (enrollError || !enrollments || enrollments.length === 0) {
       return res.status(404).json({ success: false, message: 'Student not found or unauthorized' });
@@ -425,12 +421,490 @@ const getStudentStats = async (req, res) => {
   }
 };
 
-// Route definitions (specific routes before parameterized ones)
+// ============================================================
+// Audit logging for student actions
+// ============================================================
+
+const createStudentOriginal = createStudent;
+const createStudentWithAudit = async (req, res) => {
+  await createStudentOriginal(req, res);
+  if (res.statusCode < 400) {
+    const { logAudit } = require('../lib/auditLog');
+    await logAudit({
+      actorId: req.user.id,
+      actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
+      teacherId: req.user.teacherId || req.user.id,
+      action: 'student_created',
+      entityType: 'student',
+      metadata: { name: req.body.name, group_id: req.body.group_id },
+      ipAddress: req.ip
+    });
+
+    // Auto-remove demo data when first real student is added
+    try {
+      const { data: hasRealStudents } = await supabase
+        .from('students')
+        .select('id', { count: 'exact', head: true })
+        .eq('teacher_id', req.user.id)
+        .eq('is_demo', false);
+
+      if (hasRealStudents === 1) {
+        const { removeDemoData } = require('../scripts/seed_demo_data');
+        await removeDemoData(req.user.id);
+        logger.info('Auto-removed demo data after first real student', { teacherId: req.user.id });
+      }
+    } catch (demoError) {
+      logger.error('Failed to auto-remove demo data', { error: demoError.message, teacherId: req.user.id });
+    }
+  }
+};
+
+const updateStudentOriginal = updateStudent;
+const updateStudentWithAudit = async (req, res) => {
+  await updateStudentOriginal(req, res);
+  if (res.statusCode < 400) {
+    const { logAudit } = require('../lib/auditLog');
+    await logAudit({
+      actorId: req.user.id,
+      actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
+      teacherId: req.user.teacherId || req.user.id,
+      action: 'student_updated',
+      entityType: 'student',
+      entityId: req.params.id,
+      metadata: { updates: Object.keys(req.body) },
+      ipAddress: req.ip
+    });
+  }
+};
+
+const deleteStudentOriginal = deleteStudent;
+const deleteStudentWithAudit = async (req, res) => {
+  await deleteStudentOriginal(req, res);
+  if (res.statusCode < 400) {
+    const { logAudit } = require('../lib/auditLog');
+    await logAudit({
+      actorId: req.user.id,
+      actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
+      teacherId: req.user.teacherId || req.user.id,
+      action: 'student_deleted',
+      entityType: 'student',
+      entityId: req.params.id,
+      ipAddress: req.ip
+    });
+  }
+};
+
+/**
+ * @openapi
+ * /api/students:
+ *   get:
+ *     tags: [Students]
+ *     summary: List students for the authenticated teacher
+ *     description: Returns a paginated list of students enrolled in the teacher's groups. Supports search, grade, status, and group filtering.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search students by name (case-insensitive)
+ *       - in: query
+ *         name: grade
+ *         schema:
+ *           type: string
+ *         description: Filter by grade level
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, inactive, transferred]
+ *           default: active
+ *         description: Filter by enrollment status
+ *       - in: query
+ *         name: group_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by specific group ID
+ *     responses:
+ *       200:
+ *         description: Paginated list of students
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Student'
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.get('/', authenticateToken, getStudents);
+
+/**
+ * @openapi
+ * /api/students/{id}/stats:
+ *   get:
+ *     tags: [Students]
+ *     summary: Get student statistics
+ *     description: Returns attendance and academic statistics for a specific student enrolled in the teacher's groups.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Student UUID
+ *     responses:
+ *       200:
+ *         description: Student statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     attendance:
+ *                       type: object
+ *                       properties:
+ *                         present:
+ *                           type: integer
+ *                         absent:
+ *                           type: integer
+ *                         late:
+ *                           type: integer
+ *                         excused:
+ *                           type: integer
+ *                         total_days:
+ *                           type: integer
+ *                         attendance_percentage:
+ *                           type: number
+ *                     academic:
+ *                       type: object
+ *                       properties:
+ *                         average_score:
+ *                           type: number
+ *                         total_assessments:
+ *                           type: integer
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       404:
+ *         description: Student not found or unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.get('/:id/stats', authenticateToken, getStudentStats);
+
+/**
+ * @openapi
+ * /api/students/{id}:
+ *   get:
+ *     tags: [Students]
+ *     summary: Get a single student
+ *     description: Returns full student details including parents, enrollments, attendance history, and grades.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Student UUID
+ *     responses:
+ *       200:
+ *         description: Student details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Student'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       404:
+ *         description: Student not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.get('/:id', authenticateToken, getStudent);
-router.post('/', authenticateToken, validate(createStudentSchema), createStudent);
-router.put('/:id', authenticateToken, validate(updateStudentSchema), updateStudent);
-router.delete('/:id', authenticateToken, deleteStudent);
+
+/**
+ * @openapi
+ * /api/students:
+ *   post:
+ *     tags: [Students]
+ *     summary: Create a new student and enroll in a group
+ *     description: Creates a new student record, enrolls them in the specified group, and optionally creates parent contacts.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, group_id]
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 255
+ *                 description: Student full name
+ *               student_id:
+ *                 type: string
+ *                 maxLength: 50
+ *                 description: External student code (auto-generated if omitted)
+ *               phone:
+ *                 type: string
+ *                 pattern: '^\+?[1-9]\d{6,14}$'
+ *                 description: Student phone number
+ *               group_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Group ID to enroll the student in
+ *               parents:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                     phone:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     relationship:
+ *                       type: string
+ *                     is_primary:
+ *                       type: boolean
+ *                     preferred_language:
+ *                       type: string
+ *                       enum: [ar, en]
+ *                 description: Parent contacts to link to the student
+ *     responses:
+ *       201:
+ *         description: Student created and enrolled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Student'
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
+router.post('/', authenticateToken, requirePermission('manage_students'), validate(createStudentSchema), createStudentWithAudit);
+
+/**
+ * @openapi
+ * /api/students/{id}:
+ *   put:
+ *     tags: [Students]
+ *     summary: Update a student
+ *     description: Updates student information. Only the authenticated teacher's enrollments are affected.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Student UUID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               student_code:
+ *                 type: string
+ *                 maxLength: 50
+ *                 description: External student code
+ *               name:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 255
+ *                 description: Student full name
+ *               phone:
+ *                 type: string
+ *                 pattern: '^\+?[1-9]\d{6,14}$'
+ *                 description: Student phone number
+ *     responses:
+ *       200:
+ *         description: Student updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Student'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
+router.put('/:id', authenticateToken, requirePermission('manage_students'), validate(updateStudentSchema), updateStudentWithAudit);
+
+/**
+ * @openapi
+ * /api/students/{id}:
+ *   delete:
+ *     tags: [Students]
+ *     summary: Delete a student
+ *     description: Removes the student from the teacher's classes by deleting associated enrollments. Does not delete the student record itself if enrolled in other teachers' groups.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Student UUID
+ *     responses:
+ *       200:
+ *         description: Student removed from classes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       404:
+ *         description: Student not found in teacher's classes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
+router.delete('/:id', authenticateToken, requirePermission('manage_students'), deleteStudentWithAudit);
 
 module.exports = router;

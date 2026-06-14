@@ -6,6 +6,10 @@ const dotenv = require('dotenv');
 // Load environment variables
 dotenv.config();
 
+// Import Swagger config
+const swaggerSpec = require('./config/swagger');
+const swaggerUi = require('swagger-ui-express');
+
 // Import routes
 const authRoutes = require('./routes/auth');
 const teacherRoutes = require('./routes/teachers');
@@ -15,7 +19,14 @@ const attendanceRoutes = require('./routes/attendance');
 const gradeRoutes = require('./routes/grades');
 const messageRoutes = require('./routes/messages');
 const offeringRoutes = require('./routes/offerings');
+const assistantRoutes = require('./routes/assistants');
+const importRoutes = require('./routes/import');
+const selfRegistrationRoutes = require('./routes/selfRegistration');
 const { router: whatsappRoutes } = require('./routes/whatsapp');
+const alertRoutes = require('./routes/alerts');
+const notificationRoutes = require('./routes/notifications');
+const reportRoutes = require('./routes/reports');
+const gradeAnalysisRoutes = require('./routes/gradeAnalysis');
 
 // Create a router for WhatsApp routes
 const whatsappRouter = express.Router();
@@ -75,6 +86,23 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'Nabeeh API Docs',
+  customCss: '.swagger-ui .topbar { display: none }',
+  swaggerOptions: {
+    persistAuthorization: true,
+    docExpansion: 'list',
+    filter: true,
+  },
+}));
+
+// Serve raw OpenAPI spec
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
 // API routes with specific rate limiting
 if (process.env.USE_MOCK_DB === 'true') {
   const mockRoutes = require('./routes/mock');
@@ -89,6 +117,13 @@ if (process.env.USE_MOCK_DB === 'true') {
   app.use('/api/grades', gradeRoutes);
   app.use('/api/messages', messageRoutes);
   app.use('/api/offerings', offeringRoutes);
+  app.use('/api/assistants', assistantRoutes);
+  app.use('/api/import', importRoutes);
+  app.use('/api/students/self-register', selfRegistrationRoutes);
+  app.use('/api/alerts', alertRoutes);
+  app.use('/api/notifications', notificationRoutes);
+  app.use('/api/reports', reportRoutes);
+  app.use('/api/grade-analysis', gradeAnalysisRoutes);
 }
 
 // WhatsApp routes with rate limiting
@@ -106,10 +141,31 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // Start server
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   winstonLogger.info(`🚀 Nabeeh Backend Server running on port ${PORT}`);
   winstonLogger.info(`📚 Environment: ${process.env.NODE_ENV}`);
   winstonLogger.info(`🔗 Health check: http://localhost:${PORT}/health`);
+
+  // Start cron jobs
+  const { startCronJobs } = require('./lib/cron');
+  startCronJobs();
+
+  // Auto-connect WhatsApp if creds exist
+  const { baileysClient } = require('./lib/baileys');
+  const { supabaseAdmin } = require('./config/database');
+  const { data: existingCreds } = await supabaseAdmin
+    .from('whatsapp_auth_creds')
+    .select('id')
+    .eq('id', 'default')
+    .maybeSingle();
+  if (existingCreds) {
+    winstonLogger.info('📱 WhatsApp creds found, auto-connecting...');
+    baileysClient.connect().catch((err) => {
+      winstonLogger.error('WhatsApp auto-connect failed', { error: err.message });
+    });
+  } else {
+    winstonLogger.info('📱 No WhatsApp creds, waiting for pairing...');
+  }
 });
 
 // Graceful shutdown handling

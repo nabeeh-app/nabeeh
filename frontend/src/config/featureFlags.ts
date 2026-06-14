@@ -20,6 +20,11 @@ export const featureFlags = {
   messaging: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_MESSAGING),
   courses: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_COURSES, true),
   monitor: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_MONITOR, true),
+  assistants: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_ASSISTANTS, true),
+  aiFeatures: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_AI, true),
+  alerts: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_ALERTS, true),
+  notifications: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_NOTIFICATIONS, true),
+  gradeAnalysis: parseEnvFlag(process.env.NEXT_PUBLIC_FEATURE_GRADE_ANALYSIS, true),
 } as const;
 
 export type FeatureKey = keyof typeof featureFlags;

@@ -51,10 +51,10 @@ const SUBJECT_KEYWORDS = {
  */
 function detectIntent(text, language = 'ar') {
   const lower = text.toLowerCase();
-  const keywords = language === 'ar' ? INTENT_KEYWORDS : {
-    attendance: INTENT_KEYWORDS.attendance.en,
-    grades: INTENT_KEYWORDS.grades.en,
-    help: INTENT_KEYWORDS.help.en
+  const keywords = {
+    attendance: language === 'ar' ? INTENT_KEYWORDS.attendance.ar : INTENT_KEYWORDS.attendance.en,
+    grades: language === 'ar' ? INTENT_KEYWORDS.grades.ar : INTENT_KEYWORDS.grades.en,
+    help: language === 'ar' ? INTENT_KEYWORDS.help.ar : INTENT_KEYWORDS.help.en
   };
 
   // Check attendance intent

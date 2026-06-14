@@ -64,7 +64,7 @@ const sanitizeInput = (req, res, next) => {
     return str
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
       .replace(/javascript:/gi, '')
-      .replace(/on\w+\s*=/gi, '')
+      .replace(/on\w+\s*=\s*[^"'\s>]*/gi, '')
       .trim();
   };
 

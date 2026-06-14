@@ -47,27 +47,23 @@ export default function SystemMonitorPage() {
     try {
       setChecking(true);
 
-      let apiHealthy = false;
-      let apiResponseTime = 0;
-      try {
-        const apiStart = Date.now();
-        await apiClient.getDashboardStats();
-        apiResponseTime = Date.now() - apiStart;
-        apiHealthy = true;
-      } catch {
-        apiHealthy = false;
-      }
+      const [apiResult, dbResult] = await Promise.allSettled([
+        (async () => {
+          const start = Date.now();
+          await apiClient.getDashboardStats();
+          return { healthy: true, time: Date.now() - start };
+        })(),
+        (async () => {
+          const start = Date.now();
+          await apiClient.getOfferings();
+          return { healthy: true, time: Date.now() - start };
+        })()
+      ]);
 
-      let dbHealthy = false;
-      let dbResponseTime = 0;
-      try {
-        const dbStart = Date.now();
-        await apiClient.getOfferings();
-        dbResponseTime = Date.now() - dbStart;
-        dbHealthy = true;
-      } catch {
-        dbHealthy = false;
-      }
+      const apiHealthy = apiResult.status === 'fulfilled' && apiResult.value.healthy;
+      const apiResponseTime = apiResult.status === 'fulfilled' ? apiResult.value.time : 0;
+      const dbHealthy = dbResult.status === 'fulfilled' && dbResult.value.healthy;
+      const dbResponseTime = dbResult.status === 'fulfilled' ? dbResult.value.time : 0;
 
       setSystemInfo({
         apiHealthy,
@@ -85,8 +81,40 @@ export default function SystemMonitorPage() {
   }, []);
 
   useEffect(() => {
-    checkSystemHealth();
-  }, [checkSystemHealth]);
+    let cancelled = false;
+    const check = async () => {
+      try {
+        setChecking(true);
+        const [apiResult, dbResult] = await Promise.allSettled([
+          (async () => {
+            const start = Date.now();
+            await apiClient.getDashboardStats();
+            return { healthy: true, time: Date.now() - start };
+          })(),
+          (async () => {
+            const start = Date.now();
+            await apiClient.getOfferings();
+            return { healthy: true, time: Date.now() - start };
+          })()
+        ]);
+        if (cancelled) return;
+        const apiHealthy = apiResult.status === 'fulfilled' && apiResult.value.healthy;
+        const apiResponseTime = apiResult.status === 'fulfilled' ? apiResult.value.time : 0;
+        const dbHealthy = dbResult.status === 'fulfilled' && dbResult.value.healthy;
+        const dbResponseTime = dbResult.status === 'fulfilled' ? dbResult.value.time : 0;
+        setSystemInfo({ apiHealthy, apiResponseTime, dbHealthy, dbResponseTime, lastChecked: new Date() });
+      } catch (err) {
+        if (!cancelled) logger.error('System health check failed', err);
+      } finally {
+        if (!cancelled) {
+          setChecking(false);
+          setLoading(false);
+        }
+      }
+    };
+    check();
+    return () => { cancelled = true; };
+  }, []);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-US');

@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,9 +12,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import logger from '@/lib/logger';
 import {
   Table,
   TableBody,
@@ -32,34 +30,23 @@ import {
   AlertCircle,
   Download,
   Upload,
-  Search,
   ChevronLeft,
   ChevronRight,
   CalendarDays,
   UserCheck,
-  Timer,
   FileText,
   BarChart3
 } from 'lucide-react';
-import { apiClient } from '@/lib/client';
-import { Attendance, BulkAttendanceRequest, Offering, Student } from '@/types';
+import { BulkAttendanceRequest, Student, Attendance } from '@/types';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ViewModeTabs } from '@/components/ui/ViewModeTabs';
-
-interface AttendanceWithStudent extends Attendance {
-  student: Student;
-}
-
-interface AttendanceStats {
-  total_sessions: number;
-  present_count: number;
-  absent_count: number;
-  late_count: number;
-  excused_count: number;
-  attendance_rate: number;
-}
+import { useOfferings } from '@/hooks/useOfferings';
+import { useStudents } from '@/hooks/useStudents';
+import { useAttendanceRecords, useAttendanceSummary, useCreateAttendance } from '@/hooks/useAttendance';
+import logger from '@/lib/logger';
+import { apiClient } from '@/lib/client';
 
 interface DailyAttendance {
   date: string;
@@ -78,24 +65,15 @@ export default function AttendancePage() {
 
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
-  const [offerings, setOfferings] = useState<Offering[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
-  const [noGroups, setNoGroups] = useState(false);
-
-  const [students, setStudents] = useState<Student[]>([]);
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceWithStudent[]>([]);
-  const [dailyAttendance, setDailyAttendance] = useState<DailyAttendance | null>(null);
-  const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'bulk'>('calendar');
   const [isStatsModalOpen, setStatsModalOpen] = useState(false);
+  const [dailyAttendance, setDailyAttendance] = useState<DailyAttendance | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [studentFilter, setStudentFilter] = useState<string>('');
-  const [dateRange, setDateRange] = useState({
+  const [dateRange] = useState({
     from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0]
   });
@@ -108,113 +86,65 @@ export default function AttendancePage() {
     variant?: 'default' | 'destructive';
   }>({ open: false, title: '', description: '', onConfirm: () => {} });
 
-  useEffect(() => {
-    loadOfferings();
-  }, []);
+  const { data: offerings = [], isLoading: offeringsLoading } = useOfferings();
+
+  const groups = useMemo(() => offerings.flatMap(o => o.groups ?? []), [offerings]);
 
   useEffect(() => {
-    if (selectedGroupId && selectedGroupId !== '') {
-      loadInitialData();
+    if (groups.length === 0 && !offeringsLoading) {
+      router.replace(`/${locale}/dashboard/classes?setup=required`);
     }
-  }, [selectedGroupId, dateRange]);
+  }, [groups, offeringsLoading, locale, router]);
+
+  const effectiveSelectedGroupId = useMemo(
+    () => selectedGroupId || groups[0]?.id || '',
+    [selectedGroupId, groups]
+  );
+
+  const studentsParams = useMemo(() => effectiveSelectedGroupId ? {
+    limit: 100,
+    status: 'active',
+    group_id: effectiveSelectedGroupId,
+  } : undefined, [effectiveSelectedGroupId]);
+
+  const { data: studentsResponse } = useStudents(studentsParams);
+  const students: Student[] = useMemo(() => studentsResponse?.data ?? [], [studentsResponse]);
+
+  const attendanceParams = useMemo(() => effectiveSelectedGroupId ? {
+    limit: 100,
+    start_date: dateRange.from,
+    end_date: dateRange.to,
+    group_id: effectiveSelectedGroupId,
+  } : undefined, [effectiveSelectedGroupId, dateRange]);
+
+  const { data: attendanceResponse } = useAttendanceRecords(attendanceParams);
+  const attendanceRecords = useMemo(() => attendanceResponse?.data ?? [], [attendanceResponse]);
+
+  const summaryParams = useMemo(() => effectiveSelectedGroupId ? {
+    start_date: dateRange.from,
+    end_date: dateRange.to,
+    group_id: effectiveSelectedGroupId,
+  } : undefined, [effectiveSelectedGroupId, dateRange]);
+
+  const { data: attendanceStats } = useAttendanceSummary(summaryParams);
+  const createAttendance = useCreateAttendance();
 
   useEffect(() => {
-    if (selectedDate && selectedGroupId) {
-      loadDailyAttendance(selectedDate);
-    }
-  }, [selectedDate, students, selectedGroupId]);
+    if (!selectedDate || !effectiveSelectedGroupId || students.length === 0) return;
 
-  const loadOfferings = async () => {
-    try {
-      const data = await apiClient.getOfferings();
-      setOfferings(data);
-      const groups = data.flatMap((offering) => offering.groups ?? []);
-      if (groups.length === 0) {
-        setNoGroups(true);
-        setLoading(false);
-        router.replace(`/${locale}/dashboard/classes?setup=required`);
-        return;
-      }
-      setNoGroups(false);
-      const firstGroup = groups[0];
-      if (firstGroup) setSelectedGroupId(firstGroup.id);
-    } catch (err) {
-      logger.error(err);
-    }
-  };
+    let cancelled = false;
 
-  const loadInitialData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      if (!selectedGroupId) return;
-
-      const studentsResponse = await apiClient.getStudents({
-        limit: 100,
-        status: 'active',
-        group_id: selectedGroupId
-      });
-      setStudents(studentsResponse.data);
-
-      await loadAttendanceRecords();
-      await loadAttendanceStats();
-
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load attendance data';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadAttendanceRecords = async () => {
-    try {
-      const response = await apiClient.getAttendance({
-        limit: 100,
-        start_date: dateRange.from,
-        end_date: dateRange.to,
-        group_id: selectedGroupId
-      });
-
-      const recordsWithStudents = response.data.map(record => ({
-        ...record,
-        student: students.find(s => s.id === record.student_id) || {} as Student
-      }));
-
-      setAttendanceRecords(recordsWithStudents);
-    } catch (err: any) {
-      logger.error('Error loading attendance records:', err);
-    }
-  };
-
-  const loadAttendanceStats = async () => {
-    try {
-      const response = await apiClient.getAttendanceSummary({
-        start_date: dateRange.from,
-        end_date: dateRange.to,
-        group_id: selectedGroupId
-      });
-      setAttendanceStats(response);
-    } catch (err: any) {
-      logger.error('Error loading attendance stats:', err);
-      setAttendanceStats(null);
-    }
-  };
-
-  const loadDailyAttendance = async (date: string) => {
-    try {
-      const response = await apiClient.getAttendance({
-        start_date: date,
-        end_date: date,
-        limit: 100,
-        group_id: selectedGroupId
-      });
-
-      const dailyData: DailyAttendance = {
-        date,
+    apiClient.getAttendance({
+      start_date: selectedDate,
+      end_date: selectedDate,
+      limit: 100,
+      group_id: effectiveSelectedGroupId
+    }).then((response: { data: Attendance[] }) => {
+      if (cancelled) return;
+      setDailyAttendance({
+        date: selectedDate,
         students: students.map(student => {
-          const attendanceRecord = response.data.find(record => record.student_id === student.id);
+          const attendanceRecord = response.data.find((record: Attendance) => record.student_id === student.id);
           return {
             student_id: student.id,
             name: student.name,
@@ -222,13 +152,12 @@ export default function AttendancePage() {
             notes: attendanceRecord?.notes || undefined
           };
         })
-      };
-
-      setDailyAttendance(dailyData);
-    } catch (err: any) {
+      });
+    }).catch((err: unknown) => {
+      if (cancelled) return;
       logger.error('Error loading daily attendance:', err);
       setDailyAttendance({
-        date,
+        date: selectedDate,
         students: students.map(student => ({
           student_id: student.id,
           name: student.name,
@@ -236,20 +165,19 @@ export default function AttendancePage() {
           notes: undefined
         }))
       });
-    }
-  };
+    });
+
+    return () => { cancelled = true; };
+  }, [selectedDate, students, effectiveSelectedGroupId]);
 
   const handleAttendanceChange = (studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
     if (!dailyAttendance) return;
-
     setDailyAttendance(prev => {
       if (!prev) return null;
       return {
         ...prev,
         students: prev.students.map(student =>
-          student.student_id === studentId
-            ? { ...student, status }
-            : student
+          student.student_id === studentId ? { ...student, status } : student
         )
       };
     });
@@ -257,33 +185,27 @@ export default function AttendancePage() {
 
   const handleBulkAttendanceSave = async () => {
     if (!dailyAttendance) return;
-
     try {
       setSaving(true);
-
       const attendanceData: BulkAttendanceRequest = {
         date: selectedDate,
         attendance: dailyAttendance.students
           .filter(student => student.status !== null)
           .map(student => ({
             student_id: student.student_id,
-            group_id: selectedGroupId,
+            group_id: effectiveSelectedGroupId,
             status: student.status!,
             notes: student.notes
           }))
       };
-
-      await apiClient.createAttendance(attendanceData);
-
-      await loadAttendanceRecords();
-      await loadAttendanceStats();
-
-    } catch (err: any) {
+      await createAttendance.mutateAsync(attendanceData);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
       logger.error('Error saving attendance:', err);
       setAlertDialog({
         open: true,
         title: t('errors.generic'),
-        description: err.message || t('errors.generic'),
+        description: message || t('errors.generic'),
         onConfirm: () => setAlertDialog(prev => ({ ...prev, open: false })),
       });
     } finally {
@@ -293,125 +215,79 @@ export default function AttendancePage() {
 
   const getStatusIcon = (status: string | null) => {
     switch (status) {
-      case 'present':
-        return <CheckCircle className="h-4 w-4 text-[#026370]" />;
-      case 'absent':
-        return <XCircle className="h-4 w-4 text-[#c53030]" />;
-      case 'late':
-        return <Clock className="h-4 w-4 text-ink/70" />;
-      case 'excused':
-        return <AlertCircle className="h-4 w-4 text-primary" />;
-      default:
-        return <div className="h-4 w-4 rounded-pill border-2 border-ink/20" />;
+      case 'present': return <CheckCircle className="h-4 w-4 text-[#026370]" />;
+      case 'absent': return <XCircle className="h-4 w-4 text-[#c53030]" />;
+      case 'late': return <Clock className="h-4 w-4 text-ink/70" />;
+      case 'excused': return <AlertCircle className="h-4 w-4 text-primary" />;
+      default: return <div className="h-4 w-4 rounded-pill border-2 border-ink/20" />;
     }
   };
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      present: {
-        variant: 'default' as const,
-        label: t('attendance.status.present'),
-        color: 'bg-surface-sage text-ink'
-      },
-      absent: {
-        variant: 'destructive' as const,
-        label: t('attendance.status.absent'),
-        color: 'bg-[#c53030]/10 text-[#c53030]'
-      },
-      late: {
-        variant: 'outline' as const,
-        label: t('attendance.status.late'),
-        color: 'bg-surface-cool text-ink/70'
-      },
-      excused: {
-        variant: 'secondary' as const,
-        label: t('attendance.status.excused'),
-        color: 'bg-primary/10 text-primary'
-      }
+      present: { variant: 'default' as const, label: t('attendance.status.present'), color: 'bg-surface-sage text-ink' },
+      absent: { variant: 'destructive' as const, label: t('attendance.status.absent'), color: 'bg-[#c53030]/10 text-[#c53030]' },
+      late: { variant: 'outline' as const, label: t('attendance.status.late'), color: 'bg-surface-cool text-ink/70' },
+      excused: { variant: 'secondary' as const, label: t('attendance.status.excused'), color: 'bg-primary/10 text-primary' }
     };
-
     return statusMap[status as keyof typeof statusMap] || statusMap.present;
   };
 
   const generateCalendarDays = () => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-
     const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
-
     const days = [];
     const current = new Date(startDate);
-
     for (let i = 0; i < 42; i++) {
       const dateStr = current.toISOString().split('T')[0];
       const isCurrentMonth = current.getMonth() === month;
       const isToday = dateStr === new Date().toISOString().split('T')[0];
       const isSelected = dateStr === selectedDate;
-
-      const hasAttendance = attendanceRecords.some(record => record.date === dateStr);
-
-      days.push({
-        date: new Date(current),
-        dateStr,
-        isCurrentMonth,
-        isToday,
-        isSelected,
-        hasAttendance
-      });
-
+      const hasAttendance = attendanceRecords.some((record: Attendance) => record.date === dateStr);
+      days.push({ date: new Date(current), dateStr, isCurrentMonth, isToday, isSelected, hasAttendance });
       current.setDate(current.getDate() + 1);
     }
-
     return days;
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentMonth(prev => {
       const newMonth = new Date(prev);
-      if (direction === 'prev') {
-        newMonth.setMonth(newMonth.getMonth() - 1);
-      } else {
-        newMonth.setMonth(newMonth.getMonth() + 1);
-      }
+      if (direction === 'prev') newMonth.setMonth(newMonth.getMonth() - 1);
+      else newMonth.setMonth(newMonth.getMonth() + 1);
       return newMonth;
     });
   };
 
-  const filteredRecords = attendanceRecords.filter(record => {
-    const matchesStatus = statusFilter === 'all' || record.status === statusFilter;
-    const matchesStudent = !studentFilter ||
-      record.student?.name?.toLowerCase().includes(studentFilter.toLowerCase());
-    const recordDate = new Date(record.date);
-    const fromDate = new Date(dateRange.from);
-    const toDate = new Date(dateRange.to);
-    const matchesDate = recordDate >= fromDate && recordDate <= toDate;
+  const filteredRecords = useMemo(() => {
+    return attendanceRecords.filter((record: Attendance) => {
+      const matchesStatus = statusFilter === 'all' || record.status === statusFilter;
+      const matchesStudent = !studentFilter || record.student?.name?.toLowerCase().includes(studentFilter.toLowerCase());
+      const recordDate = new Date(record.date);
+      const fromDate = new Date(dateRange.from);
+      const toDate = new Date(dateRange.to);
+      const matchesDate = recordDate >= fromDate && recordDate <= toDate;
+      return matchesStatus && matchesStudent && matchesDate;
+    });
+  }, [attendanceRecords, statusFilter, studentFilter, dateRange]);
 
-    return matchesStatus && matchesStudent && matchesDate;
-  });
-
-  if (loading) {
+  if (offeringsLoading || !effectiveSelectedGroupId) {
     return <LoadingSpinner message={t('attendance.loading')} />;
   }
 
-  if (noGroups) {
+  if (groups.length === 0) {
     return (
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink/20 bg-surface-sage p-4 text-ink">
           <div className="space-y-1">
-            <p className="text-sm font-semibold">
-              {t('attendance.noGroups')}
-            </p>
-            <p className="text-sm text-ink/70">
-              {t('attendance.noGroupsDescription')}
-            </p>
+            <p className="text-sm font-semibold">{t('attendance.noGroups')}</p>
+            <p className="text-sm text-ink/70">{t('attendance.noGroupsDescription')}</p>
           </div>
           <Button asChild variant="outline" className="border-ink/20 text-ink hover:bg-surface-cool">
-            <Link href={`/${locale}/dashboard/classes?setup=required`}>
-              {t('attendance.setUpGroups')}
-            </Link>
+            <Link href={`/${locale}/dashboard/classes?setup=required`}>{t('attendance.setUpGroups')}</Link>
           </Button>
         </div>
       </div>
@@ -430,10 +306,7 @@ export default function AttendancePage() {
         title={t('attendance.title')}
         description={t('attendance.description')}
       >
-        <Select
-          value={selectedGroupId}
-          onValueChange={setSelectedGroupId}
-        >
+        <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
           <SelectTrigger className="min-w-[250px]">
             <SelectValue placeholder={t('attendance.selectClass')} />
           </SelectTrigger>
@@ -464,30 +337,20 @@ export default function AttendancePage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>
-                {t('attendance.statsTitle')}
-              </DialogTitle>
+              <DialogTitle>{t('attendance.statsTitle')}</DialogTitle>
             </DialogHeader>
             {attendanceStats && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                   <div className="text-center p-4 bg-surface-sage rounded-lg">
-                     <div className="text-2xl font-bold text-ink">
-                       {attendanceStats.total_sessions}
-                     </div>
-                     <div className="text-sm text-ink/60">
-                       {t('attendance.totalSessions')}
-                     </div>
-                   </div>
-                     <div className="text-center p-4 bg-surface-sage rounded-lg">
-                     <div className="text-2xl font-bold text-[#026370]">
-                       {attendanceStats.attendance_rate}%
-                     </div>
-                     <div className="text-sm text-ink/60">
-                       {t('attendance.attendanceRate')}
-                     </div>
-                   </div>
-                 </div>
+                  <div className="text-center p-4 bg-surface-sage rounded-lg">
+                    <div className="text-2xl font-bold text-ink">{attendanceStats.total_sessions}</div>
+                    <div className="text-sm text-ink/60">{t('attendance.totalSessions')}</div>
+                  </div>
+                  <div className="text-center p-4 bg-surface-sage rounded-lg">
+                    <div className="text-2xl font-bold text-[#026370]">{attendanceStats.attendance_rate}%</div>
+                    <div className="text-sm text-ink/60">{t('attendance.attendanceRate')}</div>
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2">
@@ -533,7 +396,7 @@ export default function AttendancePage() {
       {/* Calendar View */}
       {viewMode === 'calendar' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {!selectedGroupId ? (
+          {!effectiveSelectedGroupId ? (
             <div className="lg:col-span-3 text-center p-12 bg-surface-cool rounded-lg border border-dashed border-ink/20">
               <AlertCircle className="h-12 w-12 text-ink/40 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-ink">{t('attendance.pleaseSelectClass')}</h3>
@@ -547,8 +410,7 @@ export default function AttendancePage() {
                     <div className="flex items-center justify-between">
                       <CardTitle>
                         {currentMonth.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
-                          year: 'numeric',
-                          month: 'long'
+                          year: 'numeric', month: 'long'
                         })}
                       </CardTitle>
                       <div className="flex items-center space-x-2">
@@ -597,9 +459,7 @@ export default function AttendancePage() {
               <div>
                 <Card>
                   <CardHeader>
-                    <CardTitle>
-                      {t('attendance.todayAttendance')}
-                    </CardTitle>
+                    <CardTitle>{t('attendance.todayAttendance')}</CardTitle>
                     <p className="text-sm text-ink/60">
                       {new Date(selectedDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}
                     </p>
@@ -623,11 +483,7 @@ export default function AttendancePage() {
                         ))}
                         {dailyAttendance.students.length > 5 && (
                           <div className="text-center">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setViewMode('bulk')}
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => setViewMode('bulk')}>
                               {t('attendance.viewAllStudents', { count: dailyAttendance.students.length })}
                             </Button>
                           </div>
@@ -643,7 +499,7 @@ export default function AttendancePage() {
       )}
 
       {/* Bulk Entry View */}
-      {viewMode === 'bulk' && !selectedGroupId ? (
+      {viewMode === 'bulk' && !effectiveSelectedGroupId ? (
         <div className="text-center p-12 bg-surface-cool rounded-lg border border-dashed border-ink/20">
           <AlertCircle className="h-12 w-12 text-ink/40 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-ink">{t('attendance.pleaseSelectClass')}</h3>
@@ -654,30 +510,16 @@ export default function AttendancePage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>
-                  {t('attendance.bulkAttendanceEntry')}
-                </CardTitle>
+                <CardTitle>{t('attendance.bulkAttendanceEntry')}</CardTitle>
                 <p className="text-sm text-ink/60 mt-1">
                   {new Date(selectedDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                   })}
                 </p>
               </div>
               <div className="flex items-center space-x-2">
-                <Input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-auto"
-                />
-                <Button
-                  onClick={handleBulkAttendanceSave}
-                  disabled={saving}
-                  className="gap-2"
-                >
+                <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-auto" />
+                <Button onClick={handleBulkAttendanceSave} disabled={saving} className="gap-2">
                   {saving ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -697,30 +539,20 @@ export default function AttendancePage() {
             {dailyAttendance && (
               <div className="space-y-4">
                 <div className="flex items-center space-x-2 p-4 bg-surface-cool rounded-lg">
-                  <span className="text-sm font-medium">
-                    {t('attendance.quickActions')}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      dailyAttendance.students.forEach(student => {
-                        handleAttendanceChange(student.student_id, 'present');
-                      });
-                    }}
-                  >
+                  <span className="text-sm font-medium">{t('attendance.quickActions')}</span>
+                  <Button variant="outline" size="sm" onClick={() => {
+                    dailyAttendance.students.forEach(student => {
+                      handleAttendanceChange(student.student_id, 'present');
+                    });
+                  }}>
                     <CheckCircle className="w-4 h-4 mr-1" />
                     {t('attendance.markAllPresent')}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      dailyAttendance.students.forEach(student => {
-                        handleAttendanceChange(student.student_id, 'absent');
-                      });
-                    }}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => {
+                    dailyAttendance.students.forEach(student => {
+                      handleAttendanceChange(student.student_id, 'absent');
+                    });
+                  }}>
                     <XCircle className="w-4 h-4 mr-1" />
                     {t('attendance.markAllAbsent')}
                   </Button>
@@ -740,46 +572,23 @@ export default function AttendancePage() {
                           </Avatar>
                           <div>
                             <div className="font-medium">{student.name}</div>
-                            <div className="text-xs text-ink/60">
-                              {studentData?.grade_level}
-                            </div>
+                            <div className="text-xs text-ink/60">{studentData?.grade_level}</div>
                           </div>
                         </div>
-
                         <div className="grid grid-cols-2 gap-2">
-                          <Button
-                            variant={student.status === 'present' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => handleAttendanceChange(student.student_id, 'present')}
-                            className="gap-1"
-                          >
+                          <Button variant={student.status === 'present' ? 'default' : 'outline'} size="sm" onClick={() => handleAttendanceChange(student.student_id, 'present')} className="gap-1">
                             <CheckCircle className="w-3 h-3" />
                             {t('attendance.status.present')}
                           </Button>
-                          <Button
-                            variant={student.status === 'absent' ? 'destructive' : 'outline'}
-                            size="sm"
-                            onClick={() => handleAttendanceChange(student.student_id, 'absent')}
-                            className="gap-1"
-                          >
+                          <Button variant={student.status === 'absent' ? 'destructive' : 'outline'} size="sm" onClick={() => handleAttendanceChange(student.student_id, 'absent')} className="gap-1">
                             <XCircle className="w-3 h-3" />
                             {t('attendance.status.absent')}
                           </Button>
-                          <Button
-                            variant={student.status === 'late' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => handleAttendanceChange(student.student_id, 'late')}
-                            className="gap-1"
-                          >
+                          <Button variant={student.status === 'late' ? 'default' : 'outline'} size="sm" onClick={() => handleAttendanceChange(student.student_id, 'late')} className="gap-1">
                             <Clock className="w-3 h-3" />
                             {t('attendance.status.late')}
                           </Button>
-                          <Button
-                            variant={student.status === 'excused' ? 'secondary' : 'outline'}
-                            size="sm"
-                            onClick={() => handleAttendanceChange(student.student_id, 'excused')}
-                            className="gap-1"
-                          >
+                          <Button variant={student.status === 'excused' ? 'secondary' : 'outline'} size="sm" onClick={() => handleAttendanceChange(student.student_id, 'excused')} className="gap-1">
                             <AlertCircle className="w-3 h-3" />
                             {t('attendance.status.excused')}
                           </Button>
@@ -798,20 +607,10 @@ export default function AttendancePage() {
       {viewMode === 'list' && (
         <div className="space-y-0">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-ink font-display">
-              {t('attendance.attendanceRecords')}
-            </h2>
+            <h2 className="text-xl font-semibold text-ink font-display">{t('attendance.attendanceRecords')}</h2>
             <div className="flex items-center space-x-2">
-              <Input
-                placeholder={t('attendance.searchStudent')}
-                value={studentFilter}
-                onChange={(e) => setStudentFilter(e.target.value)}
-                className="w-64"
-              />
-              <Select
-                value={statusFilter}
-                onValueChange={setStatusFilter}
-              >
+              <Input placeholder={t('attendance.searchStudent')} value={studentFilter} onChange={(e) => setStudentFilter(e.target.value)} className="w-64" />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="min-w-[150px]">
                   <SelectValue placeholder={t('attendance.allStatus')} />
                 </SelectTrigger>
@@ -826,10 +625,7 @@ export default function AttendancePage() {
             </div>
           </div>
           {filteredRecords.length === 0 ? (
-            <EmptyState
-              icon={Calendar}
-              message={t('attendance.noRecords')}
-            />
+            <EmptyState icon={Calendar} message={t('attendance.noRecords')} />
           ) : (
             <Table>
               <TableHeader>
@@ -842,7 +638,7 @@ export default function AttendancePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRecords.map((record) => {
+                {filteredRecords.map((record: Attendance) => {
                   const status = getStatusBadge(record.status);
                   return (
                     <TableRow key={record.id}>
@@ -856,32 +652,22 @@ export default function AttendancePage() {
                           </Avatar>
                           <div>
                             <div className="font-medium">{record.student?.name || t('attendance.unknown')}</div>
-                            <div className="text-sm text-ink/60">
-                              {record.student?.grade_level}
-                            </div>
+                            <div className="text-sm text-ink/60">{record.student?.grade_level}</div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        {new Date(record.date).toLocaleDateString(
-                          locale === 'ar' ? 'ar-SA' : 'en-US'
-                        )}
+                        {new Date(record.date).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={status.variant} className={status.color}>
-                          {status.label}
-                        </Badge>
+                        <Badge variant={status.variant} className={status.color}>{status.label}</Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm text-ink/60">
-                          {record.notes || '-'}
-                        </span>
+                        <span className="text-sm text-ink/60">{record.notes || '-'}</span>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-ink/60">
-                          {new Date(record.created_at).toLocaleString(
-                            locale === 'ar' ? 'ar-SA' : 'en-US'
-                          )}
+                          {new Date(record.created_at).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}
                         </span>
                       </TableCell>
                     </TableRow>

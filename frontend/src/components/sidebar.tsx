@@ -4,12 +4,26 @@ import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useMemo } from 'react';
-import { LogOut, Menu, X } from 'lucide-react';
+import { LogOut, Menu, X, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { useAuth } from '@/hooks/useAuth';
 import { getVisibleNavigation } from '@/config/navigation';
+
+const UNLOCK_KEYS = {
+  attendance: 'nabeeh_has_students',
+  grades: 'nabeeh_has_attendance',
+  reports: 'nabeeh_has_grades',
+} as const;
+
+type UnlockFeature = keyof typeof UNLOCK_KEYS;
+
+function isFeatureUnlocked(feature: UnlockFeature): boolean {
+  if (typeof window === 'undefined') return false;
+  const key = UNLOCK_KEYS[feature];
+  return localStorage.getItem(key) === 'true';
+}
 
 export function Sidebar() {
   const t = useTranslations('navigation');
@@ -85,6 +99,24 @@ export function Sidebar() {
                 <Icon className="w-4.5 h-4.5" />
                 <span>{t(item.name)}</span>
               </span>
+            );
+          }
+
+          const unlockFeature = item.unlockFeature as UnlockFeature | undefined;
+          const isLocked = unlockFeature && !isFeatureUnlocked(unlockFeature);
+
+          if (isLocked) {
+            return (
+              <button
+                key={item.name}
+                onClick={() => alert('Upgrade to unlock this feature')}
+                className="flex items-center gap-3 px-3 py-3 mx-1 rounded-md text-base font-normal font-body uppercase tracking-wider text-sidebar-accent-foreground/40 opacity-50 cursor-pointer transition-colors hover:bg-sidebar-accent/30"
+                title="Upgrade to unlock this feature"
+              >
+                <Icon className="w-4.5 h-4.5" />
+                <span>{t(item.name)}</span>
+                <Lock className="w-3.5 h-3.5 ml-auto opacity-60" />
+              </button>
             );
           }
 

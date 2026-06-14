@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
+import { useDebounce } from '@/hooks/useDebounce';
 import { formatPhoneNumber, validateEmail } from '@/lib/utils';
 import { Save, Upload, Phone, Clock, CheckCircle, XCircle, Loader2, MessageSquare } from 'lucide-react';
 import apiClient from '@/lib/client';
@@ -182,26 +183,26 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (teacher) {
-      setSettings({
-        name: teacher.name || '',
-        email: teacher.email || '',
-        phone: teacher.phone || '',
-        whatsapp_number: teacher.whatsapp_number || teacher.phone || '',
-        business_name: teacher.business_name || '',
-        bio: teacher.bio || '',
-        subjects: teacher.subjects || [],
-        address: teacher.address || '',
-        city: teacher.city || '',
-        country: teacher.country || 'Egypt',
-        timezone: teacher.timezone || 'Africa/Cairo',
-        telegram_username: teacher.telegram_username || ''
-      });
+      void (async () => {
+        setSettings({
+          name: teacher.name || '',
+          email: teacher.email || '',
+          phone: teacher.phone || '',
+          whatsapp_number: teacher.whatsapp_number || teacher.phone || '',
+          business_name: teacher.business_name || '',
+          bio: teacher.bio || '',
+          subjects: teacher.subjects || [],
+          address: teacher.address || '',
+          city: teacher.city || '',
+          country: teacher.country || 'Egypt',
+          timezone: teacher.timezone || 'Africa/Cairo',
+          telegram_username: teacher.telegram_username || ''
+        });
+      })();
     }
   }, [teacher]);
 
-  useEffect(() => {
-    checkWhatsAppStatus();
-  }, [settings.whatsapp_number]);
+  const debouncedWhatsappNumber = useDebounce(settings.whatsapp_number, 500);
 
   const checkWhatsAppStatus = async () => {
     if (!settings.whatsapp_number) {
@@ -212,33 +213,25 @@ export default function SettingsPage() {
     try {
       setIsLoading(true);
       setStatusMessage('');
-      const response = await apiClient.api.post('/whatsapp/status', {
-        phone: settings.whatsapp_number
-      });
+      const data = await apiClient.getWhatsAppStatus();
 
-      if (response.data.success) {
-        setWhatsappStatus(response.data.data?.status || 'disconnected');
+      if (data) {
+        const status = data.status as 'connected' | 'disconnected';
+        setWhatsappStatus(status || 'disconnected');
 
-        if (response.data.data?.status === 'connected') {
-          setStatusMessage(
-            response.data.message?.includes('partially connected')
-              ? lang.partiallyConnected
-              : ''
-          );
-        } else if (response.data.data?.status === 'disconnected') {
+        if (status === 'connected') {
+          setStatusMessage('');
+        } else if (status === 'disconnected') {
           setStatusMessage(lang.whatsappDisconnected);
-        } else if (response.data.data?.status === 'invalid_number') {
-          setStatusMessage(lang.invalidNumber);
-        } else {
-          setStatusMessage(response.data.message || '');
         }
       } else {
         setWhatsappStatus('disconnected');
-        setStatusMessage(response.data.message || lang.checkFailed);
+        setStatusMessage(lang.checkFailed);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number } };
       logger.error('WhatsApp status check failed:', error);
-      if (error.response?.status !== 401) {
+      if (err.response?.status !== 401) {
         setWhatsappStatus('disconnected');
         setStatusMessage(lang.checkFailed);
       }
@@ -246,6 +239,12 @@ export default function SettingsPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    void (async () => {
+      await checkWhatsAppStatus();
+    })();
+  }, [debouncedWhatsappNumber]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -311,11 +310,12 @@ export default function SettingsPage() {
 
       setMessage({ type: 'success', text: lang.savedSuccess });
       checkWhatsAppStatus();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       logger.error('Save settings error:', error);
       setMessage({
         type: 'error',
-        text: error?.response?.data?.message || lang.saveError
+        text: err?.response?.data?.message || lang.saveError
       });
     } finally {
       setIsSaving(false);

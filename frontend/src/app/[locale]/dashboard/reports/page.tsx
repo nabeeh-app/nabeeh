@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations, useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,17 +24,12 @@ import { StatCards } from '@/components/ui/StatCards';
 export default function ReportsPage() {
   const t = useTranslations();
   const tReportsStatus = useTranslations('reportsStatus');
-  const locale = useLocale();
 
   const [gradeStats, setGradeStats] = useState<GradeStats | null>(null);
   const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummary | null>(null);
   const [messageStats, setMessageStats] = useState<MessageStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('lastMonth');
-
-  useEffect(() => {
-    loadStats();
-  }, [dateRange]);
 
   const getDateParams = () => {
     const now = new Date();
@@ -78,6 +73,12 @@ export default function ReportsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void (async () => {
+      await loadStats();
+    })();
+  }, [dateRange]);
 
   if (loading) {
     return <LoadingSpinner message={t('reports.loading')} />;

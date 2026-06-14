@@ -64,7 +64,7 @@ async function findOrCreateConversation(parentId, teacherId, chatId) {
 }
 
 /**
- * Save a message to the database
+ * Save a message to the database and update last_message_at
  */
 async function saveMessage(conversationId, direction, content, meta = {}) {
   const { error } = await supabase
@@ -79,6 +79,11 @@ async function saveMessage(conversationId, direction, content, meta = {}) {
   if (error) {
     logger.error('Error saving message', { error: error.message });
   }
+
+  await supabase
+    .from('conversations')
+    .update({ last_message_at: new Date().toISOString() })
+    .eq('id', conversationId);
 }
 
 /**
@@ -94,6 +99,37 @@ async function getStudentAttendance(studentId) {
     .single();
 
   return attendance;
+}
+
+/**
+ * Flatten grade query results into simple objects for response formatting
+ */
+function flattenGrades(rawGrades) {
+  return (rawGrades || []).map(g => ({
+    subject: g.enrollment?.group?.offering?.subject?.name_en
+      || g.enrollment?.group?.offering?.subject?.name_ar
+      || 'Unknown',
+    score: g.score,
+    max_score: g.assessment?.max_score,
+    percentage: g.assessment?.max_score
+      ? ((g.score / g.assessment.max_score) * 100).toFixed(1)
+      : 'N/A',
+    date: g.assessment?.date,
+    type: g.assessment?.type
+  }));
+}
+
+/**
+ * Flatten all grades for average calculation
+ */
+function flattenAllGrades(rawGrades) {
+  return (rawGrades || []).map(g => ({
+    score: g.score,
+    max_score: g.assessment?.max_score,
+    percentage: g.assessment?.max_score
+      ? (g.score / g.assessment.max_score) * 100
+      : 0
+  }));
 }
 
 /**
@@ -114,7 +150,8 @@ async function getStudentGrades(studentId, subject) {
     query = query.or(`enrollment.group.offering.subject.name_en.ilike.${subject},enrollment.group.offering.subject.name_ar.ilike.${subject},enrollment.group.offering.subject.code.ilike.${subject}`);
   }
 
-  const { data: recentGrades } = await query.limit(5);
+  const { data: recentGradesRaw } = await query.limit(5);
+  const recentGrades = flattenGrades(recentGradesRaw);
 
   let allQuery = supabase
     .from('grades')
@@ -129,7 +166,8 @@ async function getStudentGrades(studentId, subject) {
     allQuery = allQuery.or(`enrollment.group.offering.subject.name_en.ilike.${subject},enrollment.group.offering.subject.code.ilike.${subject}`);
   }
 
-  const { data: allGrades } = await allQuery;
+  const { data: allGradesRaw } = await allQuery;
+  const allGrades = flattenAllGrades(allGradesRaw);
 
   return { recentGrades, allGrades };
 }

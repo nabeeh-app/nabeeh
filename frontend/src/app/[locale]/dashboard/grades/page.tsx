@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -40,16 +40,17 @@ import {
   FileSpreadsheet,
   Target
 } from 'lucide-react';
-import { apiClient } from '@/lib/client';
-import { Student, Grade, CreateGradeRequest, Offering } from '@/types';
-import { AlertCircle, ChevronDown, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Student, Grade, CreateGradeRequest } from '@/types';
+import { AlertCircle, ChevronDown } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { StatCards } from '@/components/ui/StatCards';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ViewModeTabs } from '@/components/ui/ViewModeTabs';
-import logger from '@/lib/logger';
+import { useOfferings } from '@/hooks/useOfferings';
+import { useStudents } from '@/hooks/useStudents';
+import { useGrades, useCreateGrade, useUpdateGrade, useDeleteGrade } from '@/hooks/useGrades';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 interface GradeWithStudent extends Grade {
   student: Student;
@@ -79,53 +80,111 @@ interface SubjectStats {
   student_count: number;
 }
 
+const getLetterGrade = (percentage: number): string => {
+  if (percentage >= 95) return 'A+';
+  if (percentage >= 90) return 'A';
+  if (percentage >= 85) return 'A-';
+  if (percentage >= 80) return 'B+';
+  if (percentage >= 75) return 'B';
+  if (percentage >= 70) return 'B-';
+  if (percentage >= 65) return 'C+';
+  if (percentage >= 60) return 'C';
+  if (percentage >= 55) return 'C-';
+  if (percentage >= 50) return 'D';
+  return 'F';
+};
+
+const getGradeColor = (percentage: number): string => {
+  if (percentage >= 85) return 'text-[#026370] bg-surface-sage';
+  if (percentage >= 70) return 'text-ink/70 bg-surface-cool';
+  return 'text-[#c53030] bg-[#c53030]/10';
+};
+
 export default function GradesPage() {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
 
-  const [students, setStudents] = useState<Student[]>([]);
-  const [grades, setGrades] = useState<GradeWithStudent[]>([]);
-  const [gradebook, setGradebook] = useState<GradebookEntry[]>([]);
-  const [subjectStats, setSubjectStats] = useState<SubjectStats[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const [offerings, setOfferings] = useState<Offering[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
-  const [openGroupSelect, setOpenGroupSelect] = useState(false);
-  const [noGroups, setNoGroups] = useState(false);
-
-  const [viewMode, setViewMode] = useState<'gradebook' | 'list' | 'entry'>('gradebook');
-  const [selectedAssessmentType, setSelectedAssessmentType] = useState<string>('all');
-
+  const [viewMode, setViewMode] = useState<'gradebook' | 'list'>('gradebook');
+  const [selectedAssessmentType] = useState<string>('all');
   const [isAddGradeModalOpen, setAddGradeModalOpen] = useState(false);
-  const [isBulkEntryModalOpen, setBulkEntryModalOpen] = useState(false);
   const [isStatsModalOpen, setStatsModalOpen] = useState(false);
   const [selectedGrade, setSelectedGrade] = useState<GradeWithStudent | null>(null);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
-
   const [searchTerm, setSearchTerm] = useState('');
-  const [gradeFilter, setGradeFilter] = useState<string>('all');
-  const [dateRange, setDateRange] = useState({
+  const [gradeFilter] = useState<string>('all');
+  const [dateRange] = useState({
     from: new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0]
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
+  
+  const gradebookScrollRef = useRef<HTMLDivElement>(null);
+  const listScrollRef = useRef<HTMLDivElement>(null);
 
-  const currentSubjectName = (() => {
+  const { data: offerings = [], isLoading: offeringsLoading } = useOfferings();
+
+  const groups = useMemo(() => offerings.flatMap(o => o.groups ?? []), [offerings]);
+
+  useEffect(() => {
+    if (groups.length === 0 && !offeringsLoading) {
+      router.replace(`/${locale}/dashboard/classes?setup=required`);
+    }
+  }, [groups, offeringsLoading, locale, router]);
+
+  const effectiveSelectedGroupId = useMemo(
+    () => selectedGroupId || groups[0]?.id || '',
+    [selectedGroupId, groups]
+  );
+
+  const currentSubjectName = useMemo(() => {
     for (const offering of offerings) {
-      if (offering.groups.find((g) => g.id === selectedGroupId)) {
+      if (offering.groups.find((g) => g.id === effectiveSelectedGroupId)) {
         return offering.subject.name_en;
       }
     }
     return '';
-  })();
+  }, [offerings, effectiveSelectedGroupId]);
+
+  const studentsParams = useMemo(() => effectiveSelectedGroupId ? {
+    limit: 100,
+    status: 'active',
+    group_id: effectiveSelectedGroupId,
+  } : undefined, [effectiveSelectedGroupId]);
+
+  const gradesParams = useMemo(() => effectiveSelectedGroupId ? {
+    limit: 500,
+    start_date: dateRange.from,
+    end_date: dateRange.to,
+    subject: currentSubjectName || undefined,
+    group_id: effectiveSelectedGroupId,
+  } : undefined, [effectiveSelectedGroupId, dateRange, currentSubjectName]);
+
+  const { data: studentsResponse, isLoading: studentsLoading } = useStudents(studentsParams);
+  const students: Student[] = useMemo(() => studentsResponse?.data ?? [], [studentsResponse]);
+
+  const { data: gradesResponse, isLoading: gradesLoading } = useGrades(gradesParams);
+  const grades: GradeWithStudent[] = useMemo(() => {
+    const rawGrades = gradesResponse?.data ?? [];
+    const studentIds = new Set(students.map(s => s.id));
+    return rawGrades
+      .filter((g: Grade) => studentIds.has(g.student_id))
+      .map((grade: Grade) => ({
+        ...grade,
+        student: students.find(s => s.id === grade.student_id) || {} as Student
+      }));
+  }, [gradesResponse, students]);
+
+  const createGrade = useCreateGrade();
+  const updateGrade = useUpdateGrade();
+  const deleteGrade = useDeleteGrade();
 
   const [newGrade, setNewGrade] = useState<CreateGradeRequest>({
     student_id: '',
     group_id: '',
-    subject: currentSubjectName,
+    subject: '',
     assessment_type: 'test',
     assessment_name: '',
     score: 0,
@@ -133,7 +192,6 @@ export default function GradesPage() {
     date: new Date().toISOString().split('T')[0],
     notes: ''
   });
-  const [formError, setFormError] = useState('');
 
   const [alertDialog, setAlertDialog] = useState<{
     open: boolean;
@@ -144,112 +202,20 @@ export default function GradesPage() {
   }>({ open: false, title: '', description: '', onConfirm: () => {} });
 
   useEffect(() => {
-    loadOfferings();
-  }, []);
+    if (!effectiveSelectedGroupId) return;
+    void (async () => {
+      setNewGrade(prev => ({
+        ...prev,
+        group_id: effectiveSelectedGroupId,
+        subject: currentSubjectName || prev.subject
+      }));
+    })();
+  }, [effectiveSelectedGroupId, currentSubjectName]);
 
-  useEffect(() => {
-    if (selectedGroupId) {
-      loadInitialData();
-    } else if (offerings.length > 0) {
-      setStudents([]);
-      setGrades([]);
-    }
-  }, [selectedGroupId, dateRange]);
-
-  const loadOfferings = async () => {
-    try {
-      const data = await apiClient.getOfferings();
-      setOfferings(data || []);
-
-      const groups = (data || []).flatMap((offering: { groups?: { id: string }[] }) => offering.groups ?? []);
-      if (groups.length === 0) {
-        setNoGroups(true);
-        setLoading(false);
-        router.replace(`/${locale}/dashboard/classes?setup=required`);
-        return;
-      }
-      setNoGroups(false);
-      if (groups[0]) {
-        setSelectedGroupId(groups[0].id);
-      }
-    } catch (err) {
-      logger.error('Error loading offerings:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (grades.length > 0 && students.length > 0) {
-      generateGradebook();
-      calculateSubjectStats();
-    }
-  }, [grades, students]);
-
-  useEffect(() => {
-    if (!selectedGroupId) return;
-    setNewGrade(prev => ({
-      ...prev,
-      group_id: selectedGroupId,
-      subject: currentSubjectName || prev.subject
-    }));
-  }, [selectedGroupId, currentSubjectName]);
-
-  const loadInitialData = async () => {
-    if (!selectedGroupId) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      let selectedSubjectName = '';
-      offerings.forEach(offering => {
-        const group = offering.groups.find((g) => g.id === selectedGroupId);
-        if (group) {
-          selectedSubjectName = offering.subject.name_en;
-        }
-      });
-
-      const studentsResponse = await apiClient.getStudents({
-        limit: 100,
-        status: 'active',
-        group_id: selectedGroupId
-      });
-      setStudents(studentsResponse.data);
-
-      const gradesResponse = await apiClient.getGrades({
-        limit: 500,
-        start_date: dateRange.from,
-        end_date: dateRange.to,
-        subject: selectedSubjectName,
-        group_id: selectedGroupId,
-      });
-
-      const studentIds = new Set(studentsResponse.data.map(s => s.id));
-      const gradesWithStudents = gradesResponse.data
-        .filter(g => studentIds.has(g.student_id))
-        .map(grade => ({
-          ...grade,
-          student: studentsResponse.data.find(s => s.id === grade.student_id) || {} as Student
-        }));
-
-      setGrades(gradesWithStudents);
-
-    } catch (err: any) {
-      logger.error('Error loading grades data:', err);
-      setError(err.message || 'Failed to load grades data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateGradebook = () => {
-    const filteredStudents = students;
-
-    const gradebookData: GradebookEntry[] = filteredStudents.map(student => {
-      const studentGrades = grades.filter(g =>
-        g.student_id === student.id
-      );
-
-      const gradesMap: { [key: string]: any } = {};
+  const gradebook: GradebookEntry[] = useMemo(() => {
+    return students.map(student => {
+      const studentGrades = grades.filter(g => g.student_id === student.id);
+      const gradesMap: { [key: string]: { score: number; max_score: number; percentage: number; date: string } } = {};
       studentGrades.forEach(grade => {
         gradesMap[grade.assessment_name] = {
           score: grade.score,
@@ -258,32 +224,24 @@ export default function GradesPage() {
           date: grade.date
         };
       });
-
       const average = studentGrades.length > 0
         ? studentGrades.reduce((sum, grade) => sum + grade.percentage, 0) / studentGrades.length
         : 0;
-
-      const letterGrade = getLetterGrade(average);
-
       return {
         student_id: student.id,
         student_name: student.name,
         grades: gradesMap,
         average: Math.round(average * 100) / 100,
-        letter_grade: letterGrade
+        letter_grade: getLetterGrade(average)
       };
     });
+  }, [students, grades]);
 
-    setGradebook(gradebookData);
-  };
-
-  const calculateSubjectStats = () => {
+  const subjectStats: SubjectStats[] = useMemo(() => {
     const subjects = [...new Set(grades.map(g => g.subject))];
-
-    const stats: SubjectStats[] = subjects.map(subject => {
+    return subjects.map(subject => {
       const subjectGrades = grades.filter(g => g.subject === subject);
       const scores = subjectGrades.map(g => g.percentage);
-
       return {
         subject,
         total_assessments: subjectGrades.length,
@@ -293,69 +251,31 @@ export default function GradesPage() {
         student_count: [...new Set(subjectGrades.map(g => g.student_id))].length
       };
     });
-
-    setSubjectStats(stats);
-  };
-
-  const getLetterGrade = (percentage: number): string => {
-    if (percentage >= 95) return 'A+';
-    if (percentage >= 90) return 'A';
-    if (percentage >= 85) return 'A-';
-    if (percentage >= 80) return 'B+';
-    if (percentage >= 75) return 'B';
-    if (percentage >= 70) return 'B-';
-    if (percentage >= 65) return 'C+';
-    if (percentage >= 60) return 'C';
-    if (percentage >= 55) return 'C-';
-    if (percentage >= 50) return 'D';
-    return 'F';
-  };
-
-  const getGradeColor = (percentage: number): string => {
-    if (percentage >= 85) return 'text-[#026370] bg-surface-sage';
-    if (percentage >= 70) return 'text-ink/70 bg-surface-cool';
-    return 'text-[#c53030] bg-[#c53030]/10';
-  };
+  }, [grades]);
 
   const handleAddGrade = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const gradeToSubmit = { ...newGrade };
     if (!gradeToSubmit.subject && currentSubjectName) {
       gradeToSubmit.subject = currentSubjectName;
     }
-
     const gradeWithGroup = {
       ...gradeToSubmit,
       group_id: gradeToSubmit.group_id || selectedGroupId
     };
-
     if (!gradeWithGroup.group_id || !gradeWithGroup.student_id || !gradeWithGroup.subject || !gradeWithGroup.assessment_name) {
       setFormError(t('grades.validation.fillRequired'));
       return;
     }
-
     try {
       setSubmitting(true);
       setFormError('');
-
-      const createdGrade = await apiClient.createGrade(gradeWithGroup);
-      const student = students.find(s => s.id === gradeWithGroup.student_id);
-
-      if (student) {
-        const gradeWithStudent: GradeWithStudent = {
-          ...createdGrade,
-          student
-        };
-        setGrades(prev => [...prev, gradeWithStudent]);
-      }
-
+      await createGrade.mutateAsync(gradeWithGroup);
       setAddGradeModalOpen(false);
       resetForm();
-
-    } catch (err: any) {
-      logger.error('Error creating grade:', err);
-      setFormError(err.message || 'Failed to create grade');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setFormError(message || 'Failed to create grade');
     } finally {
       setSubmitting(false);
     }
@@ -365,7 +285,7 @@ export default function GradesPage() {
     setSelectedGrade(grade);
     setNewGrade({
       student_id: grade.student_id,
-      group_id: grade.group_id || selectedGroupId,
+      group_id: grade.group_id || effectiveSelectedGroupId,
       subject: grade.subject,
       assessment_type: grade.assessment_type,
       assessment_name: grade.assessment_name,
@@ -379,37 +299,22 @@ export default function GradesPage() {
 
   const handleUpdateGrade = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!selectedGrade) return;
-    if (!newGrade.group_id && !selectedGroupId) {
+    if (!newGrade.group_id && !effectiveSelectedGroupId) {
       setFormError(t('grades.validation.selectClass'));
       return;
     }
-
     try {
       setSubmitting(true);
       setFormError('');
-
-      const payload = {
-        ...newGrade,
-        group_id: newGrade.group_id || selectedGroupId
-      };
-      const updatedGrade = await apiClient.updateGrade(selectedGrade.id, payload);
-
-      setGrades(prev =>
-        prev.map(g => g.id === selectedGrade.id
-          ? { ...updatedGrade, student: g.student }
-          : g
-        )
-      );
-
+      const payload = { ...newGrade, group_id: newGrade.group_id || effectiveSelectedGroupId };
+      await updateGrade.mutateAsync({ id: selectedGrade.id, data: payload });
       setEditModalOpen(false);
       setSelectedGrade(null);
       resetForm();
-
-    } catch (err: any) {
-      logger.error('Error updating grade:', err);
-      setFormError(err.message || 'Failed to update grade');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setFormError(message || 'Failed to update grade');
     } finally {
       setSubmitting(false);
     }
@@ -423,14 +328,13 @@ export default function GradesPage() {
       variant: 'destructive',
       onConfirm: async () => {
         try {
-          await apiClient.deleteGrade(grade.id);
-          setGrades(prev => prev.filter(g => g.id !== grade.id));
-        } catch (err: any) {
-          logger.error('Error deleting grade:', err);
+          await deleteGrade.mutateAsync(grade.id);
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
           setAlertDialog({
             open: true,
             title: t('errors.generic'),
-            description: err.message || t('errors.generic'),
+            description: message || t('errors.generic'),
             onConfirm: () => setAlertDialog(prev => ({ ...prev, open: false })),
           });
         }
@@ -442,7 +346,7 @@ export default function GradesPage() {
     setNewGrade({
       student_id: '',
       group_id: selectedGroupId || '',
-      subject: '',
+      subject: currentSubjectName || '',
       assessment_type: 'test',
       assessment_name: '',
       score: 0,
@@ -450,46 +354,54 @@ export default function GradesPage() {
       date: new Date().toISOString().split('T')[0],
       notes: ''
     });
-    if (currentSubjectName) {
-      setNewGrade(prev => ({ ...prev, subject: currentSubjectName }));
-    }
     setFormError('');
   };
 
-  const uniqueSubjects = [...new Set(grades.map(g => g.subject))];
-  const uniqueAssessments = [...new Set(grades.map(g => g.assessment_name))];
+  const uniqueSubjects = useMemo(() => [...new Set(grades.map(g => g.subject))], [grades]);
+  const uniqueAssessments = useMemo(() => [...new Set(grades.map(g => g.assessment_name))], [grades]);
   const assessmentTypes = ['test', 'quiz', 'homework', 'project', 'midterm', 'final'];
 
-  const filteredGrades = grades.filter(grade => {
-    const matchesSearch = grade.student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      grade.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      grade.assessment_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesAssessmentType = selectedAssessmentType === 'all' || grade.assessment_type === selectedAssessmentType;
-    const matchesGradeFilter = gradeFilter === 'all' || getLetterGrade(grade.percentage) === gradeFilter;
+  const filteredGrades = useMemo(() => {
+    return grades.filter(grade => {
+      const matchesSearch = grade.student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        grade.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        grade.assessment_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesAssessmentType = selectedAssessmentType === 'all' || grade.assessment_type === selectedAssessmentType;
+      const matchesGradeFilter = gradeFilter === 'all' || getLetterGrade(grade.percentage) === gradeFilter;
+      return matchesSearch && matchesAssessmentType && matchesGradeFilter;
+    });
+  }, [grades, searchTerm, selectedAssessmentType, gradeFilter]);
 
-    return matchesSearch && matchesAssessmentType && matchesGradeFilter;
+  const gradebookVirtualizer = useVirtualizer({
+    count: gradebook.length,
+    getScrollElement: () => gradebookScrollRef.current,
+    estimateSize: () => 72,
+    overscan: 5,
   });
 
-  if (loading) {
+  const listVirtualizer = useVirtualizer({
+    count: filteredGrades.length,
+    getScrollElement: () => listScrollRef.current,
+    estimateSize: () => 72,
+    overscan: 5,
+  });
+
+  const isLoading = offeringsLoading || studentsLoading || gradesLoading;
+
+  if (isLoading) {
     return <LoadingSpinner message={t('grades.loading')} />;
   }
 
-  if (noGroups) {
+  if (groups.length === 0) {
     return (
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink/20 bg-surface-sage p-4 text-ink">
           <div className="space-y-1">
-            <p className="text-sm font-semibold">
-              {t('grades.noGroups')}
-            </p>
-            <p className="text-sm text-ink/70">
-              {t('grades.noGroupsDescription')}
-            </p>
+            <p className="text-sm font-semibold">{t('grades.noGroups')}</p>
+            <p className="text-sm text-ink/70">{t('grades.noGroupsDescription')}</p>
           </div>
           <Button asChild variant="outline" className="border-ink/20 text-ink hover:bg-surface-cool">
-            <Link href={`/${locale}/dashboard/classes?setup=required`}>
-              {t('grades.setUpGroups')}
-            </Link>
+            <Link href={`/${locale}/dashboard/classes?setup=required`}>{t('grades.setUpGroups')}</Link>
           </Button>
         </div>
       </div>
@@ -514,16 +426,13 @@ export default function GradesPage() {
         title={t('grades.title')}
         description={t('grades.descriptionCount')}
       >
-        <Select
-          value={selectedGroupId}
-          onValueChange={setSelectedGroupId}
-        >
+        <Select value={effectiveSelectedGroupId} onValueChange={setSelectedGroupId}>
           <SelectTrigger className="w-[300px]">
             <SelectValue placeholder={t('students.fields.group')} />
           </SelectTrigger>
           <SelectContent>
             {offerings.map((offering) => (
-              offering.groups.map((group: any) => (
+              offering.groups.map((group) => (
                 <SelectItem key={group.id} value={group.id}>
                   {offering.subject.name_en} - {group.name}
                 </SelectItem>
@@ -548,18 +457,14 @@ export default function GradesPage() {
           </DialogTrigger>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
-              <DialogTitle>
-                {t('grades.gradeStatistics')}
-              </DialogTitle>
+              <DialogTitle>{t('grades.gradeStatistics')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               {subjectStats.map((stat, index) => (
                 <div key={index} className="p-4 bg-surface-sage/50 rounded-md">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold">{stat.subject}</h3>
-                    <Badge variant="outline">
-                      {t('grades.studentsCount', { count: stat.student_count })}
-                    </Badge>
+                    <Badge variant="outline">{t('grades.studentsCount', { count: stat.student_count })}</Badge>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
@@ -601,13 +506,8 @@ export default function GradesPage() {
             <form onSubmit={handleAddGrade} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="student_id">
-                    {t('grades.fields.student')} *
-                  </Label>
-                  <Select
-                    value={newGrade.student_id}
-                    onValueChange={(value) => setNewGrade(s => ({ ...s, student_id: value }))}
-                  >
+                  <Label htmlFor="student_id">{t('grades.fields.student')} *</Label>
+                  <Select value={newGrade.student_id} onValueChange={(value) => setNewGrade(s => ({ ...s, student_id: value }))}>
                     <SelectTrigger id="student_id">
                       <SelectValue placeholder={t('grades.selectStudent')} />
                     </SelectTrigger>
@@ -619,123 +519,47 @@ export default function GradesPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="subject">
-                    {t('grades.fields.subject')} *
-                  </Label>
-                  <Input
-                    id="subject"
-                    value={newGrade.subject || currentSubjectName}
-                    onChange={(e) => setNewGrade(s => ({ ...s, subject: e.target.value }))}
-                    placeholder={t('grades.subjectPlaceholder')}
-                    required
-                    disabled={!!currentSubjectName}
-                  />
+                  <Label htmlFor="subject">{t('grades.fields.subject')} *</Label>
+                  <Input id="subject" value={newGrade.subject || currentSubjectName} onChange={(e) => setNewGrade(s => ({ ...s, subject: e.target.value }))} placeholder={t('grades.subjectPlaceholder')} required disabled={!!currentSubjectName} />
                 </div>
                 <div>
-                  <Label htmlFor="assessment_type">
-                    {t('grades.fields.assessmentType')} *
-                  </Label>
-                  <Select
-                    value={newGrade.assessment_type}
-                    onValueChange={(value) => setNewGrade(s => ({ ...s, assessment_type: value }))}
-                  >
-                    <SelectTrigger id="assessment_type">
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Label htmlFor="assessment_type">{t('grades.fields.assessmentType')} *</Label>
+                  <Select value={newGrade.assessment_type} onValueChange={(value) => setNewGrade(s => ({ ...s, assessment_type: value }))}>
+                    <SelectTrigger id="assessment_type"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {assessmentTypes.map(type => (
-                        <SelectItem key={type} value={type}>
-                          {t(`grades.assessmentTypes.${type}`)}
-                        </SelectItem>
+                        <SelectItem key={type} value={type}>{t(`grades.assessmentTypes.${type}`)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="assessment_name">
-                    {t('grades.fields.assessmentName')} *
-                  </Label>
-                  <Input
-                    id="assessment_name"
-                    value={newGrade.assessment_name}
-                    onChange={(e) => setNewGrade(s => ({ ...s, assessment_name: e.target.value }))}
-                    placeholder={t('grades.assessmentNamePlaceholder')}
-                    required
-                  />
+                  <Label htmlFor="assessment_name">{t('grades.fields.assessmentName')} *</Label>
+                  <Input id="assessment_name" value={newGrade.assessment_name} onChange={(e) => setNewGrade(s => ({ ...s, assessment_name: e.target.value }))} placeholder={t('grades.assessmentNamePlaceholder')} required />
                 </div>
                 <div>
-                  <Label htmlFor="score">
-                    {t('grades.fields.score')} *
-                  </Label>
-                  <Input
-                    id="score"
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={newGrade.score}
-                    onChange={(e) => setNewGrade(s => ({ ...s, score: parseFloat(e.target.value) || 0 }))}
-                    required
-                  />
+                  <Label htmlFor="score">{t('grades.fields.score')} *</Label>
+                  <Input id="score" type="number" min="0" step="0.5" value={newGrade.score} onChange={(e) => setNewGrade(s => ({ ...s, score: parseFloat(e.target.value) || 0 }))} required />
                 </div>
                 <div>
-                  <Label htmlFor="max_score">
-                    {t('grades.fields.maxScore')} *
-                  </Label>
-                  <Input
-                    id="max_score"
-                    type="number"
-                    min="1"
-                    value={newGrade.max_score}
-                    onChange={(e) => setNewGrade(s => ({ ...s, max_score: parseFloat(e.target.value) || 100 }))}
-                    required
-                  />
+                  <Label htmlFor="max_score">{t('grades.fields.maxScore')} *</Label>
+                  <Input id="max_score" type="number" min="1" value={newGrade.max_score} onChange={(e) => setNewGrade(s => ({ ...s, max_score: parseFloat(e.target.value) || 100 }))} required />
                 </div>
                 <div>
-                  <Label htmlFor="date">
-                    {t('grades.fields.date')} *
-                  </Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={newGrade.date}
-                    onChange={(e) => setNewGrade(s => ({ ...s, date: e.target.value }))}
-                    required
-                  />
+                  <Label htmlFor="date">{t('grades.fields.date')} *</Label>
+                  <Input id="date" type="date" value={newGrade.date} onChange={(e) => setNewGrade(s => ({ ...s, date: e.target.value }))} required />
                 </div>
               </div>
               <div>
-                <Label htmlFor="notes">
-                  {t('grades.fields.notes')}
-                </Label>
-                <textarea
-                  id="notes"
-                  className="w-full border rounded px-3 py-2"
-                  rows={3}
-                  value={newGrade.notes}
-                  onChange={(e) => setNewGrade(s => ({ ...s, notes: e.target.value }))}
-                  placeholder={t('grades.notesPlaceholder')}
-                />
+                <Label htmlFor="notes">{t('grades.fields.notes')}</Label>
+                <textarea id="notes" className="w-full border rounded px-3 py-2" rows={3} value={newGrade.notes} onChange={(e) => setNewGrade(s => ({ ...s, notes: e.target.value }))} placeholder={t('grades.notesPlaceholder')} />
               </div>
               {formError && (
-                <div className="text-[#c53030] text-sm bg-[#c53030]/10 p-3 rounded">
-                  {formError}
-                </div>
+                <div className="text-[#c53030] text-sm bg-[#c53030]/10 p-3 rounded">{formError}</div>
               )}
               <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setAddGradeModalOpen(false)}
-                  disabled={submitting}
-                >
-                  {t('common.cancel')}
-                </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting
-                    ? t('grades.saving')
-                    : t('common.save')
-                  }
-                </Button>
+                <Button type="button" variant="outline" onClick={() => setAddGradeModalOpen(false)} disabled={submitting}>{t('common.cancel')}</Button>
+                <Button type="submit" disabled={submitting}>{submitting ? t('grades.saving') : t('common.save')}</Button>
               </div>
             </form>
           </DialogContent>
@@ -750,14 +574,8 @@ export default function GradesPage() {
           active={viewMode}
           onChange={(mode) => setViewMode(mode as 'gradebook' | 'list')}
         />
-
         <div className="flex items-center space-x-2">
-          <Input
-            placeholder={t('grades.searchEllipsis')}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-64"
-          />
+          <Input placeholder={t('grades.searchEllipsis')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-64" />
         </div>
       </div>
 
@@ -771,73 +589,72 @@ export default function GradesPage() {
             </h2>
           </div>
           {gradebook.length === 0 ? (
-            <EmptyState
-              icon={GraduationCap}
-              message={t('grades.noGradesDisplay')}
-            />
+            <EmptyState icon={GraduationCap} message={t('grades.noGradesDisplay')} />
           ) : (
-            <div className="overflow-x-auto">
+            <div ref={gradebookScrollRef} className="overflow-x-auto max-h-[600px]">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[200px]">
-                      {t('grades.fields.student')}
-                    </TableHead>
+                    <TableHead className="min-w-[200px]">{t('grades.fields.student')}</TableHead>
                     {uniqueAssessments.slice(0, 5).map(assessment => (
-                      <TableHead key={assessment} className="text-center min-w-[120px]">
-                        {assessment}
-                      </TableHead>
+                      <TableHead key={assessment} className="text-center min-w-[120px]">{assessment}</TableHead>
                     ))}
-                    <TableHead className="text-center min-w-[100px]">
-                      {t('grades.averageLabel')}
-                    </TableHead>
-                    <TableHead className="text-center min-w-[80px]">
-                      {t('grades.gradeLabel')}
-                    </TableHead>
+                    <TableHead className="text-center min-w-[100px]">{t('grades.averageLabel')}</TableHead>
+                    <TableHead className="text-center min-w-[80px]">{t('grades.gradeLabel')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {gradebook.map((entry) => (
-                    <TableRow key={entry.student_id}>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              {entry.student_name.split(' ')[0].charAt(0)}
-                              {entry.student_name.split(' ')[1]?.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">{entry.student_name}</span>
-                        </div>
-                      </TableCell>
-                      {uniqueAssessments.slice(0, 5).map(assessment => (
-                        <TableCell key={assessment} className="text-center">
-                          {entry.grades[assessment] ? (
-                            <div className="space-y-1">
-                              <div className="font-medium">
-                                {entry.grades[assessment].score}/{entry.grades[assessment].max_score}
-                              </div>
-                              <div className={`text-xs px-2 py-1 rounded ${getGradeColor(entry.grades[assessment].percentage)}`}>
-                                {entry.grades[assessment].percentage}%
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-ink/40">-</span>
-                          )}
+                  {gradebookVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const entry = gradebook[virtualRow.index];
+                    return (
+                      <TableRow
+                        key={entry.student_id}
+                        className="absolute w-full"
+                        style={{
+                          height: `${virtualRow.size}px`,
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                      >
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-primary/10 text-primary">
+                                {entry.student_name.split(' ')[0].charAt(0)}
+                                {entry.student_name.split(' ')[1]?.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{entry.student_name}</span>
+                          </div>
                         </TableCell>
-                      ))}
-                      <TableCell className="text-center">
-                        <div className={`font-bold px-3 py-1 rounded ${getGradeColor(entry.average)}`}>
-                          {entry.average}%
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="outline" className={getGradeColor(entry.average)}>
-                          {entry.letter_grade}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        {uniqueAssessments.slice(0, 5).map(assessment => (
+                          <TableCell key={assessment} className="text-center">
+                            {entry.grades[assessment] ? (
+                              <div className="space-y-1">
+                                <div className="font-medium">
+                                  {entry.grades[assessment].score}/{entry.grades[assessment].max_score}
+                                </div>
+                                <div className={`text-xs px-2 py-1 rounded ${getGradeColor(entry.grades[assessment].percentage)}`}>
+                                  {entry.grades[assessment].percentage}%
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-ink/40">-</span>
+                            )}
+                          </TableCell>
+                        ))}
+                        <TableCell className="text-center">
+                          <div className={`font-bold px-3 py-1 rounded ${getGradeColor(entry.average)}`}>
+                            {entry.average}%
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className={getGradeColor(entry.average)}>
+                            {entry.letter_grade}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -849,17 +666,13 @@ export default function GradesPage() {
       {viewMode === 'list' && (
         <div className="space-y-0">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-ink font-display">
-              {t('grades.gradeList')}
-            </h2>
+            <h2 className="text-xl font-semibold text-ink font-display">{t('grades.gradeList')}</h2>
           </div>
           {filteredGrades.length === 0 ? (
-            <EmptyState
-              icon={GraduationCap}
-              message={t('grades.noGradesMatch')}
-            />
+            <EmptyState icon={GraduationCap} message={t('grades.noGradesMatch')} />
           ) : (
-            <Table>
+            <div ref={listScrollRef} className="overflow-auto max-h-[600px]">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('grades.fields.student')}</TableHead>
@@ -873,82 +686,70 @@ export default function GradesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredGrades.map((grade) => (
-                  <TableRow key={grade.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-surface-cool text-ink/60">
-                            {grade.student?.name?.split(' ')[0]?.charAt(0)}
-                            {grade.student?.name?.split(' ')[1]?.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{grade.student?.name || 'Unknown'}</div>
-                          <div className="text-sm text-ink/60">
-                            {grade.student?.grade_level}
+                {listVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const grade = filteredGrades[virtualRow.index];
+                  return (
+                    <TableRow
+                      key={grade.id}
+                      className="absolute w-full"
+                      style={{
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-surface-cool text-ink/60">
+                              {grade.student?.name?.split(' ')[0]?.charAt(0)}
+                              {grade.student?.name?.split(' ')[1]?.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{grade.student?.name || 'Unknown'}</div>
+                            <div className="text-sm text-ink/60">{grade.student?.grade_level}</div>
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{grade.subject}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{grade.assessment_name}</div>
-                        <div className="text-sm text-ink/60 capitalize">
-                          {grade.assessment_type}
+                      </TableCell>
+                      <TableCell><Badge variant="outline">{grade.subject}</Badge></TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{grade.assessment_name}</div>
+                          <div className="text-sm text-ink/60 capitalize">{grade.assessment_type}</div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">
-                        {grade.score}/{grade.max_score}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className={`font-medium px-2 py-1 rounded text-center ${getGradeColor(grade.percentage)}`}>
-                        {grade.percentage}%
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={getGradeColor(grade.percentage)}>
-                        {grade.letter_grade || getLetterGrade(grade.percentage)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">
-                        {new Date(grade.date).toLocaleDateString(
-                          locale === 'ar' ? 'ar-SA' : 'en-US'
-                        )}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditGrade(grade)}
-                          title={t('common.edit')}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteGrade(grade)}
-                          className="text-[#c53030] hover:text-[#c53030]/80"
-                          title={t('common.delete')}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell><span className="font-medium">{grade.score}/{grade.max_score}</span></TableCell>
+                      <TableCell>
+                        <div className={`font-medium px-2 py-1 rounded text-center ${getGradeColor(grade.percentage)}`}>
+                          {grade.percentage}%
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={getGradeColor(grade.percentage)}>
+                          {grade.letter_grade || getLetterGrade(grade.percentage)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {new Date(grade.date).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleEditGrade(grade)} title={t('common.edit')}>
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteGrade(grade)} className="text-[#c53030] hover:text-[#c53030]/80" title={t('common.delete')}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
+            </div>
           )}
         </div>
       )}
@@ -957,73 +758,29 @@ export default function GradesPage() {
       <Dialog open={isEditModalOpen} onOpenChange={setEditModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {t('grades.editGradeTitle')}
-            </DialogTitle>
+            <DialogTitle>{t('grades.editGradeTitle')}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleUpdateGrade} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit_score">
-                  {t('grades.fields.score')} *
-                </Label>
-                <Input
-                  id="edit_score"
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={newGrade.score}
-                  onChange={(e) => setNewGrade(s => ({ ...s, score: parseFloat(e.target.value) || 0 }))}
-                  required
-                />
+                <Label htmlFor="edit_score">{t('grades.fields.score')} *</Label>
+                <Input id="edit_score" type="number" min="0" step="0.5" value={newGrade.score} onChange={(e) => setNewGrade(s => ({ ...s, score: parseFloat(e.target.value) || 0 }))} required />
               </div>
               <div>
-                <Label htmlFor="edit_max_score">
-                  {t('grades.fields.maxScore')} *
-                </Label>
-                <Input
-                  id="edit_max_score"
-                  type="number"
-                  min="1"
-                  value={newGrade.max_score}
-                  onChange={(e) => setNewGrade(s => ({ ...s, max_score: parseFloat(e.target.value) || 100 }))}
-                  required
-                />
+                <Label htmlFor="edit_max_score">{t('grades.fields.maxScore')} *</Label>
+                <Input id="edit_max_score" type="number" min="1" value={newGrade.max_score} onChange={(e) => setNewGrade(s => ({ ...s, max_score: parseFloat(e.target.value) || 100 }))} required />
               </div>
             </div>
             <div>
-              <Label htmlFor="edit_notes">
-                {t('grades.fields.notes')}
-              </Label>
-              <textarea
-                id="edit_notes"
-                className="w-full border rounded px-3 py-2"
-                rows={3}
-                value={newGrade.notes}
-                onChange={(e) => setNewGrade(s => ({ ...s, notes: e.target.value }))}
-                placeholder={t('grades.notesPlaceholder')}
-              />
+              <Label htmlFor="edit_notes">{t('grades.fields.notes')}</Label>
+              <textarea id="edit_notes" className="w-full border rounded px-3 py-2" rows={3} value={newGrade.notes} onChange={(e) => setNewGrade(s => ({ ...s, notes: e.target.value }))} placeholder={t('grades.notesPlaceholder')} />
             </div>
             {formError && (
-              <div className="text-[#c53030] text-sm bg-[#c53030]/10 p-3 rounded">
-                {formError}
-              </div>
+              <div className="text-[#c53030] text-sm bg-[#c53030]/10 p-3 rounded">{formError}</div>
             )}
             <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditModalOpen(false)}
-                disabled={submitting}
-              >
-                {t('common.cancel')}
-              </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting
-                  ? t('grades.saving')
-                  : t('common.save')
-                }
-              </Button>
+              <Button type="button" variant="outline" onClick={() => setEditModalOpen(false)} disabled={submitting}>{t('common.cancel')}</Button>
+              <Button type="submit" disabled={submitting}>{submitting ? t('grades.saving') : t('common.save')}</Button>
             </div>
           </form>
         </DialogContent>

@@ -22,6 +22,7 @@
     "submit": "Submit",
     "close": "Close",
     "confirm": "Confirm",
+    "ok": "OK",
     "yes": "Yes",
     "no": "No",
     "saving": "Saving..."
@@ -62,6 +63,25 @@
     "passwordResetButton": "Send Reset Link",
     "passwordResetSuccess": "Password reset link sent to your email",
     "passwordResetError": "Failed to send reset link. Please try again.",
+    "forgotPasswordTitle": "Forgot Password?",
+    "forgotPasswordSubtitle": "Enter your email and we'll send you a reset link",
+    "sending": "Sending...",
+    "sendResetLink": "Send Reset Link",
+    "backToLogin": "Back to Login",
+    "resetEmailSent": "Check Your Email",
+    "resetEmailSentDesc": "We've sent a password reset link to",
+    "resetRequestFailed": "Failed to send reset link. Please try again.",
+    "resetPasswordTitle": "Reset Your Password",
+    "resetPasswordSubtitle": "Choose a new password for your account",
+    "resetting": "Resetting...",
+    "resetPasswordButton": "Reset Password",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "invalidResetToken": "Invalid or expired reset token",
+    "resetFailed": "Failed to reset password. Please try again.",
+    "invalidResetTitle": "Invalid Link",
+    "invalidResetDesc": "This password reset link is invalid or has expired.",
+    "requestNewLink": "Request a new link",
+    "passwordResetSuccessDesc": "Redirecting you to login...",
     "newPassword": "New Password",
     "confirmNewPassword": "Confirm New Password",
     "passwordMismatch": "Passwords do not match",
@@ -95,7 +115,10 @@
     "confirmPasswordRequired": "Password confirmation is required",
     "whatsappInvalid": "Invalid WhatsApp number format",
     "registerSuccess": "Account created successfully! Redirecting to login...",
-    "registerFailed": "Registration failed"
+    "registerFailed": "Registration failed",
+    "continueWithGoogle": "Continue with Google",
+    "signUpWithGoogle": "Sign up with Google",
+    "orContinueWith": "Or continue with"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -112,9 +135,54 @@
     "parents": "Parents",
     "analytics": "Analytics",
     "monitor": "System Monitor",
+    "alerts": "Alerts",
     "help": "Help",
+    "assistants": "Assistants",
+    "adminTeachers": "Teachers",
+    "logout": "Logout",
     "openMenu": "Open menu",
     "closeMenu": "Close menu"
+  },
+  "assistants": {
+    "pageTitle": "Assistants",
+    "pageDescription": "Manage who has access to your classes and what they can do",
+    "title": "All Assistants",
+    "inviteButton": "Invite Assistant",
+    "emptyTitle": "No assistants yet",
+    "emptyDescription": "Invite someone to help manage attendance, grades, and messages.",
+    "status": {
+      "active": "Active",
+      "pending": "Pending",
+      "inactive": "Inactive"
+    },
+    "permissionsLabel": "permissions",
+    "editPermissions": "Edit Permissions",
+    "deactivate": "Deactivate",
+    "activate": "Activate",
+    "remove": "Remove",
+    "removeConfirmTitle": "Remove Assistant",
+    "removeConfirmDescription": "Are you sure you want to remove this assistant? They will lose access to your account.",
+    "inviteTitle": "Invite Assistant",
+    "inviteDescription": "Send an invitation to a teaching assistant. They will receive access based on the permissions you set.",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "assistant@example.com",
+    "invalidEmail": "Please enter a valid email address",
+    "inviteSent": "Invitation sent to {email}",
+    "inviteFailed": "Failed to send invitation. Please try again.",
+    "cancel": "Cancel",
+    "sending": "Sending...",
+    "sendInvite": "Send Invite",
+    "editPermissionsTitle": "Edit Permissions",
+    "editingFor": "Editing permissions for",
+    "saving": "Saving...",
+    "savePermissions": "Save Permissions",
+    "deliveryMethod": "How to send the invite",
+    "phoneLabel": "Phone Number",
+    "pendingInvites": "Pending Invites",
+    "expires": "Expires:",
+    "deliveryEmail": "Email",
+    "deliveryWhatsApp": "WhatsApp",
+    "deliveryBoth": "Both"
   },
   "roles": {
     "admin": "Admin",
@@ -155,6 +223,7 @@
     "description": "Manage and track student information and enrollments",
     "descriptionCount": "Manage and track {count} registered students",
     "addStudent": "Add New Student",
+    "selfRegister": "Self Registration",
     "editStudent": "Edit Student",
     "addDescription": "Add a new student to the system with their details",
     "editDescription": "Update student information and details",
@@ -191,6 +260,14 @@
     "genderLabel": "Gender:",
     "noStudentsMatch": "No students found matching your search",
     "noStudentsYet": "No students registered yet",
+    "emptyState": {
+      "title": "No students yet",
+      "description": "Add your first student to get started, or import from an Excel file.",
+      "action": "Add First Student",
+      "importAction": "Import from Excel",
+      "noResultsTitle": "No matching students",
+      "noResultsDescription": "Try adjusting your search or filters."
+    },
     "loading": "Loading students...",
     "studentIdPlaceholder": "e.g., ST001",
     "fullNamePlaceholder": "Full name",
@@ -292,6 +369,13 @@
     "noGroups": "No groups yet",
     "noGroupsDescription": "Create at least one group before taking attendance.",
     "setUpGroups": "Set up groups",
+    "emptyState": {
+      "title": "No attendance records",
+      "description": "Start by marking attendance for a session. Your records will appear here.",
+      "action": "Mark Attendance",
+      "noResultsTitle": "No records found",
+      "noResultsDescription": "No attendance records match your current filters."
+    },
     "pleaseSelectClass": "Please Select a Class",
     "pleaseSelectClassDescription": "Select a class from the dropdown above to manage attendance.",
     "statsTitle": "Attendance Statistics",
@@ -383,6 +467,13 @@
     "searchEllipsis": "Search...",
     "noGradesDisplay": "No grades to display",
     "noGradesMatch": "No grades found matching your search",
+    "emptyState": {
+      "title": "No grades recorded",
+      "description": "Add assessments and enter grades to track student performance.",
+      "action": "Add First Grade",
+      "noResultsTitle": "No grades found",
+      "noResultsDescription": "No grades match your current filters."
+    },
     "averageLabel": "Average",
     "gradeLabel": "Grade",
     "percentageLabel": "Percentage",
@@ -448,6 +539,33 @@
       "invalidScore": "Score cannot be greater than max score",
       "fillRequired": "Please fill all required fields",
       "selectClass": "Please select a class"
+    },
+    "analysis": {
+      "groupComparison": "Group Comparison",
+      "atRiskStudents": "At-Risk Students",
+      "gradeDistribution": "Grade Distribution",
+      "gradeTrends": "Grade Trends",
+      "selectOffering": "Select an offering",
+      "noOfferings": "No offerings found",
+      "noOfferingsDesc": "Create a course offering to view grade analysis",
+      "noGroupData": "No group comparison data available",
+      "noAtRiskStudents": "No at-risk students",
+      "noDistributionData": "No distribution data available",
+      "noTrendData": "No trend data available",
+      "totalStudents": "Total Students",
+      "totalAssessments": "Assessments",
+      "averageScore": "Avg Score",
+      "atRisk": "At Risk",
+      "students": "students",
+      "avgGrade": "Avg Grade",
+      "attendance": "Attendance",
+      "studentCount": "Students",
+      "score": "Score",
+      "assessment": "Assessment",
+      "severity": {
+        "warning": "Warning",
+        "critical": "Critical"
+      }
     }
   },
   "parents": {
@@ -594,6 +712,8 @@
       "pairingCodeCopied": "Pairing code copied to clipboard!",
       "enterPhoneNumber": "Enter your phone number (e.g., +201234567890):",
       "enterTestPhoneNumber": "Enter phone number to test (e.g., +201234567890):",
+      "sendTestMessageTitle": "Send Test Message",
+      "sendTestMessageDescription": "Enter a phone number to send a test message and verify WhatsApp connection",
       "testMessageContent": "🤖 Test message from Nabeeh AI Assistant!\n\nThis is a test to verify WhatsApp integration is working properly.",
       "version": "Version",
       "confirmLogout": "Are you sure you want to logout from WhatsApp?",
@@ -659,7 +779,59 @@
     "topSubjects": "Top Subjects",
     "recentActivity": "Recent Activity",
     "noData": "No report data available yet",
-    "exportReport": "Export Report"
+    "exportReport": "Export Report",
+    "generation": {
+      "title": "Report Generator",
+      "selectOffering": "Select offering",
+      "selectStudent": "Select student",
+      "generateComment": "Generate Comment",
+      "generating": "Generating...",
+      "reportPreview": "Report Preview",
+      "dataSource": "Data Sources",
+      "gradesData": "Grades",
+      "attendanceData": "Attendance",
+      "trendsData": "Trends",
+      "editDraft": "Edit Draft",
+      "discard": "Discard",
+      "sendToParent": "Send to Parent",
+      "confirmSend": "Send Report",
+      "sendDescription": "This will send the report comment to the student's parent via WhatsApp",
+      "sendConfirmMessage": "Send report for {name} to their parent via WhatsApp?",
+      "thisStudent": "this student",
+      "cancel": "Cancel",
+      "sending": "Sending...",
+      "sendToWhatsApp": "Send via WhatsApp",
+      "sentSuccess": "Report sent successfully",
+      "sentToParent": "Report sent to parent of {name}",
+      "pending": "Pending",
+      "approved": "Approved",
+      "edited": "Edited",
+      "rejected": "Rejected",
+      "sent": "Sent"
+    },
+    "approval": {
+      "pendingApprovals": "Pending Approvals",
+      "noPendingDrafts": "No drafts pending approval",
+      "unknownStudent": "Unknown student",
+      "pending": "Pending",
+      "aiDraft": "AI Draft",
+      "dataSource": "Data Sources",
+      "gradesData": "Grades",
+      "attendanceData": "Attendance",
+      "trendsData": "Trends",
+      "editedVersion": "Edited Version",
+      "editDraft": "Edit Draft",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "save": "Save",
+      "editPlaceholder": "Edit the report text...",
+      "backToQueue": "Back to queue",
+      "reviewPrompt": "Review this draft and approve, edit, or reject",
+      "edit": "Edit",
+      "reject": "Reject",
+      "approve": "Approve",
+      "sendToParent": "Send to Parent"
+    }
   },
   "monitor": {
     "title": "System Monitor",
@@ -925,5 +1097,260 @@
       "typing": "Type a message... (try: attendance, grades, schedule)",
       "botName": "Nabeeh Bot"
     }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Welcome to Nabeeh!",
+      "description": "Let's set up your teaching profile in a few steps."
+    },
+    "steps": {
+      "profile": "Your Profile",
+      "subjects": "Subjects",
+      "whatsapp": "WhatsApp",
+      "done": "All Set"
+    },
+    "profile": {
+      "title": "Tell us about yourself",
+      "description": "Enter your name and phone number to complete your profile.",
+      "nameLabel": "Full Name",
+      "namePlaceholder": "Enter your full name",
+      "phoneLabel": "Phone Number",
+      "phonePlaceholder": "+201234567890"
+    },
+    "subjects": {
+      "title": "What do you teach?",
+      "description": "Select or type the subjects you teach. You can add more later.",
+      "placeholder": "e.g., Mathematics, Physics, English"
+    },
+    "whatsapp": {
+      "title": "Connect WhatsApp",
+      "description": "Link your WhatsApp to receive parent messages directly. You can skip this and set it up later.",
+      "skip": "Skip for Now",
+      "connect": "Connect WhatsApp"
+    },
+    "done": {
+      "title": "You're all set!",
+      "description": "We've loaded some demo data so you can explore Nabeeh. It will be removed when you add your first real student.",
+      "goToDashboard": "Go to Dashboard"
+    },
+    "progress": {
+      "title": "Get Started",
+      "profileDone": "Profile set up",
+      "firstStudent": "Add first student",
+      "firstAttendance": "Mark first attendance",
+      "firstGrade": "Enter first grade",
+      "dismiss": "Dismiss",
+      "percentComplete": "{percent}% complete"
+    }
+  },
+  "import": {
+    "title": "Import Students",
+    "upload": {
+      "title": "Upload File",
+      "description": "Drag and drop your Excel or CSV file, or click to browse.",
+      "supportedFormats": "Supports .xlsx, .xls, .csv files",
+      "browse": "Browse File",
+      "dropHere": "Drop file here",
+      "pasteTitle": "Or paste from Excel",
+      "pastePlaceholder": "Paste tabular data here (from Excel, Google Sheets, etc.)",
+      "parsePaste": "Parse Pasted Data"
+    },
+    "mapper": {
+      "title": "Map Columns",
+      "description": "Match your file columns to student fields.",
+      "detectedColumns": "Detected {count} columns",
+      "autoMapped": "Auto-mapped {count} columns",
+      "columnHeader": "Column Header",
+      "preview": "Preview",
+      "mapTo": "Map To",
+      "doNotImport": "Do not import",
+      "skipColumn": "Skip"
+    },
+    "preview": {
+      "title": "Preview Import",
+      "description": "Review your data before importing.",
+      "stats": {
+        "total": "Total rows",
+        "ready": "Ready to import",
+        "warnings": "Warnings",
+        "errors": "Errors"
+      },
+      "status": {
+        "ready": "Ready",
+        "warning": "Warning",
+        "error": "Error"
+      },
+      "filterReady": "Show ready only",
+      "filterWarnings": "Show warnings",
+      "filterErrors": "Show errors"
+    },
+    "complete": {
+      "title": "Import Complete",
+      "imported": "{count} students imported successfully",
+      "skipped": "{count} rows skipped",
+      "failedImport": "{count} rows failed"
+    },
+    "validation": {
+      "nameRequired": "Student name is required",
+      "codeRequired": "Student code is required",
+      "invalidPhone": "Invalid phone number format",
+      "duplicateCode": "Duplicate student code: {code}"
+    }
+  },
+  "selfRegistration": {
+    "title": "Student Self-Registration",
+    "generateLink": "Generate Registration Link",
+    "copyLink": "Copy Link",
+    "copied": "Link copied!",
+    "linkExpiry": "Link expires in {time}",
+    "formTitle": "Student Registration",
+    "formDescription": "Register as a student of {teacher}",
+    "groupName": "Class: {name}",
+    "successTitle": "Registration Successful!",
+    "successMessage": "You've been registered! Your teacher will confirm your enrollment."
+  },
+  "emptyStates": {
+    "students": {
+      "title": "No students yet",
+      "description": "Add your first student to get started, or import from an Excel file.",
+      "action": "Add First Student",
+      "secondaryAction": "Import from Excel"
+    },
+    "attendance": {
+      "title": "No attendance records",
+      "description": "Start by marking attendance for a session. Your records will appear here.",
+      "action": "Mark Attendance"
+    },
+    "grades": {
+      "title": "No grades recorded",
+      "description": "Add assessments and enter grades to track student performance.",
+      "action": "Add First Grade"
+    },
+    "messages": {
+      "title": "No conversations yet",
+      "description": "WhatsApp messages from parents will appear here once connected.",
+      "action": "Connect WhatsApp"
+    },
+    "courses": {
+      "title": "No courses created",
+      "description": "Set up your first course offering to start managing students and groups.",
+      "action": "Create First Offering"
+    }
+  },
+  "onboarding": {
+    "progress": {
+      "title": "Setup Progress",
+      "dismiss": "Dismiss progress",
+      "complete": "All steps completed — you're all set!",
+      "steps": {
+        "profile": "Profile",
+        "firstStudent": "1st Student",
+        "firstAttendance": "1st Attendance",
+        "firstGrade": "1st Grade"
+      }
+    }
+  },
+  "whatsappBanner": {
+    "message": "Connect WhatsApp to start receiving parent messages",
+    "connect": "Connect Now",
+    "dismiss": "Dismiss"
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "next": "Next",
+    "prev": "Back",
+    "done": "Done",
+    "tooltip_step": "Step {current} of {total}"
+  },
+  "alerts": {
+    "title": "Alerts",
+    "description": "Configure and view alert rules and notifications",
+    "configuration": "Alert Configuration",
+    "addRule": "Add Rule",
+    "noRules": "No alert rules configured",
+    "noRulesDesc": "Create your first alert rule to get notified about student changes",
+    "enable": "Enable",
+    "disable": "Disable",
+    "edit": "Edit",
+    "delete": "Delete",
+    "createRule": "Create Alert Rule",
+    "editRule": "Edit Alert Rule",
+    "ruleDescription": "Set up a threshold to trigger alerts",
+    "alertType": "Alert Type",
+    "attendanceThreshold": "Attendance Threshold",
+    "gradeThreshold": "Grade Threshold",
+    "trendAnomaly": "Trend Anomaly",
+    "comparison": "Comparison",
+    "comparisonGt": "Greater than",
+    "comparisonGte": "Greater than or equal",
+    "comparisonLt": "Less than",
+    "comparisonLte": "Less than or equal",
+    "threshold": "Threshold",
+    "notificationMethod": "Notification Method",
+    "inApp": "In-App",
+    "whatsapp": "WhatsApp",
+    "both": "Both",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "saveFailed": "Failed to save rule",
+    "create": "Create",
+    "update": "Update",
+    "choosePreset": "Choose a preset or create your own",
+    "presetLowAttendance": "Low Attendance",
+    "presetLowAttendanceDesc": "Alert when a student is absent more than usual",
+    "presetFailingGrade": "Failing Grade",
+    "presetFailingGradeDesc": "Alert when a student's grade drops below 50%",
+    "presetHighAbsenteeism": "High Absenteeism",
+    "presetHighAbsenteeismDesc": "Alert when a student misses more than half of sessions",
+    "presetGradeTrend": "Grade Trend Anomaly",
+    "presetGradeTrendDesc": "AI-powered alert for unusual grade patterns",
+    "customRule": "Custom Rule",
+    "customRuleDesc": "Create your own alert rule from scratch",
+    "attendanceRuleDesc": "Notify when attendance {comparison} {threshold}%",
+    "gradeRuleDesc": "Notify when grade {comparison} {threshold}%",
+    "trendRuleDesc": "AI-detected attendance trend anomaly",
+    "markAllRead": "Mark all as read",
+    "allSeverities": "All Severities",
+    "severityInfo": "Info",
+    "severityWarning": "Warning",
+    "severityCritical": "Critical",
+    "severity": {
+      "info": "Info",
+      "warning": "Warning",
+      "critical": "Critical"
+    },
+    "unreadOnly": "Unread only",
+    "noAlerts": "No alerts yet",
+    "featureDisabled": "Alerts feature is not enabled"
+  },
+  "notifications": {
+    "preferencesTitle": "Notification Preferences",
+    "preferencesDescription": "Choose which notifications you receive and when",
+    "prefAttendanceMarked": "Attendance marked",
+    "prefGradeEntered": "Grade entered",
+    "prefWhatsappSent": "WhatsApp message sent",
+    "prefAssistantAction": "Assistant actions",
+    "prefDigest": "Weekly digest",
+    "quietHours": "Quiet Hours",
+    "quietHoursDesc": "No notifications during these hours",
+    "from": "From",
+    "to": "To",
+    "savePreferences": "Save Preferences",
+    "saving": "Saving...",
+    "saved": "Preferences saved",
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "viewAll": "View all",
+    "noNotifications": "No notifications yet",
+    "emptyDescription": "You'll see notifications here when something happens"
+  },
+  "digest": {
+    "title": "Weekly Digest",
+    "improved": "Improved",
+    "declining": "Declining",
+    "actionItems": "Action Items",
+    "noDigest": "No digest available",
+    "noDigestDesc": "Your weekly digest will appear here every Sunday",
+    "viewFullReport": "View Full Report"
   }
 }

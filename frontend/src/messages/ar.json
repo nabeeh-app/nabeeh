@@ -22,6 +22,7 @@
     "submit": "إرسال",
     "close": "إغلاق",
     "confirm": "تأكيد",
+    "ok": "حسناً",
     "yes": "نعم",
     "no": "لا",
     "saving": "جاري الحفظ..."
@@ -62,6 +63,25 @@
     "passwordResetButton": "إرسال رابط إعادة التعيين",
     "passwordResetSuccess": "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني",
     "passwordResetError": "فشل في إرسال رابط إعادة التعيين. يرجى المحاولة مرة أخرى.",
+    "forgotPasswordTitle": "نسيت كلمة المرور؟",
+    "forgotPasswordSubtitle": "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين",
+    "sending": "جارٍ الإرسال...",
+    "sendResetLink": "إرسال رابط إعادة التعيين",
+    "backToLogin": "العودة لتسجيل الدخول",
+    "resetEmailSent": "تحقق من بريدك",
+    "resetEmailSentDesc": "لقد أرسلنا رابط إعادة تعيين كلمة المرور إلى",
+    "resetRequestFailed": "فشل في إرسال رابط إعادة التعيين. يرجى المحاولة مرة أخرى.",
+    "resetPasswordTitle": "إعادة تعيين كلمة المرور",
+    "resetPasswordSubtitle": "اختر كلمة مرور جديدة لحسابك",
+    "resetting": "جارٍ إعادة التعيين...",
+    "resetPasswordButton": "إعادة تعيين كلمة المرور",
+    "passwordsDoNotMatch": "كلمات المرور غير متطابقة",
+    "invalidResetToken": "رمز إعادة التعيين غير صالح أو منتهي الصلاحية",
+    "resetFailed": "فشل في إعادة تعيين كلمة المرور. يرجى المحاولة مرة أخرى.",
+    "invalidResetTitle": "رابط غير صالح",
+    "invalidResetDesc": "رابط إعادة تعيين كلمة المرور هذا غير صالح أو منتهي الصلاحية.",
+    "requestNewLink": "طلب رابط جديد",
+    "passwordResetSuccessDesc": "جارٍ تحويلك لتسجيل الدخول...",
     "newPassword": "كلمة المرور الجديدة",
     "confirmNewPassword": "تأكيد كلمة المرور الجديدة",
     "passwordMismatch": "كلمات المرور غير متطابقة",
@@ -95,7 +115,10 @@
     "confirmPasswordRequired": "تأكيد كلمة المرور مطلوب",
     "whatsappInvalid": "رقم الواتساب غير صحيح",
     "registerSuccess": "تم إنشاء الحساب بنجاح! سيتم توجيهك لصفحة تسجيل الدخول...",
-    "registerFailed": "حدث خطأ أثناء التسجيل"
+    "registerFailed": "حدث خطأ أثناء التسجيل",
+    "continueWithGoogle": "المتابعة باستخدام جوجل",
+    "signUpWithGoogle": "التسجيل باستخدام جوجل",
+    "orContinueWith": "أو المتابعة باستخدام"
   },
   "navigation": {
     "dashboard": "لوحة التحكم",
@@ -113,9 +136,53 @@
     "parents": "أولياء الأمور",
     "analytics": "التحليلات",
     "monitor": "مراقب النظام",
+    "alerts": "التنبيهات",
     "help": "المساعدة",
+    "assistants": "المساعدين",
+    "adminTeachers": "المعلمون",
     "openMenu": "فتح القائمة",
     "closeMenu": "إغلاق القائمة"
+  },
+  "assistants": {
+    "pageTitle": "المساعدون",
+    "pageDescription": "تحديد من يصل إلى فصولك وماذا يمكنه القيام به",
+    "title": "قائمة المساعدين",
+    "inviteButton": "دعوة مساعد",
+    "emptyTitle": "لا يوجد مساعدون بعد",
+    "emptyDescription": "ادعُ شخصاً لمساعدتك في إدارة الحضور والدرجات والرسائل.",
+    "status": {
+      "active": "نشط",
+      "pending": "في الانتظار",
+      "inactive": "غير نشط"
+    },
+    "permissionsLabel": "الصلاحيات",
+    "editPermissions": "تعديل الصلاحيات",
+    "deactivate": "تعطيل",
+    "activate": "تفعيل",
+    "remove": "إزالة",
+    "removeConfirmTitle": "إزالة المساعد",
+    "removeConfirmDescription": "هل أنت متأكد أنك تريد إزالة هذا المساعد؟ سيفقد الوصول إلى حسابك.",
+    "inviteTitle": "دعوة مساعد",
+    "inviteDescription": "أرسل دعوة لمساعد تعليمي. سيتلقى الوصول بناءً على الصلاحيات التي تحددها.",
+    "emailLabel": "البريد الإلكتروني",
+    "emailPlaceholder": "assistant@example.com",
+    "invalidEmail": "يرجى إدخال بريد إلكتروني صالح",
+    "inviteSent": "تم إرسال الدعوة إلى {email}",
+    "inviteFailed": "فشل إرسال الدعوة. يرجى المحاولة مرة أخرى.",
+    "cancel": "إلغاء",
+    "sending": "جاري الإرسال...",
+    "sendInvite": "إرسال الدعوة",
+    "editPermissionsTitle": "تعديل الصلاحيات",
+    "editingFor": "تعديل صلاحيات",
+    "saving": "جاري الحفظ...",
+    "savePermissions": "حفظ الصلاحيات",
+    "deliveryMethod": "طريقة إرسال الدعوة",
+    "phoneLabel": "رقم الهاتف",
+    "pendingInvites": "الدعوات المعلقة",
+    "expires": "ينتهي:",
+    "deliveryEmail": "بريد إلكتروني",
+    "deliveryWhatsApp": "واتساب",
+    "deliveryBoth": "كلاهما"
   },
   "roles": {
     "admin": "مدير",
@@ -155,6 +222,7 @@
     "title": "إدارة الطلاب",
     "description": "إدارة وتتبع معلومات الطلاب والتسجيلات",
     "addStudent": "إضافة طالب جديد",
+    "selfRegister": "التسجيل الذاتي",
     "editStudent": "تعديل الطالب",
     "addDescription": "إضافة طالب جديد إلى النظام مع بياناته",
     "editDescription": "تحديث معلومات وبيانات الطالب",
@@ -253,6 +321,14 @@
     "genderLabel": "الجنس:",
     "noStudentsMatch": "لم يتم العثور على طلاب مطابقين للبحث",
     "noStudentsYet": "لا يوجد طلاب مسجلون بعد",
+    "emptyState": {
+      "title": "لا يوجد طلاب بعد",
+      "description": "أضف أول طالب للبدء، أو استورد من ملف Excel.",
+      "action": "إضافة أول طالب",
+      "importAction": "استيراد من Excel",
+      "noResultsTitle": "لا يوجد طلاب مطابقون",
+      "noResultsDescription": "حاول تعديل البحث أو التصفية."
+    },
     "studentIdPlaceholder": "مثال: ST001",
     "fullNamePlaceholder": "الاسم الكامل",
     "gradeLevelPlaceholder": "مثال: الصف العاشر",
@@ -293,6 +369,13 @@
     "noGroups": "لا توجد مجموعات بعد",
     "noGroupsDescription": "أنشئ مجموعة واحدة على الأقل قبل تسجيل الحضور.",
     "setUpGroups": "إعداد المجموعات",
+    "emptyState": {
+      "title": "لا توجد سجلات حضور",
+      "description": "ابدأ بتسجيل الحضور لجلسة. ستظهر سجلاتك هنا.",
+      "action": "تسجيل الحضور",
+      "noResultsTitle": "لا توجد سجلات",
+      "noResultsDescription": "لا توجد سجلات حضور تطابق التصفية الحالية."
+    },
     "pleaseSelectClass": "يرجى اختيار فصل",
     "pleaseSelectClassDescription": "اختر فصلاً من القائمة المنسدلة أعلاه لإدارة الحضور.",
     "statsTitle": "إحصائيات الحضور",
@@ -364,6 +447,13 @@
     "noGroups": "لا توجد مجموعات بعد",
     "noGroupsDescription": "أنشئ مجموعة واحدة على الأقل قبل إدخال الدرجات.",
     "setUpGroups": "إعداد المجموعات",
+    "emptyState": {
+      "title": "لا توجد درجات",
+      "description": "أضف التقييمات وأدخل الدرجات لتتبع أداء الطلاب.",
+      "action": "إضافة أول درجة",
+      "noResultsTitle": "لم يتم العثور على درجات",
+      "noResultsDescription": "لا توجد درجات تطابق التصفية الحالية."
+    },
     "totalGrades": "إجمالي الدرجات",
     "subjectsLabel": "المواد",
     "overallAverage": "المتوسط العام",
@@ -448,6 +538,33 @@
       "invalidScore": "الدرجة لا يمكن أن تكون أكبر من الدرجة العظمى",
       "fillRequired": "يرجى ملء جميع الحقول المطلوبة",
       "selectClass": "يرجى اختيار الفصل"
+    },
+    "analysis": {
+      "groupComparison": "مقارنة المجموعات",
+      "atRiskStudents": "الطلاب المعرضون للخطر",
+      "gradeDistribution": "توزيع الدرجات",
+      "gradeTrends": "اتجاهات الدرجات",
+      "selectOffering": "اختر مقررًا",
+      "noOfferings": "لم يتم العثور على مقررات",
+      "noOfferingsDesc": "أنشئ مقررًا لعرض تحليل الدرجات",
+      "noGroupData": "لا توجد بيانات للمقارنة",
+      "noAtRiskStudents": "لا يوجد طلاب معرضون للخطر",
+      "noDistributionData": "لا توجد بيانات للتوزيع",
+      "noTrendData": "لا توجد بيانات للاتجاهات",
+      "totalStudents": "إجمالي الطلاب",
+      "totalAssessments": "التقييمات",
+      "averageScore": "متوسط الدرجات",
+      "atRisk": "معرض للخطر",
+      "students": "طلاب",
+      "avgGrade": "متوسط الدرجة",
+      "attendance": "الحضور",
+      "studentCount": "الطلاب",
+      "score": "الدرجة",
+      "assessment": "التقييم",
+      "severity": {
+        "warning": "تحذير",
+        "critical": "حرج"
+      }
     }
   },
   "parents": {
@@ -594,6 +711,8 @@
       "pairingCodeCopied": "تم نسخ رمز الإقران إلى الحافظة!",
       "enterPhoneNumber": "أدخل رقم هاتفك (مثال: +201234567890):",
       "enterTestPhoneNumber": "أدخل رقم الهاتف للاختبار (مثال: +201234567890):",
+      "sendTestMessageTitle": "إرسال رسالة تجريبية",
+      "sendTestMessageDescription": "أدخل رقم الهاتف لإرسال رسالة تجريبية للتحقق من اتصال الواتساب",
       "testMessageContent": "🤖 رسالة تجريبية من مساعد نبيه الذكي!\n\nهذا اختبار للتحقق من أن تكامل الواتساب يعمل بشكل صحيح.",
       "version": "الإصدار",
       "confirmLogout": "هل أنت متأكد من تسجيل الخروج من الواتساب؟",
@@ -659,7 +778,59 @@
     "topSubjects": "المواد الأعلى",
     "recentActivity": "النشاط الأخير",
     "noData": "لا توجد بيانات تقارير متاحة بعد",
-    "exportReport": "تصدير التقرير"
+    "exportReport": "تصدير التقرير",
+    "generation": {
+      "title": "مولد التقارير",
+      "selectOffering": "اختر المقرر",
+      "selectStudent": "اختر الطالب",
+      "generateComment": "توليد التعليق",
+      "generating": "جاري التوليد...",
+      "reportPreview": "معاينة التقرير",
+      "dataSource": "مصادر البيانات",
+      "gradesData": "الدرجات",
+      "attendanceData": "الحضور",
+      "trendsData": "الاتجاهات",
+      "editDraft": "تعديل المسودة",
+      "discard": "تجاهل",
+      "sendToParent": "إرسال إلى ولي الأمر",
+      "confirmSend": "إرسال التقرير",
+      "sendDescription": "سيتم إرسال تعليق التقرير إلى ولي الطالب عبر واتساب",
+      "sendConfirmMessage": "إرسال تقرير {name} إلى ولي أمره عبر واتساب؟",
+      "thisStudent": "هذا الطالب",
+      "cancel": "إلغاء",
+      "sending": "جاري الإرسال...",
+      "sendToWhatsApp": "إرسال عبر واتساب",
+      "sentSuccess": "تم إرسال التقرير بنجاح",
+      "sentToParent": "تم إرسال التقرير إلى ولي أمر {name}",
+      "pending": "قيد المراجعة",
+      "approved": "تمت الموافقة",
+      "edited": "تم التعديل",
+      "rejected": "مرفوض",
+      "sent": "تم الإرسال"
+    },
+    "approval": {
+      "pendingApprovals": "موافقات معلقة",
+      "noPendingDrafts": "لا توجد مسودات بانتظار الموافقة",
+      "unknownStudent": "طالب غير معروف",
+      "pending": "قيد المراجعة",
+      "aiDraft": "مسودة الذكاء الاصطناعي",
+      "dataSource": "مصادر البيانات",
+      "gradesData": "الدرجات",
+      "attendanceData": "الحضور",
+      "trendsData": "الاتجاهات",
+      "editedVersion": "النسخة المعدلة",
+      "editDraft": "تعديل المسودة",
+      "cancel": "إلغاء",
+      "saving": "جاري الحفظ...",
+      "save": "حفظ",
+      "editPlaceholder": "تعديل نص التقرير...",
+      "backToQueue": "العودة إلى القائمة",
+      "reviewPrompt": "راجع هذه المسودة ووافق عليها أو عدّلها أو ارفضها",
+      "edit": "تعديل",
+      "reject": "رفض",
+      "approve": "موافقة",
+      "sendToParent": "إرسال إلى ولي الأمر"
+    }
   },
   "monitor": {
     "title": "مراقب النظام",
@@ -925,5 +1096,260 @@
       "typing": "اكتب رسالة... (جرّب: حضور، درجات، جدول)",
       "botName": "بوت نبيه"
     }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "مرحباً بك في نبيه!",
+      "description": "سنوظّف ملفك الشخصي في بضع خطوات بسيطة."
+    },
+    "steps": {
+      "profile": "ملفك الشخصي",
+      "subjects": "المواد",
+      "whatsapp": "واتساب",
+      "done": "تم"
+    },
+    "profile": {
+      "title": "أخبرنا عن نفسك",
+      "description": "أدخل اسمك ورقم هاتفك لإكمال ملفك الشخصي.",
+      "nameLabel": "الاسم الكامل",
+      "namePlaceholder": "أدخل اسمك الكامل",
+      "phoneLabel": "رقم الهاتف",
+      "phonePlaceholder": "+201234567890"
+    },
+    "subjects": {
+      "title": "ماذا تدرس؟",
+      "description": "اختر أو اكتب المواد التي تدرسها. يمكنك إضافة المزيد لاحقاً.",
+      "placeholder": "مثلاً: رياضيات، فيزياء، إنجليزي"
+    },
+    "whatsapp": {
+      "title": "ربط الواتساب",
+      "description": "اربط حسابك بالواتساب لتلقي رسائل أولياء الأمور مباشرة. يمكنك التخطي وإعداده لاحقاً.",
+      "skip": "تخطي مؤقتاً",
+      "connect": "ربط الواتساب"
+    },
+    "done": {
+      "title": "كل شيء جاهز!",
+      "description": "لقد حمّلنا بعض البيانات التجريبية لتستكشف نبيه. ستتم إزالتها عند إضافة أول طالب حقيقي.",
+      "goToDashboard": "الذهاب للوحة التحكم"
+    },
+    "progress": {
+      "title": "البدء",
+      "profileDone": "تم إعداد الملف الشخصي",
+      "firstStudent": "إضافة أول طالب",
+      "firstAttendance": "تسجيل أول حضور",
+      "firstGrade": "إدخال أول درجة",
+      "dismiss": "إخفاء",
+      "percentComplete": "{percent}% مكتمل"
+    }
+  },
+  "import": {
+    "title": "استيراد الطلاب",
+    "upload": {
+      "title": "رفع ملف",
+      "description": "اسحب وأفلت ملف Excel أو CSV، أو انقر للاختيار.",
+      "supportedFormats": "يدعم ملفات .xlsx و .xls و .csv",
+      "browse": "اختيار ملف",
+      "dropHere": "أفلت الملف هنا",
+      "pasteTitle": "أو الصق من Excel",
+      "pastePlaceholder": "الصق البيانات هنا (من Excel أو Google Sheets)",
+      "parsePaste": "تحليل البيانات المُلصقة"
+    },
+    "mapper": {
+      "title": "تعيين الأعمدة",
+      "description": "طابق أعمدة ملفك مع حقول الطالب.",
+      "detectedColumns": "تم اكتشاف {count} أعمدة",
+      "autoMapped": "تم تعيين {count} أعمدة تلقائياً",
+      "columnHeader": "عنوان العمود",
+      "preview": "معاينة",
+      "mapTo": "تعيين إلى",
+      "doNotImport": "عدم الاستيراد",
+      "skipColumn": "تخطي"
+    },
+    "preview": {
+      "title": "معاينة الاستيراد",
+      "description": "راجع بياناتك قبل الاستيراد.",
+      "stats": {
+        "total": "إجمالي الصفوف",
+        "ready": "جاهز للاستيراد",
+        "warnings": "تحذيرات",
+        "errors": "أخطاء"
+      },
+      "status": {
+        "ready": "جاهز",
+        "warning": "تحذير",
+        "error": "خطأ"
+      },
+      "filterReady": "إظهار الجاهزة فقط",
+      "filterWarnings": "إظهار التحذيرات",
+      "filterErrors": "إظهار الأخطاء"
+    },
+    "complete": {
+      "title": "اكتمل الاستيراد",
+      "imported": "تم استيراد {count} طالب بنجاح",
+      "skipped": "تم تخطي {count} صف",
+      "failedImport": "فشل استيراد {count} صف"
+    },
+    "validation": {
+      "nameRequired": "اسم الطالب مطلوب",
+      "codeRequired": "كود الطالب مطلوب",
+      "invalidPhone": "رقم الهاتف غير صالح",
+      "duplicateCode": "كود طالب مكرر: {code}"
+    }
+  },
+  "selfRegistration": {
+    "title": "التسجيل الذاتي للطلاب",
+    "generateLink": "إنشاء رابط التسجيل",
+    "copyLink": "نسخ الرابط",
+    "copied": "تم نسخ الرابط!",
+    "linkExpiry": "ينتهي الرابط خلال {time}",
+    "formTitle": "تسجيل طالب",
+    "formDescription": "سجّل كطالب لدى {teacher}",
+    "groupName": "الفصل: {name}",
+    "successTitle": "تم التسجيل بنجاح!",
+    "successMessage": "تم تسجيلك! سيؤكد المعلم تسجيلك."
+  },
+  "emptyStates": {
+    "students": {
+      "title": "لا يوجد طلاب بعد",
+      "description": "أضف أول طالب للبدء، أو استورد من ملف Excel.",
+      "action": "إضافة أول طالب",
+      "secondaryAction": "استيراد من Excel"
+    },
+    "attendance": {
+      "title": "لا توجد سجلات حضور",
+      "description": "ابدأ بتسجيل الحضور لجلسة. ستظهر سجلاتك هنا.",
+      "action": "تسجيل الحضور"
+    },
+    "grades": {
+      "title": "لا توجد درجات",
+      "description": "أضف التقييمات وأدخل الدرجات لتتبع أداء الطلاب.",
+      "action": "إضافة أول درجة"
+    },
+    "messages": {
+      "title": "لا توجد محادثات بعد",
+      "description": "ستظهر رسائل واتساب من أولياء الأمور هنا عند الربط.",
+      "action": "ربط الواتساب"
+    },
+    "courses": {
+      "title": "لم يتم إنشاء مقررات بعد",
+      "description": "أنشئ أول مقرر لبدء إدارة الطلاب والمجموعات.",
+      "action": "إنشاء أول مقرر"
+    }
+  },
+  "onboarding": {
+    "progress": {
+      "title": "تقدم الإعداد",
+      "dismiss": "إخفاء التقدم",
+      "complete": "تم إكمال جميع الخطوات — أنت جاهز!",
+      "steps": {
+        "profile": "الملف الشخصي",
+        "firstStudent": "أول طالب",
+        "firstAttendance": "أول حضور",
+        "firstGrade": "أول درجة"
+      }
+    }
+  },
+  "whatsappBanner": {
+    "message": "اربط الواتساب لتلقي رسائل أولياء الأمور",
+    "connect": "اربط الآن",
+    "dismiss": "إخفاء"
+  },
+  "onboarding": {
+    "skip": "تخطي",
+    "next": "التالي",
+    "prev": "رجوع",
+    "done": "تم",
+    "tooltip_step": "خطوة {current} من {total}"
+  },
+  "alerts": {
+    "title": "التنبيهات",
+    "description": "تكوين وعرض قواعد التنبيهات والإشعارات",
+    "configuration": "إعدادات التنبيهات",
+    "addRule": "إضافة قاعدة",
+    "noRules": "لا توجد قواعد تنبيهات",
+    "noRulesDesc": "أنشئ قاعدة تنبيه أولى للحصول على إشعارات حول تغييرات الطلاب",
+    "enable": "تفعيل",
+    "disable": "تعطيل",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "createRule": "إنشاء قاعدة تنبيه",
+    "editRule": "تعديل قاعدة التنبيه",
+    "ruleDescription": "قم بتعيين حد لتشغيل التنبيهات",
+    "alertType": "نوع التنبيه",
+    "attendanceThreshold": "حد الحضور",
+    "gradeThreshold": "حد الدرجة",
+    "trendAnomaly": "انحراف الاتجاه",
+    "comparison": "المقارنة",
+    "comparisonGt": "أكبر من",
+    "comparisonGte": "أكبر من أو يساوي",
+    "comparisonLt": "أقل من",
+    "comparisonLte": "أقل من أو يساوي",
+    "threshold": "الحد",
+    "notificationMethod": "طريقة الإشعار",
+    "inApp": "في التطبيق",
+    "whatsapp": "واتساب",
+    "both": "كلاهما",
+    "cancel": "إلغاء",
+    "saving": "جاري الحفظ...",
+    "saveFailed": "فشل حفظ القاعدة",
+    "create": "إنشاء",
+    "update": "تحديث",
+    "choosePreset": "اختر قالب جاهز أو أنشئ قاعدة مخصصة",
+    "presetLowAttendance": "حضور منخفض",
+    "presetLowAttendanceDesc": "تنبيه عند غياب الطالب أكثر من المعتاد",
+    "presetFailingGrade": "درجة راسبة",
+    "presetFailingGradeDesc": "تنبيه عند انخفاض درجة الطالب عن 50%",
+    "presetHighAbsenteeism": "غياب مفرط",
+    "presetHighAbsenteeismDesc": "تنبيه عند تخطي الطالب نصف الحصص",
+    "presetGradeTrend": "انحراف في اتجاه الدرجة",
+    "presetGradeTrendDesc": "تنبيه بالذكاء الاصطناعي لأنماط الدرجات غير المعتادة",
+    "customRule": "قاعدة مخصصة",
+    "customRuleDesc": "أنشئ قاعدة تنبيه من الصفر",
+    "attendanceRuleDesc": "إشعار عند الحضور {comparison} {threshold}%",
+    "gradeRuleDesc": "إشعار عند الدرجة {comparison} {threshold}%",
+    "trendRuleDesc": "انحراف في اتجاه الحضور تم اكتشافه بالذكاء الاصطناعي",
+    "markAllRead": "تحديد الكل كمقروء",
+    "allSeverities": "جميع المستويات",
+    "severityInfo": "معلومات",
+    "severityWarning": "تحذير",
+    "severityCritical": "حرج",
+    "severity": {
+      "info": "معلومات",
+      "warning": "تحذير",
+      "critical": "حرج"
+    },
+    "unreadOnly": "غير مقروء فقط",
+    "noAlerts": "لا توجد تنبيهات بعد",
+    "featureDisabled": "ميزة التنبيهات غير مفعلة"
+  },
+  "notifications": {
+    "preferencesTitle": "تفضيلات الإشعارات",
+    "preferencesDescription": "اختر الإشعارات التي تريد تلقيها ومتى",
+    "prefAttendanceMarked": "تم تسجيل الحضور",
+    "prefGradeEntered": "تم إدخال الدرجة",
+    "prefWhatsappSent": "تم إرسال رسالة واتساب",
+    "prefAssistantAction": "إجراءات المساعد",
+    "prefDigest": "الملخص الأسبوعي",
+    "quietHours": "ساعات الراحة",
+    "quietHoursDesc": "لا إشعارات خلال هذه الساعات",
+    "from": "من",
+    "to": "إلى",
+    "savePreferences": "حفظ التفضيلات",
+    "saving": "جاري الحفظ...",
+    "saved": "تم حفظ التفضيلات",
+    "title": "الإشعارات",
+    "markAllRead": "تحديد الكل كمقروء",
+    "viewAll": "عرض الكل",
+    "noNotifications": "لا توجد إشعارات بعد",
+    "emptyDescription": "ستظهر الإشعارات هنا عند حدوث شيء ما"
+  },
+  "digest": {
+    "title": "الملخص الأسبوعي",
+    "improved": "تحسن",
+    "declining": "تناقص",
+    "actionItems": "إجراءات مطلوبة",
+    "noDigest": "لا يوجد ملخص متاح",
+    "noDigestDesc": "سيظهر ملخصك الأسبوعي هنا كل أحد",
+    "viewFullReport": "عرض التقرير الكامل"
   }
 }

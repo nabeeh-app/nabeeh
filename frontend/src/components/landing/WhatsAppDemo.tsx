@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { Send, CheckCheck, User } from 'lucide-react';
+import { Send, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type ChildName = 'ahmed' | 'omar' | 'salma';
@@ -97,17 +97,51 @@ export function WhatsAppDemo() {
 
   // Auto-play when selected
   useEffect(() => {
-    if (selectedName && messages.length === 0 && !isPlaying) {
-      playScenario(0);
-    }
-  }, [selectedName, messages.length, isPlaying, playScenario]);
+    if (!selectedName || messages.length > 0 || isPlaying) return;
+    let cancelled = false;
+    const play = async () => {
+      setIsPlaying(true);
+      const key = SCENARIO_ORDER[0];
+      const parentMsg = tScenarios(`${key}.parentMessage`);
+      const botMsg = tScenarios(`${key}.botResponse`);
+      await new Promise((r) => setTimeout(r, 800));
+      if (cancelled) return;
+      addMessage('parent', parentMsg);
+      await new Promise((r) => setTimeout(r, 1500));
+      if (cancelled) return;
+      addMessage('bot', botMsg);
+      await new Promise((r) => setTimeout(r, 1200));
+      if (cancelled) return;
+      setScenarioIndex(1);
+      setIsPlaying(false);
+    };
+    play();
+    return () => { cancelled = true; };
+  }, [selectedName, messages.length, isPlaying, addMessage, tScenarios]);
 
   // Continue playing next scenario when previous finishes
   useEffect(() => {
-    if (selectedName && scenarioIndex > 0 && scenarioIndex < SCENARIO_ORDER.length && !isPlaying) {
-      playScenario(scenarioIndex);
-    }
-  }, [scenarioIndex, selectedName, isPlaying, playScenario]);
+    if (!selectedName || scenarioIndex <= 0 || scenarioIndex >= SCENARIO_ORDER.length || isPlaying) return;
+    let cancelled = false;
+    const play = async () => {
+      setIsPlaying(true);
+      const key = SCENARIO_ORDER[scenarioIndex];
+      const parentMsg = tScenarios(`${key}.parentMessage`);
+      const botMsg = tScenarios(`${key}.botResponse`);
+      await new Promise((r) => setTimeout(r, 800));
+      if (cancelled) return;
+      addMessage('parent', parentMsg);
+      await new Promise((r) => setTimeout(r, 1500));
+      if (cancelled) return;
+      addMessage('bot', botMsg);
+      await new Promise((r) => setTimeout(r, 1200));
+      if (cancelled) return;
+      setScenarioIndex(scenarioIndex + 1);
+      setIsPlaying(false);
+    };
+    play();
+    return () => { cancelled = true; };
+  }, [scenarioIndex, selectedName, isPlaying, addMessage, tScenarios]);
 
   const handleSend = () => {
     const trimmed = input.trim().toLowerCase();

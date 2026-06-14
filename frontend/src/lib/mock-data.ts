@@ -1,7 +1,6 @@
 import type {
   Teacher,
   Student,
-  Parent,
   Offering,
   Attendance,
   AttendanceSummary,

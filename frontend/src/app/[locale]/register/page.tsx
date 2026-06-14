@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations, useLocale } from 'next-intl';
@@ -12,7 +12,9 @@ import { validateEmail, formatPhoneNumber } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Phone, Mail, User, Building, BookOpen } from 'lucide-react';
 import { GridPattern } from '@/components/ui/grid-pattern';
+import { GoogleSignInButton } from '@/components/auth/google-sign-in-button';
 import logger from '@/lib/logger';
+import { apiClient } from '@/lib/client';
 
 interface RegisterFormData {
   name: string;
@@ -29,8 +31,8 @@ interface Props {
   params: Promise<{ locale: string }>;
 }
 
-export default function RegisterPage({ params }: Props) {
-  const [locale, setLocale] = useState('en');
+export default function RegisterPage({ params: _params }: Props) {
+  const locale = useLocale();
   const [formData, setFormData] = useState<RegisterFormData>({
     name: '',
     email: '',
@@ -50,10 +52,6 @@ export default function RegisterPage({ params }: Props) {
   const router = useRouter();
   const t = useTranslations('auth');
   const isRTL = locale === 'ar';
-
-  useEffect(() => {
-    params.then(({ locale: paramLocale }) => setLocale(paramLocale));
-  }, [params]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -123,33 +121,21 @@ export default function RegisterPage({ params }: Props) {
         password: formData.password,
         business_name: formData.business_name.trim() || undefined,
         subjects: formData.subjects ? formData.subjects.split(',').map(s => s.trim()).filter(Boolean) : undefined,
-        whatsapp_number: formData.whatsapp_number || formData.phone
+        whatsapp_number: formData.whatsapp_number || formData.phone,
+        preferred_language: locale === 'ar' ? 'ar' : 'en'
       };
 
-      const response = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(registrationData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccessMessage(t('registerSuccess'));
-        
-        setTimeout(() => {
-          router.push(`/${locale}/login`);
-        }, 2000);
-      } else {
-        setErrors({ general: data.message || t('registerFailed') });
-      }
-    } catch (error) {
+      await apiClient.register(registrationData);
+      setSuccessMessage(t('registerSuccess'));
+      
+      setTimeout(() => {
+        router.push(`/${locale}/login`);
+      }, 2000);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       logger.error('Registration error:', error);
-      setErrors({ 
-        general: t('networkError')
-      });
+      const message = err.response?.data?.message || t('networkError');
+      setErrors({ general: message });
     } finally {
       setIsLoading(false);
     }
@@ -407,6 +393,17 @@ export default function RegisterPage({ params }: Props) {
                     t('createTeacherAccount')
                   )}
                 </Button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-ink/20" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-3 bg-canvas text-ink/60 font-body">{t('orContinueWith')}</span>
+                  </div>
+                </div>
+
+                <GoogleSignInButton mode="register" />
 
                 <div className="text-center">
                   <p className="text-base text-ink/70 font-body">

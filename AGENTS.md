@@ -50,7 +50,8 @@ nabeeh/
 ├── backend/                    # Express API
 │   ├── server.js               # Entry point — middleware chain, route mounting
 │   ├── config/
-│   │   └── database.js         # Exports { supabase, supabaseAdmin } — THE ONLY Supabase clients
+│   │   ├── database.js         # Exports { supabase, supabaseAdmin } — THE ONLY Supabase clients
+│   │   └── swagger.js          # OpenAPI 3.0 spec config + shared schemas
 │   ├── middleware/
 │   │   ├── auth.js             # JWT verification + role check
 │   │   ├── security.js         # Rate limiting (env-gated), helmet, sanitization
@@ -175,6 +176,40 @@ res.status(4xx/5xx).json({ success: false, message: 'Error description', code: '
 ```
 
 **Never return raw objects or `{ error: '...' }`.** Always use the envelope.
+
+### 3.5. API Documentation — Swagger/OpenAPI
+
+Every route file MUST have `@openapi` JSDoc annotations. The interactive docs are served at `GET /api-docs` (Swagger UI) and the raw spec at `GET /api-docs.json`.
+
+```js
+/**
+ * @openapi
+ * /api/students:
+ *   get:
+ *     tags: [Students]
+ *     summary: List all students
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *     responses:
+ *       200:
+ *         description: Students list
+ *       401:
+ *         $ref: '#/components/schemas/ErrorEnvelope'
+ */
+router.get('/', authenticateToken, getStudents);
+```
+
+**Rules for new routes:**
+- Every `router.get/post/put/delete/patch` MUST have a `@openapi` block before it
+- Include `tags`, `summary`, `description`, `security`, `parameters`/`requestBody`, `responses`
+- Protected routes get `security: [{ bearerAuth: [] }]`
+- Use `$ref: '#/components/schemas/ErrorEnvelope'` for error responses
+- Config lives in `config/swagger.js` — add shared schemas there
+- Tags: Auth, Teachers, Students, Parents, Attendance, Grades, Offerings, Messages, Assistants, Import, Self Registration, WhatsApp, Alerts, Notifications, Reports, Grade Analysis
 
 ### 4. Input Validation — Zod
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations, useLocale } from 'next-intl';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,6 @@ import {
 } from '@/components/ui/table';
 import {
   Plus,
-  Search,
   BookOpen,
   Users,
   GraduationCap,
@@ -29,7 +28,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
-import { apiClient } from '@/lib/client';
+import { useOfferings, useDeleteOffering, useCreateGroup } from '@/hooks/useOfferings';
 import { Offering } from '@/types';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -41,8 +40,10 @@ export default function CoursesPage() {
   const t = useTranslations();
   const locale = useLocale();
 
-  const [offerings, setOfferings] = useState<Offering[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: offerings = [], isLoading: loading } = useOfferings();
+  const deleteOffering = useDeleteOffering();
+  const createGroup = useCreateGroup();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedOffering, setExpandedOffering] = useState<string | null>(null);
   const [isAddGroupOpen, setAddGroupOpen] = useState(false);
@@ -58,22 +59,6 @@ export default function CoursesPage() {
     description: string;
     onConfirm: () => void;
   }>({ open: false, title: '', description: '', onConfirm: () => {} });
-
-  useEffect(() => {
-    loadOfferings();
-  }, []);
-
-  const loadOfferings = async () => {
-    try {
-      setLoading(true);
-      const data = await apiClient.getOfferings();
-      setOfferings(data);
-    } catch (err) {
-      logger.error('Failed to load offerings', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filteredOfferings = offerings.filter((o) => {
     if (!searchTerm) return true;
@@ -98,11 +83,13 @@ export default function CoursesPage() {
     try {
       setSubmitting(true);
       setFormError('');
-      await apiClient.createGroup(selectedOfferingId, {
-        name: newGroupName.trim(),
-        schedule_description: newGroupSchedule.trim() || null,
+      await createGroup.mutateAsync({
+        offeringId: selectedOfferingId,
+        data: {
+          name: newGroupName.trim(),
+          schedule_description: newGroupSchedule.trim() || null,
+        },
       });
-      await loadOfferings();
       setAddGroupOpen(false);
       setNewGroupName('');
       setNewGroupSchedule('');
@@ -124,8 +111,7 @@ export default function CoursesPage() {
         : `Are you sure you want to delete ${offering.subject.name_en}?`,
       onConfirm: async () => {
         try {
-          await apiClient.deleteOffering(offering.id);
-          setOfferings((prev) => prev.filter((o) => o.id !== offering.id));
+          await deleteOffering.mutateAsync(offering.id);
         } catch (err: unknown) {
           logger.error('Error deleting offering', err);
         }

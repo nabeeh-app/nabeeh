@@ -30,7 +30,8 @@ const registerSchema = z.object({
     phone: z.string().regex(/^\+?[1-9]\d{6,14}$/).optional().nullable(),
     business_name: z.string().max(255).optional().nullable(),
     subjects: z.array(z.string()).optional().nullable(),
-    whatsapp_number: z.string().regex(/^\+?[1-9]\d{6,14}$/).optional().nullable()
+    whatsapp_number: z.string().regex(/^\+?[1-9]\d{6,14}$/).optional().nullable(),
+    preferred_language: z.enum(['ar', 'en']).default('ar')
   })
 });
 
@@ -266,6 +267,35 @@ const getMessagesSchema = z.object({
   })
 });
 
+// ==================== ASSISTANT SCHEMAS ====================
+
+const inviteAssistantSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+    permissions: z.record(z.boolean()).optional()
+  })
+});
+
+const acceptInviteSchema = z.object({
+  body: z.object({
+    token: z.string().min(1)
+  })
+});
+
+const updateAssistantPermissionsSchema = z.object({
+  body: z.object({
+    permissions: z.record(z.boolean())
+  }),
+  params: z.object({ id: z.string().uuid() })
+});
+
+const updateAssistantStatusSchema = z.object({
+  body: z.object({
+    status: z.enum(['active', 'inactive'])
+  }),
+  params: z.object({ id: z.string().uuid() })
+});
+
 module.exports = {
   validate,
   registerSchema,
@@ -287,5 +317,9 @@ module.exports = {
   createTeacherSchema,
   updateProfileSchema,
   updateSettingsSchema,
-  getMessagesSchema
+  getMessagesSchema,
+  inviteAssistantSchema,
+  acceptInviteSchema,
+  updateAssistantPermissionsSchema,
+  updateAssistantStatusSchema
 };

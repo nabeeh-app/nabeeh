@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations, useLocale } from 'next-intl';
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,6 @@ import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTr
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import logger from '@/lib/logger';
 import {
   Table,
   TableBody,
@@ -21,52 +20,62 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  Eye,
-  Download,
-  Upload,
-  Users,
-  GraduationCap,
-  Phone,
-  Calendar,
-  MapPin,
-  BookOpen
-} from 'lucide-react';
-import { apiClient } from '@/lib/client';
-import { Student, CreateStudentRequest, Parent, Offering } from '@/types';
+import { Plus, Edit, Trash2, Eye, Download, Upload, Users, GraduationCap, Phone, Calendar, MapPin, BookOpen, Link2 } from 'lucide-react';
+import { Student, CreateStudentRequest, Parent } from '@/types';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { StatCards } from '@/components/ui/StatCards';
 import { FilterBar } from '@/components/ui/FilterBar';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Pagination } from '@/components/ui/Pagination';
+import { useStudents, useCreateStudent, useUpdateStudent, useDeleteStudent } from '@/hooks/useStudents';
+import { useOfferings } from '@/hooks/useOfferings';
+import StudentImportModal from '@/components/students/StudentImportModal';
+import SelfRegistrationLink from '@/components/students/SelfRegistrationLink';
 
 interface StudentWithParents extends Student {
   parents: Parent[];
 }
+
+const PAGE_SIZE = 20;
 
 export default function StudentsPage() {
   const t = useTranslations();
   const locale = useLocale();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [students, setStudents] = useState<StudentWithParents[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<StudentWithParents[]>([]);
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [gradeFilter] = useState<string>('all');
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
   const [isAddModalOpen, setAddModalOpen] = useState(false);
+  const [isImportModalOpen, setImportModalOpen] = useState(false);
+  const [isSelfRegModalOpen, setSelfRegModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<StudentWithParents | null>(null);
   const [isViewModalOpen, setViewModalOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [gradeFilter, setGradeFilter] = useState<string>('all');
-  const [offerings, setOfferings] = useState<Offering[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
+  const { data: offerings = [] } = useOfferings();
+
+  const queryParams = useMemo(() => {
+    const params: Record<string, unknown> = { page, limit: PAGE_SIZE };
+    if (selectedGroupId && selectedGroupId !== 'all') {
+      params.group_id = selectedGroupId;
+    }
+    return params;
+  }, [page, selectedGroupId]);
+
+  const { data: studentsResponse, isLoading } = useStudents(queryParams);
+  const students: StudentWithParents[] = useMemo(() => {
+    return (studentsResponse?.data ?? []).map((s: Student) => ({
+      ...s,
+      parents: s.parents ?? [],
+    }));
+  }, [studentsResponse]);
+
+  const createStudent = useCreateStudent();
+  const updateStudent = useUpdateStudent();
+  const deleteStudent = useDeleteStudent();
 
   const [newStudent, setNewStudent] = useState<CreateStudentRequest>({
     student_id: '',
@@ -83,6 +92,7 @@ export default function StudentsPage() {
     address: '',
   });
   const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const [alertDialog, setAlertDialog] = useState<{
     open: boolean;
@@ -92,70 +102,23 @@ export default function StudentsPage() {
     variant?: 'default' | 'destructive';
   }>({ open: false, title: '', description: '', onConfirm: () => {} });
 
-  useEffect(() => {
-    loadOfferings();
-  }, []);
-
-  useEffect(() => {
-    loadStudents();
-  }, [selectedGroupId]);
-
-  useEffect(() => {
-    filterStudents();
-  }, [students, searchTerm, statusFilter, gradeFilter]);
-
-  const loadOfferings = async () => {
-    try {
-      const data = await apiClient.getOfferings();
-      setOfferings(data);
-    } catch (err) {
-      logger.error('Failed checking offerings', err);
-    }
-  };
-
-  const loadStudents = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const params: any = { limit: 100 };
-      if (selectedGroupId && selectedGroupId !== 'all') {
-        params.group_id = selectedGroupId;
-      }
-
-      const response = await apiClient.getStudents(params);
-
-      const studentsWithParents = response.data.map(student => ({
-        ...student,
-        parents: student.parents || []
-      }));
-
-      setStudents(studentsWithParents);
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load students';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterStudents = () => {
-    let filtered = students.filter(student => {
+  const filteredStudents = useMemo(() => {
+    return students.filter(student => {
       const matchesSearch =
         student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.student_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.subjects?.some(subject =>
           subject.toLowerCase().includes(searchTerm.toLowerCase())
         );
-
       const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
       const matchesGrade = gradeFilter === 'all' || student.grade_level === gradeFilter;
-
       return matchesSearch && matchesStatus && matchesGrade;
     });
+  }, [students, searchTerm, statusFilter, gradeFilter]);
 
-    setFilteredStudents(filtered);
-  };
+  const totalPages = studentsResponse?.pagination?.total
+    ? Math.ceil(studentsResponse.pagination.total / PAGE_SIZE)
+    : 1;
 
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,21 +131,12 @@ export default function StudentsPage() {
     try {
       setSubmitting(true);
       setFormError('');
-
-      const createdStudent = await apiClient.createStudent(newStudent);
-
-      const studentWithParents: StudentWithParents = {
-        ...createdStudent,
-        parents: []
-      };
-
-      setStudents(prev => [...prev, studentWithParents]);
+      await createStudent.mutateAsync(newStudent);
       setAddModalOpen(false);
       resetForm();
-
-    } catch (err: any) {
-      logger.error('Error creating student:', err);
-      setFormError(err.message || 'Failed to create student');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setFormError(message || 'Failed to create student');
     } finally {
       setSubmitting(false);
     }
@@ -214,7 +168,6 @@ export default function StudentsPage() {
 
   const handleUpdateStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!selectedStudent) return;
     if (!newStudent.group_id) {
       setFormError(t('students.validation.selectClass'));
@@ -224,23 +177,13 @@ export default function StudentsPage() {
     try {
       setSubmitting(true);
       setFormError('');
-
-      const updatedStudent = await apiClient.updateStudent(selectedStudent.id, newStudent);
-
-      setStudents(prev =>
-        prev.map(s => s.id === selectedStudent.id
-          ? { ...updatedStudent, parents: s.parents }
-          : s
-        )
-      );
-
+      await updateStudent.mutateAsync({ id: selectedStudent.id, data: newStudent });
       setEditModalOpen(false);
       setSelectedStudent(null);
       resetForm();
-
-    } catch (err: any) {
-      logger.error('Error updating student:', err);
-      setFormError(err.message || 'Failed to update student');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setFormError(message || 'Failed to update student');
     } finally {
       setSubmitting(false);
     }
@@ -254,14 +197,13 @@ export default function StudentsPage() {
       variant: 'destructive',
       onConfirm: async () => {
         try {
-          await apiClient.deleteStudent(student.id);
-          setStudents(prev => prev.filter(s => s.id !== student.id));
-        } catch (err: any) {
-          logger.error('Error deleting student:', err);
+          await deleteStudent.mutateAsync(student.id);
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
           setAlertDialog({
             open: true,
             title: t('errors.generic'),
-            description: err.message || t('errors.generic'),
+            description: message || t('errors.generic'),
             onConfirm: () => setAlertDialog(prev => ({ ...prev, open: false })),
           });
         }
@@ -305,18 +247,17 @@ export default function StudentsPage() {
         color: 'bg-primary/10 text-primary'
       }
     };
-
     return statusMap[status as keyof typeof statusMap] || statusMap.active;
   };
 
   const uniqueGrades = [...new Set(students.map(s => s.grade_level))].filter(Boolean);
 
-  if (loading) {
+  if (isLoading) {
     return <LoadingSpinner message={t('students.loading')} />;
   }
 
   const stats = [
-    { icon: Users, value: students.length, label: t('students.totalStudents'), color: 'primary' as const },
+    { icon: Users, value: studentsResponse?.pagination?.total ?? students.length, label: t('students.totalStudents'), color: 'primary' as const },
     { icon: GraduationCap, value: students.filter(s => s.status === 'active').length, label: t('students.activeStudents'), color: 'success' as const },
     { icon: BookOpen, value: uniqueGrades.length, label: t('students.fields.gradeLevel'), color: 'accent' as const },
     { icon: Calendar, value: students.filter(s => { const d = new Date(s.enrollment_date); const m = new Date(); m.setMonth(m.getMonth() - 1); return d >= m; }).length, label: t('students.newThisMonth'), color: 'warning' as const },
@@ -326,11 +267,15 @@ export default function StudentsPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('students.title')}
-        description={t('students.descriptionCount', { count: students.length })}
+        description={t('students.descriptionCount', { count: studentsResponse?.pagination?.total ?? students.length })}
       >
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={() => setImportModalOpen(true)}>
           <Upload className="w-4 h-4 mr-2" />
           {t('common.import')}
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setSelfRegModalOpen(true)}>
+          <Link2 className="w-4 h-4 mr-2" />
+          {t('students.selfRegister')}
         </Button>
         <Button variant="outline" size="sm">
           <Download className="w-4 h-4 mr-2" />
@@ -533,14 +478,14 @@ export default function StudentsPage() {
       >
         <Select
           value={selectedGroupId}
-          onValueChange={setSelectedGroupId}
+          onValueChange={(v) => { setSelectedGroupId(v); setPage(1); }}
         >
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder={t('students.allClasses')} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('students.allClasses')}</SelectItem>
-            {offerings.flatMap(o => o.groups.map((g: any) => (
+            {offerings.flatMap(o => o.groups.map((g) => (
               <SelectItem key={g.id} value={g.id}>
                 {o.subject.name_en} - {g.name}
               </SelectItem>
@@ -580,110 +525,117 @@ export default function StudentsPage() {
             }
           />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('students.student')}</TableHead>
-                <TableHead>{t('students.details')}</TableHead>
-                <TableHead>{t('students.fields.subjects')}</TableHead>
-                <TableHead>{t('students.fields.status')}</TableHead>
-                <TableHead>{t('students.enrollment')}</TableHead>
-                <TableHead>{t('students.actionsColumn')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredStudents.map((student) => {
-                const status = getStatusBadge(student.status);
-                return (
-                  <TableRow key={student.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {student.name.split(' ')[0].charAt(0)}
-                            {student.name.split(' ')[1]?.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{student.name}</div>
-                          <div className="text-sm text-ink/60">ID: {student.student_id}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm space-y-1">
-                        <div className="flex items-center gap-1">
-                          <GraduationCap className="h-3 w-3 text-ink/40" />
-                          <span>{student.grade_level}</span>
-                        </div>
-                        {student.emergency_contact && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3 text-ink/40" />
-                            <span className="text-ink/60">{student.emergency_contact}</span>
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('students.student')}</TableHead>
+                  <TableHead>{t('students.details')}</TableHead>
+                  <TableHead>{t('students.fields.subjects')}</TableHead>
+                  <TableHead>{t('students.fields.status')}</TableHead>
+                  <TableHead>{t('students.enrollment')}</TableHead>
+                  <TableHead>{t('students.actionsColumn')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredStudents.map((student) => {
+                  const status = getStatusBadge(student.status);
+                  return (
+                    <TableRow key={student.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarFallback className="bg-primary/10 text-primary">
+                              {student.name.split(' ')[0].charAt(0)}
+                              {student.name.split(' ')[1]?.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{student.name}</div>
+                            <div className="text-sm text-ink/60">ID: {student.student_id}</div>
                           </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {student.subjects?.slice(0, 2).map((subject, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {subject}
-                          </Badge>
-                        ))}
-                        {student.subjects && student.subjects.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{student.subjects.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={status.variant} className={status.color}>
-                        {status.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {new Date(student.enrollment_date).toLocaleDateString(
-                          locale === 'ar' ? 'ar-SA' : 'en-US'
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewStudent(student)}
-                          aria-label={t('students.viewDetails')}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditStudent(student)}
-                          aria-label={t('common.edit')}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteStudent(student)}
-                          className="text-destructive hover:text-destructive/80"
-                          aria-label={t('common.delete')}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm space-y-1">
+                          <div className="flex items-center gap-1">
+                            <GraduationCap className="h-3 w-3 text-ink/40" />
+                            <span>{student.grade_level}</span>
+                          </div>
+                          {student.emergency_contact && (
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3 text-ink/40" />
+                              <span className="text-ink/60">{student.emergency_contact}</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {student.subjects?.slice(0, 2).map((subject, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {subject}
+                            </Badge>
+                          ))}
+                          {student.subjects && student.subjects.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{student.subjects.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={status.variant} className={status.color}>
+                          {status.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {new Date(student.enrollment_date).toLocaleDateString(
+                            locale === 'ar' ? 'ar-SA' : 'en-US'
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewStudent(student)}
+                            aria-label={t('students.viewDetails')}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditStudent(student)}
+                            aria-label={t('common.edit')}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteStudent(student)}
+                            className="text-destructive hover:text-destructive/80"
+                            aria-label={t('common.delete')}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
+          </>
         )}
       </div>
 
@@ -708,7 +660,6 @@ export default function StudentsPage() {
 
           {selectedStudent && (
             <div className="space-y-6">
-              {/* ── Header: Avatar + Name + Badge ── */}
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16 shrink-0">
                   <AvatarFallback className="bg-primary/10 text-primary text-xl">
@@ -729,9 +680,7 @@ export default function StudentsPage() {
                 </div>
               </div>
 
-              {/* ── Two-column grid ── */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Right column — Basic Info (RTL: right side) */}
                 <div className="space-y-3">
                   <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
                     {t('students.basicInfo')}
@@ -772,7 +721,6 @@ export default function StudentsPage() {
                   </div>
                 </div>
 
-                {/* Left column — Contact Info (RTL: left side) */}
                 <div className="space-y-3">
                   <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
                     {t('students.contactInfo')}
@@ -799,7 +747,6 @@ export default function StudentsPage() {
                 </div>
               </div>
 
-              {/* ── Subjects ── */}
               {selectedStudent.subjects && selectedStudent.subjects.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
@@ -815,7 +762,6 @@ export default function StudentsPage() {
                 </div>
               )}
 
-              {/* ── Parents ── */}
               {selectedStudent.parents && selectedStudent.parents.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
@@ -844,7 +790,6 @@ export default function StudentsPage() {
                 </div>
               )}
 
-              {/* ── Notes ── */}
               {selectedStudent.notes && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
@@ -892,33 +837,33 @@ export default function StudentsPage() {
                   required
                 />
               </div>
-                <div>
-                  <Label htmlFor="edit_group_id">
-                    {t('students.fields.group')} *
-                  </Label>
-                  <Select
-                    value={newStudent.group_id}
-                    onValueChange={(groupId) => {
-                      const offering = offerings.find(o => o.groups.some((g) => g.id === groupId));
-                      setNewStudent(s => ({
-                        ...s,
-                        group_id: groupId,
-                        grade_level: offering?.grade_level?.name || s.grade_level
-                      }));
-                    }}
-                  >
-                    <SelectTrigger id="edit_group_id">
-                      <SelectValue placeholder={t('students.selectClass')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {offerings.flatMap(o => o.groups.map((g) => (
-                        <SelectItem key={g.id} value={g.id}>
-                          {o.subject.name_en} - {g.name}
-                        </SelectItem>
-                      )))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div>
+                <Label htmlFor="edit_group_id">
+                  {t('students.fields.group')} *
+                </Label>
+                <Select
+                  value={newStudent.group_id}
+                  onValueChange={(groupId) => {
+                    const offering = offerings.find(o => o.groups.some((g) => g.id === groupId));
+                    setNewStudent(s => ({
+                      ...s,
+                      group_id: groupId,
+                      grade_level: offering?.grade_level?.name || s.grade_level
+                    }));
+                  }}
+                >
+                  <SelectTrigger id="edit_group_id">
+                    <SelectValue placeholder={t('students.selectClass')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {offerings.flatMap(o => o.groups.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        {o.subject.name_en} - {g.name}
+                      </SelectItem>
+                    )))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div>
                 <Label htmlFor="edit_grade_level">
                   {t('students.fields.gradeLevel')} *
@@ -928,28 +873,28 @@ export default function StudentsPage() {
                   value={newStudent.grade_level}
                   onChange={(e) => setNewStudent(s => ({ ...s, grade_level: e.target.value }))}
                   required
-                   readOnly
-                   className="bg-surface-cool"
-                 />
-               </div>
-                 <div>
-                   <Label htmlFor="edit_status">
-                    {t('students.fields.status')}
-                  </Label>
-                  <Select
-                    value={newStudent.status}
-                    onValueChange={(value) => setNewStudent(s => ({ ...s, status: value as 'active' | 'inactive' | 'graduated' }))}
-                  >
-                    <SelectTrigger id="edit_status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">{t('students.status.active')}</SelectItem>
-                      <SelectItem value="inactive">{t('students.status.inactive')}</SelectItem>
-                      <SelectItem value="graduated">{t('students.status.graduated')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                  readOnly
+                  className="bg-surface-cool"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit_status">
+                  {t('students.fields.status')}
+                </Label>
+                <Select
+                  value={newStudent.status}
+                  onValueChange={(value) => setNewStudent(s => ({ ...s, status: value as 'active' | 'inactive' | 'graduated' }))}
+                >
+                  <SelectTrigger id="edit_status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">{t('students.status.active')}</SelectItem>
+                    <SelectItem value="inactive">{t('students.status.inactive')}</SelectItem>
+                    <SelectItem value="graduated">{t('students.status.graduated')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             {formError && (
               <div className="text-[#c53030] text-sm bg-[#c53030]/10 p-3 rounded">
@@ -996,6 +941,36 @@ export default function StudentsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <StudentImportModal
+        open={isImportModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onComplete={() => {
+          setImportModalOpen(false);
+        }}
+      />
+
+      <Dialog open={isSelfRegModalOpen} onOpenChange={setSelfRegModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('students.selfRegister')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--color-ink)]/60">
+              Generate a registration link for a group. Students can use this link to register themselves.
+            </p>
+            {selectedGroupId && selectedGroupId !== 'all' ? (
+              <SelfRegistrationLink
+                groupId={selectedGroupId}
+              />
+            ) : (
+              <div className="text-sm text-[var(--color-ink)]/60">
+                Please select a specific group first using the filter above.
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

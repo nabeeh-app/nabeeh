@@ -55,7 +55,7 @@ export default function DashboardLayout({
     >
       <div className="flex h-screen bg-canvas">
         <Sidebar />
-        <div className="flex-1 overflow-y-auto relative">
+        <div className="flex-1 overflow-y-auto relative" style={locale === 'ar' ? { direction: 'rtl' } : undefined}>
           <GridPattern
             width={30}
             height={30}

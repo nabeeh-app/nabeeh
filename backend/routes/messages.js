@@ -1,5 +1,5 @@
 const express = require('express');
-const { supabase } = require('../config/database');
+const supabase = require('../config/database').supabaseAdmin;
 const { authenticateToken } = require('../middleware/auth');
 const logger = require('../lib/logger');
 
@@ -118,42 +118,22 @@ const getMessageStats = async (req, res) => {
     const startDate = start_date || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const endDate = end_date || new Date().toISOString();
 
-    // Get total messages
-    const { count: totalMessages } = await supabase
-      .from('messages')
-      .select(`
-        *,
-        conversations!inner (teacher_id)
-      `, { count: 'exact', head: true })
-      .eq('conversations.teacher_id', req.user.id)
-      .gte('created_at', startDate)
-      .lte('created_at', endDate);
+    // Single RPC call replaces 3 separate count queries
+    const { data: statsRow, error: rpcError } = await supabase
+      .rpc('message_stats', {
+        p_teacher_id: req.user.id,
+        p_start_date: startDate,
+        p_end_date: endDate
+      })
+      .single();
 
-    // Get incoming vs outgoing
-    const { count: incomingMessages } = await supabase
-      .from('messages')
-      .select(`
-        *,
-        conversations!inner (teacher_id)
-      `, { count: 'exact', head: true })
-      .eq('conversations.teacher_id', req.user.id)
-      .eq('direction', 'incoming')
-      .gte('created_at', startDate)
-      .lte('created_at', endDate);
+    if (rpcError) throw rpcError;
 
-    // Get automated vs manual
-    const { count: automatedMessages } = await supabase
-      .from('messages')
-      .select(`
-        *,
-        conversations!inner (teacher_id)
-      `, { count: 'exact', head: true })
-      .eq('conversations.teacher_id', req.user.id)
-      .eq('is_automated', true)
-      .gte('created_at', startDate)
-      .lte('created_at', endDate);
+    const totalMessages = Number(statsRow.total_count) || 0;
+    const incomingMessages = Number(statsRow.incoming_count) || 0;
+    const automatedMessages = Number(statsRow.automated_count) || 0;
 
-    // Get most common intents
+    // Get most common intents (still needs separate query for grouped data)
     const { data: intents } = await supabase
       .from('messages')
       .select(`
@@ -165,20 +145,19 @@ const getMessageStats = async (req, res) => {
       .gte('created_at', startDate)
       .lte('created_at', endDate);
 
-    // Count intents
     const intentCounts = {};
-    intents.forEach(msg => {
+    intents?.forEach(msg => {
       intentCounts[msg.intent] = (intentCounts[msg.intent] || 0) + 1;
     });
 
     res.status(200).json({
       success: true,
       data: {
-        total_messages: totalMessages || 0,
-        incoming_messages: incomingMessages || 0,
-        outgoing_messages: (totalMessages || 0) - (incomingMessages || 0),
-        automated_messages: automatedMessages || 0,
-        manual_messages: (totalMessages || 0) - (automatedMessages || 0),
+        total_messages: totalMessages,
+        incoming_messages: incomingMessages,
+        outgoing_messages: totalMessages - incomingMessages,
+        automated_messages: automatedMessages,
+        manual_messages: totalMessages - automatedMessages,
         common_intents: intentCounts,
         period: { start_date: startDate, end_date: endDate }
       }
@@ -193,9 +172,194 @@ const getMessageStats = async (req, res) => {
 };
 
 // Route definitions
+/**
+ * @openapi
+ * /api/messages/conversations:
+ *   get:
+ *     tags: [Messages]
+ *     summary: List conversations
+ *     description: Retrieve all WhatsApp conversations for the authenticated teacher, ordered by most recent message.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Conversations retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       400:
+ *         description: Database query error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.get('/conversations', authenticateToken, getConversations);
+/**
+ * @openapi
+ * /api/messages/conversations/{id}:
+ *   get:
+ *     tags: [Messages]
+ *     summary: Get conversation messages
+ *     description: Retrieve paginated messages for a specific conversation. Messages are returned oldest-first.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Conversation ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Messages retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     pages:
+ *                       type: integer
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       404:
+ *         description: Conversation not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.get('/conversations/:id', authenticateToken, getConversationMessages);
 // router.post('/send', authenticateToken, sendMessage); // Deprecated - use WhatsApp routes
+/**
+ * @openapi
+ * /api/messages/stats:
+ *   get:
+ *     tags: [Messages]
+ *     summary: Message statistics
+ *     description: Get message statistics for the authenticated teacher within a date range. Defaults to the last 7 days.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: start_date
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Start date (ISO 8601). Defaults to 7 days ago.
+ *       - in: query
+ *         name: end_date
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: End date (ISO 8601). Defaults to now.
+ *     responses:
+ *       200:
+ *         description: Statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total_messages:
+ *                       type: integer
+ *                     incoming_messages:
+ *                       type: integer
+ *                     outgoing_messages:
+ *                       type: integer
+ *                     automated_messages:
+ *                       type: integer
+ *                     manual_messages:
+ *                       type: integer
+ *                     common_intents:
+ *                       type: object
+ *                     period:
+ *                       type: object
+ *                       properties:
+ *                         start_date:
+ *                           type: string
+ *                         end_date:
+ *                           type: string
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.get('/stats', authenticateToken, getMessageStats);
 
 module.exports = router;

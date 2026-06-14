@@ -9,6 +9,8 @@ import {
   BarChart3,
   Activity,
   Settings,
+  UserPlus,
+  AlertTriangle,
   type LucideIcon,
 } from 'lucide-react';
 import { isFeatureEnabled, type FeatureKey } from '@/config/featureFlags';
@@ -22,6 +24,8 @@ export type NavigationItem = {
   roles?: ('teacher' | 'admin')[];
   /** If true, item renders as disabled (non-clickable). */
   disabled?: boolean;
+  /** Progressive unlock key — item is locked until the corresponding localStorage flag is set. */
+  unlockFeature?: 'attendance' | 'grades' | 'reports';
   /** Translation key for a short description (used by dashboard cards). */
   descriptionKey?: string;
   /** Translation namespace for the description. */
@@ -45,6 +49,7 @@ export const navigationItems: NavigationItem[] = [
     name: 'attendance',
     href: '/dashboard/attendance',
     icon: Calendar,
+    unlockFeature: 'attendance',
     descriptionKey: 'description',
     descriptionNs: 'attendance',
   },
@@ -53,6 +58,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/dashboard/grades',
     icon: GraduationCap,
     featureKey: 'grades',
+    unlockFeature: 'grades',
     descriptionKey: 'descriptionCount',
     descriptionNs: 'grades',
   },
@@ -93,6 +99,7 @@ export const navigationItems: NavigationItem[] = [
     href: '/dashboard/reports',
     icon: BarChart3,
     featureKey: 'reports',
+    unlockFeature: 'reports',
     descriptionKey: 'description',
     descriptionNs: 'reports',
   },
@@ -105,11 +112,23 @@ export const navigationItems: NavigationItem[] = [
     descriptionNs: 'monitor',
   },
   {
+    name: 'alerts',
+    href: '/dashboard/alerts',
+    icon: AlertTriangle,
+    featureKey: 'alerts',
+  },
+  {
     name: 'settings',
     href: '/dashboard/settings',
     icon: Settings,
     descriptionKey: 'preferences',
     descriptionNs: 'settings',
+  },
+  {
+    name: 'assistants',
+    href: '/dashboard/assistants',
+    icon: UserPlus,
+    featureKey: 'assistants',
   },
 ];
 
@@ -147,4 +166,6 @@ export const routeFeatureMap: Record<string, FeatureKey> = {
   messages: 'messaging',
   courses: 'courses',
   monitor: 'monitor',
+  assistants: 'assistants',
+  alerts: 'alerts',
 };

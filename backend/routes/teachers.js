@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { z } = require('zod');
 const { validate, updateProfileSchema, updateSettingsSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
 
@@ -19,26 +20,13 @@ const getProfile = async (req, res) => {
 
     if (error) throw error;
 
-    // Get student count via enrollments
-    // Note: Multiple enrollments per student? We want unique student count.
-    // Query enrollments -> groups -> offerings -> teacher_id
-    const { data: offerings } = await supabase
-      .from('offerings')
-      .select('groups(enrollments(student_id))')
-      .eq('teacher_id', req.user.id);
-
-    const studentIds = new Set();
-    offerings?.forEach(o =>
-      o.groups?.forEach(g =>
-        g.enrollments?.forEach(e =>
-          studentIds.add(e.student_id)
-        )
-      )
-    );
+    // Get student count via RPC (single query instead of enrollment tree traversal)
+    const { data: studentCount } = await supabase
+      .rpc('teacher_student_count', { p_teacher_id: req.user.id });
 
     const teacherProfile = {
       ...teacher,
-      students: { count: studentIds.size }
+      students: { count: studentCount || 0 }
     };
 
     delete teacherProfile.password_hash;
@@ -63,57 +51,22 @@ const getDashboardStats = async (req, res) => {
   try {
     const teacherId = req.user.id;
 
-    // 1. Get Students & Parents Count
-    const { data: offerings } = await supabase
-      .from('offerings')
-      .select('groups(enrollments(student_id))')
-      .eq('teacher_id', teacherId);
+    // Single RPC call replaces 5 separate queries (enrollment tree, parents, attendance, messages, grades)
+    const { data: statsJson, error: rpcError } = await supabase
+      .rpc('dashboard_stats', { p_teacher_id: teacherId });
 
-    const studentIds = new Set();
-    offerings?.forEach(o =>
-      o.groups?.forEach(g =>
-        g.enrollments?.forEach(e =>
-          studentIds.add(e.student_id)
-        )
-      )
-    );
-    const totalStudents = studentIds.size;
+    if (rpcError) throw rpcError;
 
-    let totalParents = 0;
-    if (totalStudents > 0) {
-      const { count } = await supabase
-        .from('parents')
-        .select('*', { count: 'exact', head: true })
-        .in('student_id', Array.from(studentIds));
-      totalParents = count || 0;
-    }
+    const stats = typeof statsJson === 'string' ? JSON.parse(statsJson) : statsJson;
 
-    // 2. Get today's attendance
-    const today = new Date().toISOString().split('T')[0];
-    // Join: attendance -> enrollment -> group -> offering -> teacher_id
-    const { count: todayAttendance } = await supabase
-      .from('attendance')
-      .select('enrollment:enrollments!inner(group:groups!inner(offering:offerings!inner(teacher_id)))', { count: 'exact', head: true })
-      .eq('enrollments.groups.offerings.teacher_id', teacherId)
-      .eq('date', today);
-
-    // 3. Get this week's messages (Assuming conversations linked to teacher)
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    // Assuming messages/conversations schema is valid. Reference check needed if failed.
-    const { count: weeklyMessages, error: msgError } = await supabase
-      .from('messages')
-      .select('conversations!inner(teacher_id)', { count: 'exact', head: true })
-      .eq('conversations.teacher_id', teacherId)
-      .gte('created_at', weekAgo);
-
-    // 4. Get recent grades
-    // Grades -> Assessments -> Offerings
+    // Recent grades (still needs separate query for detailed data)
     const { data: recentGrades } = await supabase
       .from('grades')
       .select(`
         score,
         assessment:assessments!inner(
-            title, 
+            name,
+            date,
             offering:offerings!inner(teacher_id)
         ),
         enrollment:enrollments!inner(
@@ -121,12 +74,10 @@ const getDashboardStats = async (req, res) => {
         )
       `)
       .eq('assessments.offerings.teacher_id', teacherId)
-      .order('id', { ascending: false }) // Grades don't have created_at usually? Use ID or Assessment Date? 
-      // Schema check: Grades table doesn't have created_at. Assessments have date.
-      // We can sort by assessment.date
+      .order('assessments.date', { ascending: false })
       .limit(5);
 
-    // 5. Get recent messages
+    // Recent messages (still needs separate query for detailed data)
     const { data: recentMessages } = await supabase
       .from('messages')
       .select(`
@@ -140,7 +91,6 @@ const getDashboardStats = async (req, res) => {
       .order('created_at', { ascending: false })
       .limit(5);
 
-    // Transform recentGrades to flat format
     const formattedGrades = recentGrades?.map(g => ({
       score: g.score,
       assessment_name: g.assessment.name,
@@ -152,10 +102,10 @@ const getDashboardStats = async (req, res) => {
       success: true,
       data: {
         stats: {
-          total_students: totalStudents || 0,
-          total_parents: totalParents || 0,
-          today_attendance: todayAttendance || 0,
-          weekly_messages: weeklyMessages || 0
+          total_students: stats.student_count || 0,
+          total_parents: stats.parent_count || 0,
+          today_attendance: stats.today_attendance || 0,
+          weekly_messages: stats.weekly_messages || 0
         },
         recent_grades: formattedGrades,
         recent_messages: recentMessages || []
@@ -245,10 +195,347 @@ const updateSettings = async (req, res) => {
   }
 };
 
-// Route definitions
+const notificationPreferencesSchema = z.object({
+  body: z.object({
+    attendance_marked: z.boolean().optional(),
+    grade_entered: z.boolean().optional(),
+    whatsapp_sent: z.boolean().optional(),
+    assistant_action: z.boolean().optional(),
+    digest: z.boolean().optional(),
+    alert: z.boolean().optional(),
+    report_ready: z.boolean().optional(),
+    quiet_hours_start: z.string().regex(/^\d{2}:\d{2}$/).optional().nullable(),
+    quiet_hours_end: z.string().regex(/^\d{2}:\d{2}$/).optional().nullable(),
+  }).refine(data => Object.keys(data).length > 0, { message: 'At least one preference must be provided' }),
+});
+
+// @desc    Update notification preferences
+// @route   PUT /api/teachers/notification-preferences
+// @access  Private
+const updateNotificationPreferences = async (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const prefs = req.body;
+
+    // Fetch existing preferences
+    const { data: existing } = await supabase
+      .from('teacher_settings')
+      .select('notification_preferences')
+      .eq('teacher_id', teacherId)
+      .single();
+
+    const currentPrefs = existing?.notification_preferences || {};
+    const updatedPrefs = { ...currentPrefs, ...prefs };
+
+    const { data, error } = await supabase
+      .from('teacher_settings')
+      .upsert({
+        teacher_id: teacherId,
+        notification_preferences: updatedPrefs,
+      }, { onConflict: 'teacher_id' })
+      .select('notification_preferences')
+      .single();
+
+    if (error) throw error;
+
+    res.status(200).json({
+      success: true,
+      data: data.notification_preferences,
+      message: 'Notification preferences updated successfully',
+    });
+  } catch (error) {
+    logger.error('Update notification preferences error', { error: error.message });
+    res.status(500).json({
+      success: false,
+      message: 'Server error updating notification preferences',
+    });
+  }
+};
+
+/**
+ * @openapi
+ * /api/teachers/profile:
+ *   get:
+ *     tags: [Teachers]
+ *     summary: Get teacher profile
+ *     description: Retrieve the authenticated teacher's full profile, including student count.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/TeacherProfile'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.get('/profile', authenticateToken, getProfile);
+
+/**
+ * @openapi
+ * /api/teachers/dashboard:
+ *   get:
+ *     tags: [Teachers]
+ *     summary: Get dashboard stats
+ *     description: Retrieve aggregated dashboard statistics including student count, parent count, today's attendance, weekly messages, recent grades, and recent messages.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard stats retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     stats:
+ *                       type: object
+ *                       properties:
+ *                         total_students:
+ *                           type: integer
+ *                         total_parents:
+ *                           type: integer
+ *                         today_attendance:
+ *                           type: integer
+ *                         weekly_messages:
+ *                           type: integer
+ *                     recent_grades:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     recent_messages:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.get('/dashboard', authenticateToken, getDashboardStats);
+
+/**
+ * @openapi
+ * /api/teachers/settings:
+ *   get:
+ *     tags: [Teachers]
+ *     summary: Get teacher settings
+ *     description: Retrieve the authenticated teacher's settings (notifications, theme, language). Returns defaults if none exist.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Settings retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     notifications:
+ *                       type: object
+ *                     theme:
+ *                       type: string
+ *                     language:
+ *                       type: string
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.get('/settings', authenticateToken, getSettings);
+
+/**
+ * @openapi
+ * /api/teachers/settings:
+ *   put:
+ *     tags: [Teachers]
+ *     summary: Update teacher settings
+ *     description: Update or create the authenticated teacher's settings. Only provided fields are updated. Uses upsert on teacher_settings.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               notifications:
+ *                 type: object
+ *                 description: Notification settings object
+ *               theme:
+ *                 type: string
+ *                 enum: [light, dark, system]
+ *                 description: UI theme preference
+ *               language:
+ *                 type: string
+ *                 enum: [ar, en]
+ *                 description: Preferred language
+ *     responses:
+ *       200:
+ *         description: Settings updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     notifications:
+ *                       type: object
+ *                     theme:
+ *                       type: string
+ *                     language:
+ *                       type: string
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: No settings provided or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.put('/settings', authenticateToken, validate(updateSettingsSchema), updateSettings);
+
+/**
+ * @openapi
+ * /api/teachers/notification-preferences:
+ *   put:
+ *     tags: [Teachers]
+ *     summary: Update notification preferences
+ *     description: Update the authenticated teacher's notification preferences. Merges with existing preferences. At least one field must be provided.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             minProperties: 1
+ *             properties:
+ *               attendance_marked:
+ *                 type: boolean
+ *                 description: Receive notification when attendance is marked
+ *               grade_entered:
+ *                 type: boolean
+ *                 description: Receive notification when a grade is entered
+ *               whatsapp_sent:
+ *                 type: boolean
+ *                 description: Receive notification when a WhatsApp message is sent
+ *               assistant_action:
+ *                 type: boolean
+ *                 description: Receive notification on assistant actions
+ *               digest:
+ *                 type: boolean
+ *                 description: Receive daily/weekly digest
+ *               alert:
+ *                 type: boolean
+ *                 description: Receive alert notifications
+ *               report_ready:
+ *                 type: boolean
+ *                 description: Receive notification when a report is ready
+ *               quiet_hours_start:
+ *                 type: string
+ *                 pattern: '^\d{2}:\d{2}$'
+ *                 description: Quiet hours start time (HH:MM)
+ *               quiet_hours_end:
+ *                 type: string
+ *                 pattern: '^\d{2}:\d{2}$'
+ *                 description: Quiet hours end time (HH:MM)
+ *     responses:
+ *       200:
+ *         description: Notification preferences updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   description: Updated notification preferences
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: No preferences provided or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
+router.put('/notification-preferences', authenticateToken, validate(notificationPreferencesSchema), updateNotificationPreferences);
 
 module.exports = router;

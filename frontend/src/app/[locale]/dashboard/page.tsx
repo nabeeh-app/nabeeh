@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAuth, usePermissions } from '@/hooks/useAuth';
-import { apiClient } from '@/lib/client';
-import { DashboardStats } from '@/types';
+import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { Users, BarChart3, FileText, MessageSquare, GraduationCap, User, Users2, Zap, ClipboardList, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { getVisibleNavigation } from '@/config/navigation';
@@ -27,7 +26,6 @@ export default function DashboardPage() {
 
   const navItems = useMemo(() => getVisibleNavigation(teacher?.role), [teacher?.role]);
 
-  /** Resolve a description from a nav item's descriptionKey + descriptionNs. */
   const getDescription = (item: (typeof navItems)[number]): string | null => {
     if (!item.descriptionKey || !item.descriptionNs) return null;
     const map: Record<string, ReturnType<typeof useTranslations>> = {
@@ -44,69 +42,24 @@ export default function DashboardPage() {
     return ns ? ns(item.descriptionKey) : null;
   };
 
-  /** Items that have a description are shown as NavigationCards. */
   const cardItems = navItems.filter((item) => getDescription(item));
 
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(false);
-  const [statsError, setStatsError] = useState<string | null>(null);
+  const { data: stats, isLoading: statsLoading, error: statsError } = useDashboardStats();
 
   const formatNumber = (value: number) => new Intl.NumberFormat(locale).format(value);
 
-  useEffect(() => {
-    if (!teacher) {
-      return;
-    }
-
-    let isMounted = true;
-    const loadStats = async () => {
-      setStatsLoading(true);
-      setStatsError(null);
-      try {
-        const data = await apiClient.getDashboardStats();
-        if (isMounted) {
-          setStats(data);
-        }
-      } catch {
-        if (isMounted) {
-          setStatsError('unavailable');
-        }
-      } finally {
-        if (isMounted) {
-          setStatsLoading(false);
-        }
-      }
-    };
-
-    loadStats();
-    return () => {
-      isMounted = false;
-    };
-  }, [teacher]);
-
   const attendanceRate = useMemo(() => {
-    if (!stats?.recent_attendance?.length) {
-      return 0;
-    }
-
+    if (!stats?.recent_attendance?.length) return 0;
     const latest = stats.recent_attendance.reduce((currentLatest, entry) => {
-      if (!currentLatest) {
-        return entry;
-      }
+      if (!currentLatest) return entry;
       return new Date(entry.date) > new Date(currentLatest.date) ? entry : currentLatest;
     }, stats.recent_attendance[0]);
-
-    if (!latest.total) {
-      return 0;
-    }
-
+    if (!latest.total) return 0;
     return Math.round((latest.present / latest.total) * 100);
   }, [stats]);
 
   const totalGrades = useMemo(() => {
-    if (!stats?.recent_grades?.length) {
-      return 0;
-    }
+    if (!stats?.recent_grades?.length) return 0;
     return stats.recent_grades.reduce((sum, entry) => sum + entry.count, 0);
   }, [stats]);
 
@@ -119,7 +72,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-        {/* Header */}
         <header>
           <div className="py-6">
             <h1 className="text-4xl font-bold text-ink font-display">
@@ -137,7 +89,6 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {/* Quick Stats */}
         {statsError && (
           <div className="rounded-md bg-surface-sage px-4 py-3 text-base text-ink font-body">
             {t('statsUnavailable')}
@@ -196,7 +147,6 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Navigation Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {cardItems.map((item) => {
             const Icon = item.icon;
@@ -212,7 +162,6 @@ export default function DashboardPage() {
             );
           })}
 
-          {/* Admin-only cards (not in shared nav config) */}
           {isAdmin() && (
             <>
               <NavigationCard

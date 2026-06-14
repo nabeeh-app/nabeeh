@@ -2,6 +2,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { AuthProvider } from '@/hooks/useAuth';
 import { LocaleProvider } from '@/components/locale-provider';
+import QueryProvider from '@/components/QueryProvider';
 import { notFound } from 'next/navigation';
 
 type Props = {
@@ -26,11 +27,13 @@ export default async function LocaleLayout({
 
   return (
     <NextIntlClientProvider messages={messages}>
-      <LocaleProvider>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
-      </LocaleProvider>
+      <QueryProvider>
+        <LocaleProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </LocaleProvider>
+      </QueryProvider>
     </NextIntlClientProvider>
   );
 }

@@ -11,7 +11,7 @@ interface GridPatternProps {
   squares?: [number, number][]
   strokeDasharray?: string
   className?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export function GridPattern({
@@ -33,7 +33,7 @@ export function GridPattern({
         "pointer-events-none absolute inset-0 h-full w-full fill-ink/[0.07] stroke-ink/[0.07]",
         className,
       )}
-      {...(props as any)}
+      {...(props as Record<string, unknown>)}
     >
       <defs>
         <pattern height={height} id={id} patternUnits="userSpaceOnUse" width={width} x={x} y={y}>

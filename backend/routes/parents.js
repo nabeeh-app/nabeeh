@@ -1,5 +1,5 @@
 const express = require('express');
-const { supabase } = require('../config/database');
+const supabase = require('../config/database').supabaseAdmin;
 const { authenticateToken } = require('../middleware/auth');
 const { validate, createParentSchema, updateParentSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
@@ -14,32 +14,14 @@ const getParents = async (req, res) => {
     const { student_id, search } = req.query;
     const teacher_id = req.user.id;
 
-    // Step 1: Get Teacher's Student IDs
+    // Step 1: Get Teacher's Student IDs via direct teacher_id filter
     const { data: teacherStudents, error: studentError } = await supabase
       .from('enrollments')
       .select('student_id')
-      .eq('groups.offerings.teacher_id', teacher_id) // This relies on deep join or we do 2 steps
-      // Supabase PostgREST deep filter:
+      .eq('teacher_id', teacher_id)
       .not('student_id', 'is', null);
 
-    // Actually, let's use the RPC or a direct join if possible, but JS logic is safest given PostgREST limits on deep nested filtering syntax sometimes.
-    // Let's try the direct "Exists" filter approach if possible, but PostgREST doesn't support EXISTS easily in JS client without foreign keys setup perfectly.
-
-    // Let's use the known working pattern from students.js:
-    // Fetch all offerings -> groups -> enrollments to get student IDs.
-    const { data: offerings } = await supabase
-      .from('offerings')
-      .select('groups(enrollments(student_id))')
-      .eq('teacher_id', teacher_id);
-
-    const studentIds = new Set();
-    offerings?.forEach(o =>
-      o.groups?.forEach(g =>
-        g.enrollments?.forEach(e =>
-          studentIds.add(e.student_id)
-        )
-      )
-    );
+    const studentIds = new Set(teacherStudents?.map(e => e.student_id) || []);
 
     if (studentIds.size === 0) {
       return res.status(200).json({ success: true, data: [] });
@@ -108,9 +90,9 @@ const getParent = async (req, res) => {
     // Verify ownership via enrollment
     const { data: enrollment } = await supabase
       .from('enrollments')
-      .select('groups!inner(offerings!inner(teacher_id))')
+      .select('id')
       .eq('student_id', parent.student_id)
-      .eq('groups.offerings.teacher_id', req.user.id)
+      .eq('teacher_id', req.user.id)
       .limit(1);
 
     if (!enrollment || enrollment.length === 0) {
@@ -148,12 +130,11 @@ const createParent = async (req, res) => {
     }
 
     // Verify student belongs to teacher (Enrollment Check)
-    // Find if student has ANY enrollment in teacher's offerings
     const { data: enrollments, error: enrollError } = await supabase
       .from('enrollments')
-      .select('id, groups!inner(offerings!inner(teacher_id))')
+      .select('id')
       .eq('student_id', student_id)
-      .eq('groups.offerings.teacher_id', req.user.id)
+      .eq('teacher_id', req.user.id)
       .limit(1);
 
     if (enrollError || !enrollments || enrollments.length === 0) {
@@ -219,34 +200,6 @@ const updateParent = async (req, res) => {
     });
 
     // Verify Authorization: Check if parent belongs to a student enrolled with this teacher
-    // Fetch parent -> student -> enrollments
-    const { data: parentCheck, error: checkError } = await supabase
-      .from('parents')
-      .select(`
-            id,
-            student_id,
-            student:students!inner (
-                enrollments!inner (
-                    groups!inner (
-                        offerings!inner (
-                            teacher_id
-                        )
-                    )
-                )
-            )
-        `)
-      .eq('id', req.params.id)
-      .eq('student.enrollments.groups.offerings.teacher_id', req.user.id)
-      .single();
-
-    // Wait, deep filtering in .eq() like that is not standard Supabase JS unless embedding.
-    // Correct approach using !inner joins automatically filters:
-    // If the join chain doesn't match the inner constraint on teacher_id, no row is returned.
-
-    // HOWEVER, the teacher_id is on OFFERINGS.
-    // So we need to filter on offerings.teacher_id.
-
-    // Let's create a specialized check query
     const { data: accessCheck } = await supabase
       .from('parents')
       .select('student_id')
@@ -257,12 +210,11 @@ const updateParent = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Parent not found' });
     }
 
-    // Now check student enrollment
     const { data: enrollment } = await supabase
       .from('enrollments')
-      .select('groups!inner(offerings!inner(teacher_id))')
+      .select('id')
       .eq('student_id', accessCheck.student_id)
-      .eq('groups.offerings.teacher_id', req.user.id)
+      .eq('teacher_id', req.user.id)
       .limit(1);
 
     if (!enrollment || enrollment.length === 0) {
@@ -321,9 +273,9 @@ const deleteParent = async (req, res) => {
     // Check auth via enrollment
     const { data: enrollment } = await supabase
       .from('enrollments')
-      .select('groups!inner(offerings!inner(teacher_id))')
+      .select('id')
       .eq('student_id', parent.student_id)
-      .eq('groups.offerings.teacher_id', req.user.id)
+      .eq('teacher_id', req.user.id)
       .limit(1);
 
     if (!enrollment || enrollment.length === 0) {
@@ -358,11 +310,343 @@ const deleteParent = async (req, res) => {
   }
 };
 
-// Route definitions
+/**
+ * @openapi
+ * /api/parents/:
+ *   get:
+ *     tags: [Parents]
+ *     summary: List parents
+ *     description: Get all parents for the logged-in teacher's enrolled students. Supports filtering by student_id and search by name/phone.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: student_id
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter parents by student ID
+ *       - in: query
+ *         name: search
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Search by parent name or phone (case-insensitive)
+ *     responses:
+ *       200:
+ *         description: List of parents retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Parent'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.get('/', authenticateToken, getParents);
+
+/**
+ * @openapi
+ * /api/parents/{id}:
+ *   get:
+ *     tags: [Parents]
+ *     summary: Get single parent
+ *     description: Retrieve a single parent by ID. Verifies the parent belongs to a student enrolled with the authenticated teacher.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The parent ID
+ *     responses:
+ *       200:
+ *         description: Parent retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Parent'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       403:
+ *         description: Unauthorized — student not enrolled with teacher
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       404:
+ *         description: Parent not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.get('/:id', authenticateToken, getParent);
+
+/**
+ * @openapi
+ * /api/parents/:
+ *   post:
+ *     tags: [Parents]
+ *     summary: Create parent
+ *     description: Create a new parent contact linked to a student. The student must be enrolled with the authenticated teacher.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [student_id, name, phone, relationship]
+ *             properties:
+ *               student_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: The student ID this parent is linked to
+ *               name:
+ *                 type: string
+ *                 description: Parent full name
+ *               phone:
+ *                 type: string
+ *                 description: Parent phone number (with country code)
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Parent email address
+ *               relationship:
+ *                 type: string
+ *                 description: Relationship to student (e.g. father, mother)
+ *               preferred_language:
+ *                 type: string
+ *                 enum: [ar, en]
+ *                 description: Preferred communication language
+ *               is_primary:
+ *                 type: boolean
+ *                 description: Whether this is the primary contact
+ *     responses:
+ *       201:
+ *         description: Parent created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Parent'
+ *       400:
+ *         description: Validation error or missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       404:
+ *         description: Student not found or not enrolled with teacher
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.post('/', authenticateToken, validate(createParentSchema), createParent);
+
+/**
+ * @openapi
+ * /api/parents/{id}:
+ *   put:
+ *     tags: [Parents]
+ *     summary: Update parent
+ *     description: Update a parent's information. Only provided fields are updated. Verifies ownership via enrollment chain.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The parent ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Parent full name
+ *               phone:
+ *                 type: string
+ *                 description: Parent phone number
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Parent email address
+ *               relationship:
+ *                 type: string
+ *                 description: Relationship to student
+ *               preferred_language:
+ *                 type: string
+ *                 enum: [ar, en]
+ *                 description: Preferred communication language
+ *               is_primary:
+ *                 type: boolean
+ *                 description: Whether this is the primary contact
+ *               telegram_username:
+ *                 type: string
+ *                 description: Telegram username
+ *               communication_preferences:
+ *                 type: object
+ *                 description: Communication preferences object
+ *     responses:
+ *       200:
+ *         description: Parent updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Parent'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       403:
+ *         description: Unauthorized — student not enrolled with teacher
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       404:
+ *         description: Parent not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.put('/:id', authenticateToken, validate(updateParentSchema), updateParent);
+
+/**
+ * @openapi
+ * /api/parents/{id}:
+ *   delete:
+ *     tags: [Parents]
+ *     summary: Delete parent
+ *     description: Permanently delete a parent contact. Verifies ownership via enrollment chain.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The parent ID
+ *     responses:
+ *       200:
+ *         description: Parent deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       403:
+ *         description: Unauthorized — student not enrolled with teacher
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       404:
+ *         description: Parent not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
 router.delete('/:id', authenticateToken, deleteParent);
 
 module.exports = router;

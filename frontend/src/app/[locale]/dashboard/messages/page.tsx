@@ -153,16 +153,58 @@ export default function MessagesPage() {
   };
 
   useEffect(() => {
-    void loadConversations();
-  }, [loadConversations]);
+    let cancelled = false;
+    const load = async () => {
+      try {
+        setIsLoadingConversations(true);
+        setError(null);
+        const response = await apiClient.getConversations({ page: 1, limit: 50 });
+        if (cancelled) return;
+        const nextConversations = response.data ?? [];
+        setConversations(nextConversations);
+        setSelectedConversationId(prev => {
+          if (prev && nextConversations.some(c => c.id === prev)) return prev;
+          return nextConversations[0]?.id ?? null;
+        });
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : 'Failed to load conversations';
+        setError(message);
+      } finally {
+        if (!cancelled) setIsLoadingConversations(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!selectedConversationId) {
-      setMessages([]);
+      void (async () => {
+        setMessages([]);
+      })();
       return;
     }
-    void loadMessages(selectedConversationId);
-  }, [selectedConversationId, loadMessages]);
+    let cancelled = false;
+    const load = async () => {
+      try {
+        setIsLoadingMessages(true);
+        setError(null);
+        const response = await apiClient.getConversationMessages(selectedConversationId, { page: 1, limit: 50 });
+        if (cancelled) return;
+        setMessages(response.data ?? []);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : 'Failed to load messages';
+        setError(message);
+        setMessages([]);
+      } finally {
+        if (!cancelled) setIsLoadingMessages(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [selectedConversationId]);
 
   return (
     <div className="space-y-6">

@@ -52,22 +52,19 @@ export const getStatusBadge = (status: string, locale: 'en' | 'ar' = 'en') => {
 };
 
 // Unified WhatsApp status checker
-export const checkWhatsAppStatus = async (phone?: string) => {
+export const checkWhatsAppStatus = async (_phone?: string) => {
   try {
-    const response = await apiClient.api.get('/whatsapp/status', {
-      params: phone ? { phone } : undefined
-    });
-
-    const data = response.data;
+    const data = await apiClient.getWhatsAppStatus();
     return {
-      success: data.success,
-      status: data.data?.status || 'disconnected',
-      message: data.message || (data.data?.status === 'connected'
+      success: true,
+      status: (data.status || 'disconnected') as 'connected' | 'disconnected' | 'qr_ready' | 'connecting' | 'error',
+      message: data.status === 'connected'
         ? 'Connected'
-        : data.data?.status === 'qr_ready'
+        : data.status === 'qr_ready'
           ? 'Scan QR Code'
-          : 'Disconnected'),
-      qr: data.data?.qr || null
+          : 'Disconnected',
+      qr: data.qr || null,
+      phone: data.phone || null
     };
   } catch (error) {
     logger.error('Check Status Error:', error);
@@ -75,7 +72,8 @@ export const checkWhatsAppStatus = async (phone?: string) => {
       success: false,
       status: 'disconnected' as const,
       message: 'Error checking WhatsApp status',
-      qr: null
+      qr: null,
+      phone: null
     };
   }
 };
@@ -83,7 +81,7 @@ export const checkWhatsAppStatus = async (phone?: string) => {
 // Unified message sending
 export const sendWhatsAppMessage = async (phone: string, message: string) => {
   try {
-    const response = await apiClient.api.post('/whatsapp/send-test', { phone, message });
+    const response = await apiClient.api.post('/whatsapp/send-to-number', { phone, message });
     const data = response.data;
     return {
       success: data.success,
