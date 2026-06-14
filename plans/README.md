@@ -23,9 +23,9 @@ honor its STOP conditions, and update your row when done.
 | 013 | Wire up GradeDistribution/TrendChart or gate | P3 | M | — | DONE |
 | 014 | Merge duplicate onboarding i18n keys | P3 | S | — | DONE |
 | 015 | Extract duplicated DataSourcesBadges | P3 | S | — | DONE |
-| D1 | Batch data-fetching layer | P2 | M | 007 | TODO |
-| D2 | Background job queue for AI operations | P2 | L | 009 | TODO |
-| D3 | Migrate frontend to React Query/SWR | P3 | L | — | TODO |
+| D1 | Batch data-fetching layer | P2 | M | 007 | DONE |
+| D2 | Background job queue for AI operations | P2 | L | 009 | DONE |
+| D3 | Migrate frontend to React Query/SWR | P3 | L | — | DONE |
 
 ## Dependency notes
 
