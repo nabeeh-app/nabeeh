@@ -1,34 +1,15 @@
-const { supabaseAdmin } = require('../config/database');
+const { fetchEnrollmentData } = require('./batchQuery');
 const logger = require('./logger');
 
 // ── Detect attendance anomalies ────────────────────────────────
 async function detectAttendanceAnomalies(teacherId) {
-  const { data: enrollments } = await supabaseAdmin
-    .from('enrollments')
-    .select(`
-      id,
-      student_id,
-      students(name),
-      group:groups!inner(id, offering:offerings!inner(teacher_id))
-    `)
-    .eq('group.offering.teacher_id', teacherId);
+  const { enrollments, sessions, attendance } = await fetchEnrollmentData(teacherId, { sessionLimit: 10 });
 
-  if (!enrollments || enrollments.length === 0) return [];
+  if (enrollments.length === 0) return [];
 
-  const groupIds = [...new Set(enrollments.map(e => e.group?.id).filter(Boolean))];
-  const { data: allSessions } = await supabaseAdmin
-    .from('sessions').select('id, date, group_id')
-    .in('group_id', groupIds);
-
-  const sessionIds = (allSessions || []).map(s => s.id);
-  const { data: allAttendance } = await supabaseAdmin
-    .from('attendance').select('enrollment_id, status, session_id')
-    .in('enrollment_id', enrollments.map(e => e.id))
-    .in('session_id', sessionIds);
-
-  const sessionMap = new Map((allSessions || []).map(s => [s.id, s]));
+  const sessionMap = new Map(sessions.map(s => [s.id, s]));
   const attendanceByEnrollment = new Map();
-  for (const att of (allAttendance || [])) {
+  for (const att of attendance) {
     if (!attendanceByEnrollment.has(att.enrollment_id)) attendanceByEnrollment.set(att.enrollment_id, []);
     attendanceByEnrollment.get(att.enrollment_id).push(att);
   }
@@ -39,7 +20,7 @@ async function detectAttendanceAnomalies(teacherId) {
     const studentId = enrollment.student_id;
     const studentName = enrollment.students?.name || 'Student';
 
-    const enrollmentSessions = (allSessions || []).filter(s => s.group_id === enrollment.group?.id);
+    const enrollmentSessions = sessions.filter(s => s.group_id === enrollment.group?.id);
     enrollmentSessions.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     const topSessions = enrollmentSessions.slice(0, 10);
 
@@ -112,30 +93,12 @@ async function detectAttendanceAnomalies(teacherId) {
 
 // ── Detect grade anomalies ─────────────────────────────────────
 async function detectGradeAnomalies(teacherId) {
-  const { data: enrollments } = await supabaseAdmin
-    .from('enrollments')
-    .select(`
-      id,
-      student_id,
-      students(name),
-      group:groups!inner(offering:offerings!inner(teacher_id))
-    `)
-    .eq('group.offering.teacher_id', teacherId);
+  const { enrollments, grades: allGrades } = await fetchEnrollmentData(teacherId);
 
-  if (!enrollments || enrollments.length === 0) return [];
-
-  const enrollmentIds = enrollments.map(e => e.id);
-  const { data: allGrades } = await supabaseAdmin
-    .from('grades').select(`
-      enrollment_id,
-      score,
-      assessment:assessments(name, date, max_score)
-    `)
-    .in('enrollment_id', enrollmentIds)
-    .order('assessment.date', { ascending: true });
+  if (enrollments.length === 0) return [];
 
   const gradesByEnrollment = new Map();
-  for (const grade of (allGrades || [])) {
+  for (const grade of allGrades) {
     if (!gradesByEnrollment.has(grade.enrollment_id)) gradesByEnrollment.set(grade.enrollment_id, []);
     gradesByEnrollment.get(grade.enrollment_id).push(grade);
   }

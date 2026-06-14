@@ -1,45 +1,26 @@
-const { supabaseAdmin } = require('../config/database');
+const { fetchEnrollmentData } = require('./batchQuery');
 const anomalyDetector = require('./anomalyDetector');
 const logger = require('./logger');
+const { supabaseAdmin } = require('../config/database');
 
 // ── Generate digest data for a teacher for a given week ────────
 async function generateDigest(teacherId, weekStart, weekEnd) {
   try {
-    const { data: enrollments } = await supabaseAdmin
-      .from('enrollments')
-      .select(`
-        id,
-        student_id,
-        students(name),
-        group:groups!inner(id, offering:offerings!inner(teacher_id))
-      `)
-      .eq('group.offering.teacher_id', teacherId);
-
-    if (!enrollments || enrollments.length === 0) {
-      return { improved: [], declining: [], action_items: [], anomalies: [] };
-    }
-
-    const enrollmentIds = enrollments.map(e => e.id);
     const priorWeekStart = new Date(new Date(weekStart).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const priorWeekEnd = new Date(new Date(weekStart).getTime() - 1).toISOString().split('T')[0];
 
-    const { data: allAttendance } = await supabaseAdmin
-      .from('attendance')
-      .select('enrollment_id, status, session:sessions(date)')
-      .in('enrollment_id', enrollmentIds)
-      .gte('session.date', priorWeekStart)
-      .lte('session.date', weekEnd);
+    // Batch fetch: enrollments + attendance + grades for the full 2-week window
+    const { enrollments, attendance: allAttendance, grades: allGrades } = await fetchEnrollmentData(teacherId, {
+      dateRange: { start: priorWeekStart, end: weekEnd },
+    });
 
-    const { data: allGrades } = await supabaseAdmin
-      .from('grades')
-      .select('enrollment_id, score, assessment:assessments(max_score, date)')
-      .in('enrollment_id', enrollmentIds)
-      .gte('assessment.date', priorWeekStart)
-      .lte('assessment.date', weekEnd);
+    if (enrollments.length === 0) {
+      return { improved: [], declining: [], action_items: [], anomalies: [] };
+    }
 
     const thisWeekAttByEnrollment = new Map();
     const priorWeekAttByEnrollment = new Map();
-    for (const att of (allAttendance || [])) {
+    for (const att of allAttendance) {
       const date = att.session?.date;
       if (!date) continue;
       const map = date >= weekStart && date <= weekEnd ? thisWeekAttByEnrollment : priorWeekAttByEnrollment;
@@ -49,7 +30,7 @@ async function generateDigest(teacherId, weekStart, weekEnd) {
 
     const thisWeekGradesByEnrollment = new Map();
     const priorWeekGradesByEnrollment = new Map();
-    for (const grade of (allGrades || [])) {
+    for (const grade of allGrades) {
       const date = grade.assessment?.date;
       if (!date) continue;
       const map = date >= weekStart && date <= weekEnd ? thisWeekGradesByEnrollment : priorWeekGradesByEnrollment;
