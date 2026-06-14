@@ -18,6 +18,7 @@ export function CommentApproval() {
   const [editing, setEditing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [error, setError] = useState('');
 
   const handleApprove = useCallback(async (draft: ReportDraft) => {
     try {
@@ -27,9 +28,9 @@ export function CommentApproval() {
         setRefreshKey(prev => prev + 1);
       }
     } catch {
-      // silent
+      setError(t('saveFailed'));
     }
-  }, []);
+  }, [t]);
 
   const handleReject = useCallback(async (draft: ReportDraft) => {
     try {
@@ -39,9 +40,9 @@ export function CommentApproval() {
         setRefreshKey(prev => prev + 1);
       }
     } catch {
-      // silent
+      setError(t('saveFailed'));
     }
-  }, []);
+  }, [t]);
 
   const handleSaved = useCallback((updated: ReportDraft) => {
     setSelectedDraft(updated);
@@ -55,6 +56,10 @@ export function CommentApproval() {
           <ArrowLeft className="h-4 w-4 mr-1" />
           {t('backToQueue')}
         </Button>
+
+        {error && (
+          <p className="text-sm text-destructive font-body">{error}</p>
+        )}
 
         {editing ? (
           <CommentEditor

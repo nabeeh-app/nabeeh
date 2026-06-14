@@ -830,7 +830,8 @@
       "edit": "Edit",
       "reject": "Reject",
       "approve": "Approve",
-      "sendToParent": "Send to Parent"
+      "sendToParent": "Send to Parent",
+      "saveFailed": "Failed to save. Please try again."
     }
   },
   "monitor": {

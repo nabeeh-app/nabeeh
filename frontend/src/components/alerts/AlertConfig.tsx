@@ -219,7 +219,7 @@ export function AlertConfig() {
       await apiClient.deleteAlertRule(id);
       setRules(prev => prev.filter(r => r.id !== id));
     } catch {
-      // silent
+      setError(t('saveFailed'));
     }
   };
 
@@ -232,7 +232,7 @@ export function AlertConfig() {
         );
       }
     } catch {
-      // silent
+      setError(t('saveFailed'));
     }
   };
 

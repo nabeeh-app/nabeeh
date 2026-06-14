@@ -18,6 +18,7 @@ export function CommentEditor({ draft, onSaved, onCancel }: CommentEditorProps) 
   const t = useTranslations('reports.approval');
   const [text, setText] = useState(draft.edited_text || draft.draft_text);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSave = async () => {
     setSaving(true);
@@ -27,7 +28,7 @@ export function CommentEditor({ draft, onSaved, onCancel }: CommentEditorProps) 
         onSaved({ ...draft, edited_text: text, status: 'edited' });
       }
     } catch {
-      // silent
+      setError(t('saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -49,6 +50,9 @@ export function CommentEditor({ draft, onSaved, onCancel }: CommentEditorProps) 
         </div>
       </CardHeader>
       <CardContent>
+        {error && (
+          <p className="text-sm text-destructive font-body mb-3">{error}</p>
+        )}
         <textarea
           value={text}
           onChange={e => setText(e.target.value)}

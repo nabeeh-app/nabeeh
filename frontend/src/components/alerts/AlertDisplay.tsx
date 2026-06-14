@@ -51,6 +51,7 @@ export function AlertDisplay() {
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -80,7 +81,7 @@ export function AlertDisplay() {
         prev.map(a => (a.id === id ? { ...a, is_read: true } : a))
       );
     } catch {
-      // silent
+      setError(t('saveFailed'));
     }
   };
 
@@ -89,7 +90,7 @@ export function AlertDisplay() {
       await apiClient.markAllAlertsRead();
       setAlerts(prev => prev.map(a => ({ ...a, is_read: true })));
     } catch {
-      // silent
+      setError(t('saveFailed'));
     }
   };
 
@@ -117,6 +118,9 @@ export function AlertDisplay() {
         </div>
       </CardHeader>
       <CardContent>
+        {error && (
+          <p className="text-sm text-destructive font-body mb-3">{error}</p>
+        )}
         <div className="flex items-center gap-2 mb-4">
           <Filter className="h-4 w-4 text-ink/50" />
           <Select
