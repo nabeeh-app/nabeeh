@@ -5,6 +5,7 @@ import { FileText, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DataSourcesBadges } from './DataSourcesBadges';
 import type { ReportDraft } from '@/types';
 
 const STATUS_CONFIG = {
@@ -56,30 +57,7 @@ export function ReportPreview({ draft, onEdit, compact }: ReportPreviewProps) {
           <p className="text-sm text-ink font-body whitespace-pre-wrap">{displayText}</p>
         </div>
 
-        {sources && (
-          <div className="space-y-2">
-            <h4 className="text-xs font-semibold text-ink/60 uppercase tracking-wide font-body">
-              {t('dataSource')}
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {sources.grades != null && (
-                <Badge variant="outline" className="text-xs">
-                  {t('gradesData')}
-                </Badge>
-              )}
-              {sources.attendance != null && (
-                <Badge variant="outline" className="text-xs">
-                  {t('attendanceData')}
-                </Badge>
-              )}
-              {sources.trends != null && (
-                <Badge variant="outline" className="text-xs">
-                  {t('trendsData')}
-                </Badge>
-              )}
-            </div>
-          </div>
-        )}
+        {sources && <DataSourcesBadges sources={sources} />}
 
         {onEdit && draft.status === 'pending' && (
           <div className="flex justify-end">

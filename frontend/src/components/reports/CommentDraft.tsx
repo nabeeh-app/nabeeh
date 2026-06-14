@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { FileText, Clock, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DataSourcesBadges } from './DataSourcesBadges';
 import type { ReportDraft } from '@/types';
 
 interface CommentDraftProps {
@@ -41,24 +42,7 @@ export function CommentDraft({ draft }: CommentDraftProps) {
           <p className="text-sm text-ink font-body whitespace-pre-wrap">{displayText}</p>
         </div>
 
-        {sources && (
-          <div className="space-y-2">
-            <h4 className="text-xs font-semibold text-ink/60 uppercase tracking-wide font-body">
-              {t('dataSource')}
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {sources.grades != null && (
-                <Badge variant="outline" className="text-xs">{t('gradesData')}</Badge>
-              )}
-              {sources.attendance != null && (
-                <Badge variant="outline" className="text-xs">{t('attendanceData')}</Badge>
-              )}
-              {sources.trends != null && (
-                <Badge variant="outline" className="text-xs">{t('trendsData')}</Badge>
-              )}
-            </div>
-          </div>
-        )}
+        {sources && <DataSourcesBadges sources={sources} />}
 
         {draft.edited_text && (
           <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">
