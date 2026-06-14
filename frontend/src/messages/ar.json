@@ -1130,20 +1130,27 @@
       "skip": "تخطي مؤقتاً",
       "connect": "ربط الواتساب"
     },
-    "done": {
+    "completed": {
       "title": "كل شيء جاهز!",
       "description": "لقد حمّلنا بعض البيانات التجريبية لتستكشف نبيه. ستتم إزالتها عند إضافة أول طالب حقيقي.",
       "goToDashboard": "الذهاب للوحة التحكم"
     },
     "progress": {
-      "title": "البدء",
-      "profileDone": "تم إعداد الملف الشخصي",
-      "firstStudent": "إضافة أول طالب",
-      "firstAttendance": "تسجيل أول حضور",
-      "firstGrade": "إدخال أول درجة",
-      "dismiss": "إخفاء",
-      "percentComplete": "{percent}% مكتمل"
-    }
+      "title": "تقدم الإعداد",
+      "dismiss": "إخفاء التقدم",
+      "complete": "تم جميع الخطوات — أنت جاهز!",
+      "steps": {
+        "profile": "الملف الشخصي",
+        "firstStudent": "أول طالب",
+        "firstAttendance": "أول حضور",
+        "firstGrade": "أول درجة"
+      }
+    },
+    "skip": "تخطي",
+    "next": "التالي",
+    "prev": "رجوع",
+    "done": "تم",
+    "tooltip_step": "الخطوة {current} من {total}"
   },
   "import": {
     "title": "استيراد الطلاب",
@@ -1239,30 +1246,10 @@
       "action": "إنشاء أول مقرر"
     }
   },
-  "onboarding": {
-    "progress": {
-      "title": "تقدم الإعداد",
-      "dismiss": "إخفاء التقدم",
-      "complete": "تم إكمال جميع الخطوات — أنت جاهز!",
-      "steps": {
-        "profile": "الملف الشخصي",
-        "firstStudent": "أول طالب",
-        "firstAttendance": "أول حضور",
-        "firstGrade": "أول درجة"
-      }
-    }
-  },
   "whatsappBanner": {
     "message": "اربط الواتساب لتلقي رسائل أولياء الأمور",
     "connect": "اربط الآن",
     "dismiss": "إخفاء"
-  },
-  "onboarding": {
-    "skip": "تخطي",
-    "next": "التالي",
-    "prev": "رجوع",
-    "done": "تم",
-    "tooltip_step": "خطوة {current} من {total}"
   },
   "alerts": {
     "title": "التنبيهات",

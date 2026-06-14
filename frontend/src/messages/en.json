@@ -1131,20 +1131,27 @@
       "skip": "Skip for Now",
       "connect": "Connect WhatsApp"
     },
-    "done": {
+    "completed": {
       "title": "You're all set!",
       "description": "We've loaded some demo data so you can explore Nabeeh. It will be removed when you add your first real student.",
       "goToDashboard": "Go to Dashboard"
     },
     "progress": {
-      "title": "Get Started",
-      "profileDone": "Profile set up",
-      "firstStudent": "Add first student",
-      "firstAttendance": "Mark first attendance",
-      "firstGrade": "Enter first grade",
-      "dismiss": "Dismiss",
-      "percentComplete": "{percent}% complete"
-    }
+      "title": "Setup Progress",
+      "dismiss": "Dismiss progress",
+      "complete": "All steps completed — you're all set!",
+      "steps": {
+        "profile": "Profile",
+        "firstStudent": "1st Student",
+        "firstAttendance": "1st Attendance",
+        "firstGrade": "1st Grade"
+      }
+    },
+    "skip": "Skip",
+    "next": "Next",
+    "prev": "Back",
+    "done": "Done",
+    "tooltip_step": "Step {current} of {total}"
   },
   "import": {
     "title": "Import Students",
@@ -1240,30 +1247,10 @@
       "action": "Create First Offering"
     }
   },
-  "onboarding": {
-    "progress": {
-      "title": "Setup Progress",
-      "dismiss": "Dismiss progress",
-      "complete": "All steps completed — you're all set!",
-      "steps": {
-        "profile": "Profile",
-        "firstStudent": "1st Student",
-        "firstAttendance": "1st Attendance",
-        "firstGrade": "1st Grade"
-      }
-    }
-  },
   "whatsappBanner": {
     "message": "Connect WhatsApp to start receiving parent messages",
     "connect": "Connect Now",
     "dismiss": "Dismiss"
-  },
-  "onboarding": {
-    "skip": "Skip",
-    "next": "Next",
-    "prev": "Back",
-    "done": "Done",
-    "tooltip_step": "Step {current} of {total}"
   },
   "alerts": {
     "title": "Alerts",

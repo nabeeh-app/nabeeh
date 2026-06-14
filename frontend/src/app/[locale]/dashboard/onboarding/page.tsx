@@ -132,13 +132,13 @@ export default function OnboardingPage() {
 
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-ink font-display">
-                {t(`steps.${['profile', 'subjects', 'whatsapp', 'done'][step]}`)}
+                {t(`steps.${['profile', 'subjects', 'whatsapp', 'completed'][step]}`)}
               </h1>
               <p className="text-base text-ink/60 font-body">
                 {step === 0 && t('profile.description')}
                 {step === 1 && t('subjects.description')}
                 {step === 2 && t('whatsapp.description')}
-                {step === 3 && t('done.description')}
+                {step === 3 && t('completed.description')}
               </p>
             </div>
 
@@ -201,7 +201,7 @@ export default function OnboardingPage() {
               <div className="w-full">
                 <Button className="w-full" onClick={handleComplete}>
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  {t('done.goToDashboard')}
+                  {t('completed.goToDashboard')}
                 </Button>
               </div>
             )}
