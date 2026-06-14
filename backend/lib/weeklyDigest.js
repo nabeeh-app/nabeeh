@@ -5,7 +5,6 @@ const logger = require('./logger');
 // ── Generate digest data for a teacher for a given week ────────
 async function generateDigest(teacherId, weekStart, weekEnd) {
   try {
-    // Get all enrollments in teacher's groups
     const { data: enrollments } = await supabaseAdmin
       .from('enrollments')
       .select(`
@@ -20,51 +19,56 @@ async function generateDigest(teacherId, weekStart, weekEnd) {
       return { improved: [], declining: [], action_items: [], anomalies: [] };
     }
 
+    const enrollmentIds = enrollments.map(e => e.id);
+    const priorWeekStart = new Date(new Date(weekStart).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const priorWeekEnd = new Date(new Date(weekStart).getTime() - 1).toISOString().split('T')[0];
+
+    const { data: allAttendance } = await supabaseAdmin
+      .from('attendance')
+      .select('enrollment_id, status, session:sessions(date)')
+      .in('enrollment_id', enrollmentIds)
+      .gte('session.date', priorWeekStart)
+      .lte('session.date', weekEnd);
+
+    const { data: allGrades } = await supabaseAdmin
+      .from('grades')
+      .select('enrollment_id, score, assessment:assessments(max_score, date)')
+      .in('enrollment_id', enrollmentIds)
+      .gte('assessment.date', priorWeekStart)
+      .lte('assessment.date', weekEnd);
+
+    const thisWeekAttByEnrollment = new Map();
+    const priorWeekAttByEnrollment = new Map();
+    for (const att of (allAttendance || [])) {
+      const date = att.session?.date;
+      if (!date) continue;
+      const map = date >= weekStart && date <= weekEnd ? thisWeekAttByEnrollment : priorWeekAttByEnrollment;
+      if (!map.has(att.enrollment_id)) map.set(att.enrollment_id, []);
+      map.get(att.enrollment_id).push(att);
+    }
+
+    const thisWeekGradesByEnrollment = new Map();
+    const priorWeekGradesByEnrollment = new Map();
+    for (const grade of (allGrades || [])) {
+      const date = grade.assessment?.date;
+      if (!date) continue;
+      const map = date >= weekStart && date <= weekEnd ? thisWeekGradesByEnrollment : priorWeekGradesByEnrollment;
+      if (!map.has(grade.enrollment_id)) map.set(grade.enrollment_id, []);
+      map.get(grade.enrollment_id).push(grade);
+    }
+
     const improved = [];
     const declining = [];
 
     for (const enrollment of enrollments) {
       const studentName = enrollment.students?.name || 'Student';
 
-      // Get attendance for this week and prior week
-      const { data: thisWeekAtt } = await supabaseAdmin
-        .from('attendance')
-        .select('status, session:sessions(date)')
-        .eq('enrollment_id', enrollment.id)
-        .gte('session.date', weekStart)
-        .lte('session.date', weekEnd);
-
-      const priorWeekStart = new Date(new Date(weekStart).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const priorWeekEnd = new Date(new Date(weekStart).getTime() - 1).toISOString().split('T')[0];
-
-      const { data: priorWeekAtt } = await supabaseAdmin
-        .from('attendance')
-        .select('status, session:sessions(date)')
-        .eq('enrollment_id', enrollment.id)
-        .gte('session.date', priorWeekStart)
-        .lte('session.date', priorWeekEnd);
-
-      const thisWeekRate = calcAttendanceRate(thisWeekAtt);
-      const priorWeekRate = calcAttendanceRate(priorWeekAtt);
+      const thisWeekRate = calcAttendanceRate(thisWeekAttByEnrollment.get(enrollment.id));
+      const priorWeekRate = calcAttendanceRate(priorWeekAttByEnrollment.get(enrollment.id));
       const attChange = thisWeekRate - priorWeekRate;
 
-      // Get grades for this week and prior week
-      const { data: thisWeekGrades } = await supabaseAdmin
-        .from('grades')
-        .select('score, assessment:assessments(max_score, date)')
-        .eq('enrollment_id', enrollment.id)
-        .gte('assessment.date', weekStart)
-        .lte('assessment.date', weekEnd);
-
-      const { data: priorWeekGrades } = await supabaseAdmin
-        .from('grades')
-        .select('score, assessment:assessments(max_score, date)')
-        .eq('enrollment_id', enrollment.id)
-        .gte('assessment.date', priorWeekStart)
-        .lte('assessment.date', priorWeekEnd);
-
-      const thisWeekGradeAvg = calcGradeAverage(thisWeekGrades);
-      const priorWeekGradeAvg = calcGradeAverage(priorWeekGrades);
+      const thisWeekGradeAvg = calcGradeAverage(thisWeekGradesByEnrollment.get(enrollment.id));
+      const priorWeekGradeAvg = calcGradeAverage(priorWeekGradesByEnrollment.get(enrollment.id));
       const gradeChange = thisWeekGradeAvg - priorWeekGradeAvg;
 
       const entry = {
@@ -83,10 +87,8 @@ async function generateDigest(teacherId, weekStart, weekEnd) {
       }
     }
 
-    // Get anomalies
     const anomalies = await anomalyDetector.detectAttendanceAnomalies(teacherId);
 
-    // Build action items
     const action_items = [];
     declining.forEach(d => {
       action_items.push({
@@ -113,7 +115,6 @@ async function generateDigest(teacherId, weekStart, weekEnd) {
       generated_at: new Date().toISOString(),
     };
 
-    // Store in weekly_digests
     const { data: existing } = await supabaseAdmin
       .from('weekly_digests')
       .select('id')
