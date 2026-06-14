@@ -57,7 +57,7 @@ async function detectAttendanceAnomalies(teacherId) {
     const sortedByDate = [...attendanceData].sort((a, b) => {
       const sessionA = sessions.find(s => s.id === a.session_id);
       const sessionB = sessions.find(s => s.id === b.session_id);
-      return (sessionB?.date || 0) - (sessionA?.date || 0);
+      return (sessionB?.date || '').localeCompare(sessionA?.date || '');
     });
     let consecutiveAbsences = 0;
     for (const a of sortedByDate) {
