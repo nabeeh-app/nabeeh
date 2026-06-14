@@ -12,19 +12,20 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { apiClient } from '@/lib/api';
+import { useOfferings } from '@/hooks/useOfferings';
 import { featureFlags } from '@/config/featureFlags';
 import { GroupComparison } from './GroupComparison';
 import { AtRiskStudents } from './AtRiskStudents';
 import { GradeDistribution } from './GradeDistribution';
 import { TrendChart } from './TrendChart';
-import type { GroupComparison as GroupComparisonType, AtRiskStudent, GradeDistribution as GradeDistributionType, GradeTrend, GradeOverview, Offering } from '@/types';
+import type { GroupComparison as GroupComparisonType, AtRiskStudent, GradeDistribution as GradeDistributionType, GradeTrend, GradeOverview } from '@/types';
 
 export function GradeAnalysis() {
   const t = useTranslations('grades');
   const tAnalysis = useTranslations('grades.analysis');
   const tCommon = useTranslations('common');
 
-  const [offerings, setOfferings] = useState<Offering[]>([]);
+  const { data: offerings, isLoading: offeringsLoading } = useOfferings();
   const [selectedOffering, setSelectedOffering] = useState<string>('');
   const [overview, setOverview] = useState<GradeOverview | null>(null);
   const [groupData, setGroupData] = useState<GroupComparisonType[]>([]);
@@ -32,24 +33,13 @@ export function GradeAnalysis() {
   const [distribution, setDistribution] = useState<GradeDistributionType[]>([]);
   const [trends, setTrends] = useState<GradeTrend[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<string>('');
-  const [loading, setLoading] = useState(true);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    apiClient.getOfferings().then(data => {
-      if (cancelled) return;
-      if (Array.isArray(data)) {
-        setOfferings(data);
-        if (data.length > 0) {
-          setSelectedOffering(data[0].id);
-        }
-      }
-    }).catch(() => {}).finally(() => {
-      if (!cancelled) setLoading(false);
-    });
-    return () => { cancelled = true; };
-  }, []);
+    if (offerings && offerings.length > 0 && !selectedOffering) {
+      setSelectedOffering(offerings[0].id);
+    }
+  }, [offerings, selectedOffering]);
 
   const loadAnalysis = useCallback(async (offeringId: string) => {
     if (!offeringId) return;
@@ -97,7 +87,7 @@ export function GradeAnalysis() {
     }).catch(() => {});
   }, [selectedStudent]);
 
-  if (loading) {
+  if (offeringsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin h-8 w-8 border-b-2 border-ink mx-auto" />
@@ -105,7 +95,7 @@ export function GradeAnalysis() {
     );
   }
 
-  if (offerings.length === 0) {
+  if ((offerings || []).length === 0) {
     return (
       <div className="text-center py-16 text-ink/60 font-body">
         <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-40" />
@@ -130,7 +120,7 @@ export function GradeAnalysis() {
             <SelectValue placeholder={tAnalysis('selectOffering')} />
           </SelectTrigger>
           <SelectContent>
-            {offerings.map(o => (
+            {(offerings || []).map(o => (
               <SelectItem key={o.id} value={o.id}>
                 {o.subject.name_en} — {o.grade_level.name} ({o.academic_year})
               </SelectItem>

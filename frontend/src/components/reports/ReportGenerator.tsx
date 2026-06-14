@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { useQuery } from '@tanstack/react-query';
 import { FileText, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,17 +14,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { apiClient } from '@/lib/api';
+import { useOfferings } from '@/hooks/useOfferings';
 import { ReportPreview } from './ReportPreview';
 import { ReportSendDialog } from './ReportSendDialog';
-import type { ReportDraft, Offering } from '@/types';
+import type { ReportDraft } from '@/types';
 
 export function ReportGenerator() {
   const t = useTranslations('reports.generation');
   const tCommon = useTranslations('common');
 
-  const [offerings, setOfferings] = useState<Offering[]>([]);
+  const { data: offerings } = useOfferings();
   const [selectedOffering, setSelectedOffering] = useState('');
-  const [students, setStudents] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [generating, setGenerating] = useState(false);
   const [draft, setDraft] = useState<ReportDraft | null>(null);
@@ -31,33 +32,22 @@ export function ReportGenerator() {
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState('');
 
-  useEffect(() => {
-    apiClient.getOfferings().then(data => {
-      if (Array.isArray(data)) setOfferings(data);
-    }).catch(() => {});
-  }, []);
+  const offering = (offerings || []).find(o => o.id === selectedOffering);
+  const groupIds = (offering?.groups || []).map(g => g.id);
 
-  useEffect(() => {
-    if (!selectedOffering) {
-      // Reset via async to avoid synchronous setState in effect
-      void Promise.resolve().then(() => setStudents([]));
-      return;
-    }
-    const offering = offerings.find(o => o.id === selectedOffering);
-    if (!offering) return;
-
-    const groups = offering.groups || [];
-    const fetchPromises = groups.map(g =>
-      apiClient.getStudents({ group_id: g.id, limit: 100 }).catch(() => ({ data: [] as Array<{ id: string; name: string }>, pagination: { total: 0 } }))
-    );
-
-    Promise.all(fetchPromises).then(results => {
-      const allStudents = results
-        .flatMap(r => (r as { data?: Array<{ id: string; name: string }> }).data || [])
-        .filter((s: { id: string }, i: number, arr: Array<{ id: string }>) => arr.findIndex((x: { id: string }) => x.id === s.id) === i);
-      setStudents(allStudents);
-    });
-  }, [selectedOffering, offerings]);
+  const { data: students = [] } = useQuery({
+    queryKey: ['students', 'bulk', groupIds],
+    queryFn: async () => {
+      const results = await Promise.all(
+        groupIds.map(id => apiClient.getStudents({ group_id: id, limit: 100 }))
+      );
+      const all = results
+        .flatMap(r => r.data || [])
+        .filter((s: { id: string }, i: number, arr: { id: string }[]) => arr.findIndex(x => x.id === s.id) === i);
+      return all;
+    },
+    enabled: groupIds.length > 0,
+  });
 
   const handleGenerate = async () => {
     if (!selectedStudent) return;
@@ -119,7 +109,7 @@ export function ReportGenerator() {
                   <SelectValue placeholder={t('selectOffering')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {offerings.map(o => (
+                  {(offerings || []).map(o => (
                     <SelectItem key={o.id} value={o.id}>
                       {o.subject.name_en} — {o.grade_level.name}
                     </SelectItem>
