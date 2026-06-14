@@ -25,7 +25,8 @@
     "ok": "حسناً",
     "yes": "نعم",
     "no": "لا",
-    "saving": "جاري الحفظ..."
+    "saving": "جاري الحفظ...",
+    "loadMore": "تحميل المزيد"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -182,7 +183,8 @@
     "expires": "ينتهي:",
     "deliveryEmail": "بريد إلكتروني",
     "deliveryWhatsApp": "واتساب",
-    "deliveryBoth": "كلاهما"
+    "deliveryBoth": "كلاهما",
+    "switchTeacher": "تبديل المعلم"
   },
   "roles": {
     "admin": "مدير",

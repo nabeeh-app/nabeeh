@@ -25,7 +25,8 @@
     "ok": "OK",
     "yes": "Yes",
     "no": "No",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "loadMore": "Load More"
   },
   "auth": {
     "login": "Sign In",
@@ -182,7 +183,8 @@
     "expires": "Expires:",
     "deliveryEmail": "Email",
     "deliveryWhatsApp": "WhatsApp",
-    "deliveryBoth": "Both"
+    "deliveryBoth": "Both",
+    "switchTeacher": "Switch Teacher"
   },
   "roles": {
     "admin": "Admin",

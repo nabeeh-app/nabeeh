@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import {
   AlertTriangle,
   Info,
@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { apiClient } from '@/lib/api';
+import { timeAgo } from '@/lib/utils';
 import type { Alert } from '@/types';
 
 const SEVERITY_CONFIG = {
@@ -29,22 +30,10 @@ const SEVERITY_CONFIG = {
   critical: { icon: AlertCircle, color: 'text-destructive', bg: 'bg-destructive/10' },
 } as const;
 
-function timeAgo(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diffMs = now - then;
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  return `${diffDay}d ago`;
-}
-
 export function AlertDisplay() {
   const t = useTranslations('alerts');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [severityFilter, setSeverityFilter] = useState<string>('all');
@@ -196,7 +185,7 @@ export function AlertDisplay() {
                         {t(`severity.${alert.severity}`)}
                       </Badge>
                       <span className="text-xs text-ink/50 font-body">
-                        {timeAgo(alert.created_at)}
+                        {timeAgo(alert.created_at, locale)}
                       </span>
                     </div>
                   </div>

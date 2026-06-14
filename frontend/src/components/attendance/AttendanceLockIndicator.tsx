@@ -1,6 +1,8 @@
 'use client';
 
+import { useLocale } from 'next-intl';
 import { Lock } from 'lucide-react';
+import { timeAgo } from '@/lib/utils';
 
 interface LockInfo {
   lockedBy: string;
@@ -12,18 +14,9 @@ interface AttendanceLockIndicatorProps {
   children: React.ReactNode;
 }
 
-function timeAgo(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diffMs = now - then;
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  return `${diffHr}h ago`;
-}
-
 export function AttendanceLockIndicator({ lock, children }: AttendanceLockIndicatorProps) {
+  const locale = useLocale();
+
   if (!lock) {
     return <>{children}</>;
   }
@@ -31,7 +24,7 @@ export function AttendanceLockIndicator({ lock, children }: AttendanceLockIndica
   return (
     <div
       className="relative opacity-60 pointer-events-none select-none"
-      title={`Locked by ${lock.lockedBy} since ${timeAgo(lock.lockedAt)}`}
+      title={`Locked by ${lock.lockedBy} since ${timeAgo(lock.lockedAt, locale)}`}
     >
       {children}
       <div className="absolute inset-0 flex items-center justify-center bg-canvas/60 rounded-md">
