@@ -3,6 +3,7 @@ const { z } = require('zod');
 const crypto = require('crypto');
 const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
 const { logAudit } = require('../lib/auditLog');
 const { getAssistantInviteTemplate } = require('../lib/emailTemplates');
 const { sendEmail } = require('../lib/email');
@@ -63,16 +64,6 @@ const updateStatusSchema = z.object({
 const removeParamsSchema = z.object({
   params: z.object({ id: z.string().uuid() })
 });
-
-function validate(schema) {
-  return (req, res, next) => {
-    const result = schema.safeParse({ body: req.body, params: req.params });
-    if (!result.success) {
-      return res.status(400).json({ success: false, message: result.error.issues[0].message, code: 'VALIDATION_ERROR' });
-    }
-    next();
-  };
-}
 
 // --- Helpers ---
 

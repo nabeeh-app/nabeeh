@@ -2,6 +2,7 @@ const express = require('express');
 const { z } = require('zod');
 const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
 const logger = require('../lib/logger');
 
 const router = express.Router();
@@ -36,17 +37,6 @@ const getAlertsSchema = z.object({
     unread_only: z.coerce.boolean().optional(),
   }),
 });
-
-function validate(schema) {
-  return (req, res, next) => {
-    const result = schema.safeParse({ body: req.body, params: req.params, query: req.query });
-    if (!result.success) {
-      return res.status(400).json({ success: false, message: result.error.issues[0].message, code: 'VALIDATION_ERROR' });
-    }
-    req.validated = result.data;
-    next();
-  };
-}
 
 const getRules = async (req, res) => {
   try {

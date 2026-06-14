@@ -2,6 +2,7 @@ const express = require('express');
 const { z } = require('zod');
 const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
 const { logAudit } = require('../lib/auditLog');
 const aiService = require('../lib/aiService');
 const logger = require('../lib/logger');
@@ -28,17 +29,6 @@ const updateDraftSchema = z.object({
 const bulkGenerateSchema = z.object({
   body: z.object({ group_id: z.string().uuid() }),
 });
-
-function validate(schema) {
-  return (req, res, next) => {
-    const result = schema.safeParse({ body: req.body, params: req.params, query: req.query });
-    if (!result.success) {
-      return res.status(400).json({ success: false, message: result.error.issues[0].message, code: 'VALIDATION_ERROR' });
-    }
-    req.validated = result.data;
-    next();
-  };
-}
 
 const generateComment = async (req, res) => {
   try {
