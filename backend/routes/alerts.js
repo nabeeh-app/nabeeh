@@ -67,7 +67,7 @@ const getRules = async (req, res) => {
 const createRule = async (req, res) => {
   try {
     const teacherId = req.user.teacherId || req.user.id;
-    const { alert_type, threshold_value, comparison, notification_method } = req.body;
+    const { alert_type, threshold_value, comparison, notification_method } = req.validated.body;
     const { data, error } = await supabaseAdmin
       .from('alert_rules')
       .insert([{ teacher_id: teacherId, alert_type, threshold_value, comparison, notification_method }])
@@ -86,7 +86,7 @@ const updateRule = async (req, res) => {
     const { id } = req.validated.params;
     const updates = {};
     for (const key of ['alert_type', 'threshold_value', 'comparison', 'notification_method']) {
-      if (req.body[key] !== undefined) updates[key] = req.body[key];
+      if (req.validated.body[key] !== undefined) updates[key] = req.validated.body[key];
     }
     const { data, error } = await supabaseAdmin
       .from('alert_rules')
