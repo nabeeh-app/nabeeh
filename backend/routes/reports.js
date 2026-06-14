@@ -277,42 +277,48 @@ const bulkGenerate = async (req, res) => {
       return res.status(404).json({ success: false, message: 'No students found in group' });
     }
 
-    const drafts = [];
-    for (const enrollment of enrollments) {
-      try {
-        const gradesResult = await require('../lib/whatsappQuery').getStudentGrades(enrollment.student_id);
-        const attendanceRecords = await require('../lib/whatsappQuery').getAllStudentAttendance(enrollment.student_id);
-        const totalSessions = attendanceRecords.length;
-        const presentCount = attendanceRecords.filter(a => a.status === 'present' || a.status === 'late').length;
-        const attendanceRate = totalSessions > 0 ? `${Math.round((presentCount / totalSessions) * 100)}%` : 'N/A';
-        const draftText = await aiService.generateReportComment({
-          studentName: enrollment.students?.name || 'Student',
-          grades: gradesResult?.recentGrades || [],
-          attendance: { total_sessions: totalSessions, present: presentCount, rate: attendanceRate },
-          trends: 'Steady improvement',
-          language: 'en',
-        }, { teacherName: 'Teacher', businessName: '' });
+    const CONCURRENCY = 3;
+    const results = [];
+    for (let i = 0; i < enrollments.length; i += CONCURRENCY) {
+      const batch = enrollments.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.all(batch.map(async (enrollment) => {
+        try {
+          const gradesResult = await require('../lib/whatsappQuery').getStudentGrades(enrollment.student_id);
+          const attendanceRecords = await require('../lib/whatsappQuery').getAllStudentAttendance(enrollment.student_id);
+          const totalSessions = attendanceRecords.length;
+          const presentCount = attendanceRecords.filter(a => a.status === 'present' || a.status === 'late').length;
+          const attendanceRate = totalSessions > 0 ? `${Math.round((presentCount / totalSessions) * 100)}%` : 'N/A';
+          const draftText = await aiService.generateReportComment({
+            studentName: enrollment.students?.name || 'Student',
+            grades: gradesResult?.recentGrades || [],
+            attendance: { total_sessions: totalSessions, present: presentCount, rate: attendanceRate },
+            trends: 'Steady improvement',
+            language: 'en',
+          }, { teacherName: 'Teacher', businessName: '' });
 
-        const { data: draft } = await supabaseAdmin
-          .from('report_drafts')
-          .insert([{
-            teacher_id: teacherId,
-            student_id: enrollment.student_id,
-            group_id,
-            draft_text: draftText,
-            data_sources: { grades: gradesResult?.recentGrades || [] },
-            status: 'pending',
-          }])
-          .select().single();
+          const { data: draft } = await supabaseAdmin
+            .from('report_drafts')
+            .insert([{
+              teacher_id: teacherId,
+              student_id: enrollment.student_id,
+              group_id,
+              draft_text: draftText,
+              data_sources: { grades: gradesResult?.recentGrades || [] },
+              status: 'pending',
+            }])
+            .select().single();
 
-        if (draft) drafts.push(draft);
-        await new Promise(r => setTimeout(r, 100)); // throttle
-      } catch (e) {
-        logger.error('Bulk generate student error', { studentId: enrollment.student_id, error: e.message });
-      }
+          return draft || null;
+        } catch (e) {
+          logger.error('Bulk generate student error', { studentId: enrollment.student_id, error: e.message });
+          return null;
+        }
+      }));
+      results.push(...batchResults);
     }
 
-    res.status(201).json({ success: true, data: { generated: drafts.length, drafts } });
+    const drafts = results.filter(Boolean);
+    res.status(201).json({ success: true, data: { drafts, total: enrollments.length, generated: drafts.length } });
   } catch (error) {
     logger.error('Bulk generate error', { error: error.message });
     res.status(500).json({ success: false, message: 'Server error in bulk generation' });
