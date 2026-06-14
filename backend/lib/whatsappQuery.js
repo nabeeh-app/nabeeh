@@ -101,6 +101,15 @@ async function getStudentAttendance(studentId) {
   return attendance;
 }
 
+async function getAllStudentAttendance(studentId) {
+  const { data: attendance } = await supabase
+    .from('attendance')
+    .select('status')
+    .eq('enrollment.student_id', studentId);
+
+  return attendance || [];
+}
+
 /**
  * Flatten grade query results into simple objects for response formatting
  */
@@ -207,6 +216,7 @@ module.exports = {
   findOrCreateConversation,
   saveMessage,
   getStudentAttendance,
+  getAllStudentAttendance,
   getStudentGrades,
   getMatchingFaq
 };

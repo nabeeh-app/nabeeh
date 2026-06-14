@@ -64,12 +64,15 @@ const generateComment = async (req, res) => {
       .from('teachers').select('name, business_name, preferred_language').eq('id', teacherId).single();
 
     const gradesResult = await require('../lib/whatsappQuery').getStudentGrades(student_id);
-    const attendance = await require('../lib/whatsappQuery').getStudentAttendance(student_id);
+    const attendanceRecords = await require('../lib/whatsappQuery').getAllStudentAttendance(student_id);
+    const totalSessions = attendanceRecords.length;
+    const presentCount = attendanceRecords.filter(a => a.status === 'present' || a.status === 'late').length;
+    const attendanceRate = totalSessions > 0 ? `${Math.round((presentCount / totalSessions) * 100)}%` : 'N/A';
 
     const draftText = await aiService.generateReportComment({
       studentName: student.name,
       grades: gradesResult?.recentGrades || [],
-      attendance: { total_sessions: 10, present: 8, rate: '80%' },
+      attendance: { total_sessions: totalSessions, present: presentCount, rate: attendanceRate },
       trends: 'Steady improvement over recent weeks',
       language: teacher?.preferred_language || 'en',
     }, {
@@ -278,10 +281,14 @@ const bulkGenerate = async (req, res) => {
     for (const enrollment of enrollments) {
       try {
         const gradesResult = await require('../lib/whatsappQuery').getStudentGrades(enrollment.student_id);
+        const attendanceRecords = await require('../lib/whatsappQuery').getAllStudentAttendance(enrollment.student_id);
+        const totalSessions = attendanceRecords.length;
+        const presentCount = attendanceRecords.filter(a => a.status === 'present' || a.status === 'late').length;
+        const attendanceRate = totalSessions > 0 ? `${Math.round((presentCount / totalSessions) * 100)}%` : 'N/A';
         const draftText = await aiService.generateReportComment({
           studentName: enrollment.students?.name || 'Student',
           grades: gradesResult?.recentGrades || [],
-          attendance: { total_sessions: 10, present: 8, rate: '80%' },
+          attendance: { total_sessions: totalSessions, present: presentCount, rate: attendanceRate },
           trends: 'Steady improvement',
           language: 'en',
         }, { teacherName: 'Teacher', businessName: '' });
