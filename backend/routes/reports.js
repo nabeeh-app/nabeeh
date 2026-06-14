@@ -5,6 +5,7 @@ const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { logAudit } = require('../lib/auditLog');
 const aiService = require('../lib/aiService');
+const { createJob, getJob } = require('../lib/jobQueue');
 const logger = require('../lib/logger');
 
 const router = express.Router();
@@ -258,57 +259,8 @@ const bulkGenerate = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Group not found' });
     }
 
-    const { data: enrollments } = await supabaseAdmin
-      .from('enrollments')
-      .select('student_id, students(name)')
-      .eq('group_id', group_id);
-
-    if (!enrollments || enrollments.length === 0) {
-      return res.status(404).json({ success: false, message: 'No students found in group' });
-    }
-
-    const CONCURRENCY = 3;
-    const results = [];
-    for (let i = 0; i < enrollments.length; i += CONCURRENCY) {
-      const batch = enrollments.slice(i, i + CONCURRENCY);
-      const batchResults = await Promise.all(batch.map(async (enrollment) => {
-        try {
-          const gradesResult = await require('../lib/whatsappQuery').getStudentGrades(enrollment.student_id);
-          const attendanceRecords = await require('../lib/whatsappQuery').getAllStudentAttendance(enrollment.student_id);
-          const totalSessions = attendanceRecords.length;
-          const presentCount = attendanceRecords.filter(a => a.status === 'present' || a.status === 'late').length;
-          const attendanceRate = totalSessions > 0 ? `${Math.round((presentCount / totalSessions) * 100)}%` : 'N/A';
-          const draftText = await aiService.generateReportComment({
-            studentName: enrollment.students?.name || 'Student',
-            grades: gradesResult?.recentGrades || [],
-            attendance: { total_sessions: totalSessions, present: presentCount, rate: attendanceRate },
-            trends: 'Steady improvement',
-            language: 'en',
-          }, { teacherName: 'Teacher', businessName: '' });
-
-          const { data: draft } = await supabaseAdmin
-            .from('report_drafts')
-            .insert([{
-              teacher_id: teacherId,
-              student_id: enrollment.student_id,
-              group_id,
-              draft_text: draftText,
-              data_sources: { grades: gradesResult?.recentGrades || [] },
-              status: 'pending',
-            }])
-            .select().single();
-
-          return draft || null;
-        } catch (e) {
-          logger.error('Bulk generate student error', { studentId: enrollment.student_id, error: e.message });
-          return null;
-        }
-      }));
-      results.push(...batchResults);
-    }
-
-    const drafts = results.filter(Boolean);
-    res.status(201).json({ success: true, data: { drafts, total: enrollments.length, generated: drafts.length } });
+    const jobId = createJob('bulk-report', { teacherId, group_id });
+    res.status(202).json({ success: true, data: { job_id: jobId, status: 'pending' } });
   } catch (error) {
     logger.error('Bulk generate error', { error: error.message });
     res.status(500).json({ success: false, message: 'Server error in bulk generation' });
@@ -672,8 +624,8 @@ router.post('/drafts/:id/reject', authenticateToken, validate(draftParamsSchema)
  *                 format: uuid
  *                 description: The group to generate reports for
  *     responses:
- *       201:
- *         description: Bulk generation completed
+ *       202:
+ *         description: Bulk generation job started
  *         content:
  *           application/json:
  *             schema:
@@ -685,12 +637,12 @@ router.post('/drafts/:id/reject', authenticateToken, validate(draftParamsSchema)
  *                 data:
  *                   type: object
  *                   properties:
- *                     generated:
- *                       type: integer
- *                     drafts:
- *                       type: array
- *                       items:
- *                         type: object
+ *                     job_id:
+ *                       type: string
+ *                       format: uuid
+ *                     status:
+ *                       type: string
+ *                       example: pending
  *       400:
  *         description: Validation error
  *         content:
@@ -803,5 +755,65 @@ router.get('/weekly-digest', authenticateToken, getLatestDigest);
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.get('/weekly-digest/:weekStart', authenticateToken, getDigestByWeek);
+
+/**
+ * @openapi
+ * /api/reports/jobs/{jobId}:
+ *   get:
+ *     tags: [Reports]
+ *     summary: Get job status
+ *     description: Check the status of a background job (e.g. bulk report generation).
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Job ID
+ *     responses:
+ *       200:
+ *         description: Job status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                       enum: [pending, processing, completed, failed]
+ *                     result:
+ *                       type: object
+ *                       nullable: true
+ *                     error:
+ *                       type: string
+ *                       nullable: true
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ *       404:
+ *         description: Job not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorEnvelope'
+ */
+router.get('/jobs/:jobId', authenticateToken, (req, res) => {
+  const job = getJob(req.params.jobId);
+  if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
+  res.json({ success: true, data: job });
+});
 
 module.exports = router;

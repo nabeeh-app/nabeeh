@@ -585,8 +585,13 @@ class ApiClient {
     return response.data;
   }
 
-  async bulkGenerateComments(groupId: string): Promise<ApiResponse<{ generated: number; drafts: Array<{ id: string; student_id: string; draft_text: string }> }>> {
+  async bulkGenerateComments(groupId: string): Promise<ApiResponse<{ job_id: string; status: string }>> {
     const response = await this.api.post('/reports/bulk-generate', { group_id: groupId });
+    return response.data;
+  }
+
+  async getJobStatus(jobId: string): Promise<ApiResponse<{ id: string; status: string; result: unknown; error: string | null }>> {
+    const response = await this.api.get(`/reports/jobs/${jobId}`);
     return response.data;
   }
 
