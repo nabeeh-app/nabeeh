@@ -458,10 +458,10 @@ export interface GradeTrend {
 
 export interface GradeOverview {
   total_students: number;
-  average_score: number;
-  highest_score: number;
-  lowest_score: number;
-  total_assessments: number;
+  average: number;
+  highest: number;
+  lowest: number;
+  total_grades: number;
 }
 
 // Notification Preferences

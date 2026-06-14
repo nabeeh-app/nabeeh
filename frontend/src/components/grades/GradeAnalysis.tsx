@@ -116,8 +116,8 @@ export function GradeAnalysis() {
 
   const statItems = overview ? [
     { icon: Users, value: overview.total_students, label: tAnalysis('totalStudents'), color: 'primary' as const },
-    { icon: BookOpen, value: overview.total_assessments, label: tAnalysis('totalAssessments'), color: 'accent' as const },
-    { icon: TrendingUp, value: `${overview.average_score.toFixed(1)}%`, label: tAnalysis('averageScore'), color: 'success' as const },
+    { icon: BookOpen, value: overview.total_grades, label: tAnalysis('totalGrades'), color: 'accent' as const },
+    { icon: TrendingUp, value: `${overview.average.toFixed(1)}%`, label: tAnalysis('averageScore'), color: 'success' as const },
     { icon: AlertTriangle, value: atRisk.length, label: tAnalysis('atRisk'), color: 'warning' as const },
   ] : [];
 

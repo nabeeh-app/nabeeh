@@ -756,10 +756,10 @@ class ApiClient {
 
   async getGradeOverview(offeringId: string): Promise<ApiResponse<{
     total_students: number;
-    average_score: number;
-    highest_score: number;
-    lowest_score: number;
-    total_assessments: number;
+    average: number;
+    highest: number;
+    lowest: number;
+    total_grades: number;
   }>> {
     const response = await this.api.get(`/grade-analysis/overview/${offeringId}`);
     return response.data;
