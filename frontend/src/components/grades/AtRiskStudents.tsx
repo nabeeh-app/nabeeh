@@ -66,10 +66,10 @@ export function AtRiskStudents({ data }: AtRiskStudentsProps) {
                     </p>
                     <div className="flex items-center gap-3 mt-0.5">
                       <span className="text-xs text-ink/60 font-body">
-                        {t('avgGrade')}: {student.average_grade.toFixed(1)}%
+                        {t('avgGrade')}: {student.average_grade != null ? `${student.average_grade.toFixed(1)}%` : 'N/A'}
                       </span>
                       <span className="text-xs text-ink/60 font-body">
-                        {t('attendance')}: {student.attendance_rate.toFixed(1)}%
+                        {t('attendance')}: {student.attendance_rate != null ? `${student.attendance_rate.toFixed(1)}%` : 'N/A'}
                       </span>
                     </div>
                   </div>

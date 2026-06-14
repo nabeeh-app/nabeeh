@@ -440,8 +440,8 @@ export interface GroupComparison {
 export interface AtRiskStudent {
   student_id: string;
   student_name: string;
-  average_grade: number;
-  attendance_rate: number;
+  average_grade: number | null;
+  attendance_rate: number | null;
   severity: 'warning' | 'critical';
 }
 
