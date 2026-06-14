@@ -16,7 +16,7 @@ honor its STOP conditions, and update your row when done.
 | 006 | Fix AtRiskStudents null crash | P1 | S | — | DONE |
 | 007 | Batch N+1 queries in anomaly/digest | P2 | M | — | DONE |
 | 008 | Add error feedback to silent catches | P2 | M | — | DONE |
-| 009 | Make bulk report generation non-blocking | P2 | L | — | TODO |
+| 009 | Make bulk report generation non-blocking | P2 | L | 009 | DONE |
 | 010 | Extract duplicated validate() middleware | P2 | S | — | TODO |
 | 011 | Localize timeAgo() and fix missing i18n | P2 | M | — | TODO |
 | 012 | Extract duplicated SEVERITY_CONFIG | P3 | S | — | TODO |
