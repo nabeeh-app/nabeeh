@@ -8,14 +8,14 @@ honor its STOP conditions, and update your row when done.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 001 | Add ownership checks to report endpoints | P1 | S | — | TODO |
-| 002 | Fix GradeOverview field name mismatch | P1 | S | — | TODO |
-| 003 | Replace hardcoded attendance in reports | P1 | M | — | TODO |
-| 004 | Fix alerts.js req.body bypass | P1 | S | — | TODO |
-| 005 | Fix anomaly detector date sort NaN | P1 | S | — | TODO |
-| 006 | Fix AtRiskStudents null crash | P1 | S | — | TODO |
-| 007 | Batch N+1 queries in anomaly/digest | P2 | M | — | TODO |
-| 008 | Add error feedback to silent catches | P2 | M | — | TODO |
+| 001 | Add ownership checks to report endpoints | P1 | S | — | DONE |
+| 002 | Fix GradeOverview field name mismatch | P1 | S | — | DONE |
+| 003 | Replace hardcoded attendance in reports | P1 | M | — | DONE |
+| 004 | Fix alerts.js req.body bypass | P1 | S | — | DONE |
+| 005 | Fix anomaly detector date sort NaN | P1 | S | — | DONE |
+| 006 | Fix AtRiskStudents null crash | P1 | S | — | DONE |
+| 007 | Batch N+1 queries in anomaly/digest | P2 | M | — | DONE |
+| 008 | Add error feedback to silent catches | P2 | M | — | DONE |
 | 009 | Make bulk report generation non-blocking | P2 | L | — | TODO |
 | 010 | Extract duplicated validate() middleware | P2 | S | — | TODO |
 | 011 | Localize timeAgo() and fix missing i18n | P2 | M | — | TODO |
