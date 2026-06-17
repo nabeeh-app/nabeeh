@@ -15,10 +15,23 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -t rsa exe.dev >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Deploy nabeeh backend + frontend
+      - name: Pull latest code
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no exe.dev \
-            "ssh tagooza 'cd /home/exedev/nabeeh && git fetch origin master && git reset --hard origin/master && docker compose -f docker-compose.prod.yml build frontend && docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans'"
+            "ssh tagooza 'cd /home/exedev/nabeeh && git fetch origin master && git reset --hard origin/master'"
+
+      - name: Build and deploy backend
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no exe.dev \
+            "ssh tagooza 'cd /home/exedev/nabeeh && docker compose -f docker-compose.prod.yml build backend && docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans backend'"
+
+      - name: Wait for backend health
+        run: sleep 10
+
+      - name: Build and deploy frontend
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no exe.dev \
+            "ssh tagooza 'cd /home/exedev/nabeeh && docker compose -f docker-compose.prod.yml build frontend && docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans frontend'"
 
       - name: Verify containers
         run: |
