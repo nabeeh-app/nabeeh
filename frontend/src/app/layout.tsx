@@ -43,7 +43,7 @@ export const metadata: Metadata = {
       "Bilingual (AR/EN) teaching assistant with WhatsApp bot for student management, attendance tracking, and automated parent communication.",
     images: [
       {
-        url: "https://nabeeh.app/api/og",
+        url: "https://nabeeh.app/og-image.png",
         width: 1200,
         height: 630,
         alt: "Nabeeh - Smart Teaching Assistant",
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     title: "Nabeeh - Smart Teaching Assistant for Tutors",
     description:
       "Bilingual (AR/EN) teaching assistant with WhatsApp bot for student management, attendance tracking, and automated parent communication.",
-    images: ["https://nabeeh.app/api/og"],
+    images: ["https://nabeeh.app/og-image.png"],
   },
   robots: {
     index: true,

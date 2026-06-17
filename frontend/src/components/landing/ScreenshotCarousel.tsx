@@ -86,13 +86,14 @@ export function ScreenshotCarousel() {
             <h2 className="text-3xl sm:text-4xl font-bold text-ink font-display mb-4">
               {t('title')}
             </h2>
-            <p className="text-lg text-ink/60 font-body">{t('subtitle')}</p>
+            <p className="text-lg text-ink/70 font-body">{t('subtitle')}</p>
           </div>
 
           <div className="relative">
             {canScrollLeft && (
               <button
                 onClick={() => scroll('left')}
+                aria-label="Scroll left"
                 className={cn(
                   'absolute top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-canvas border border-ink/10 shadow-md flex items-center justify-center hover:bg-surface-cool transition-colors cursor-pointer',
                   isRTL ? 'right-0 -mr-2' : 'left-0 -ml-2'
@@ -104,6 +105,7 @@ export function ScreenshotCarousel() {
             {canScrollRight && (
               <button
                 onClick={() => scroll('right')}
+                aria-label="Scroll right"
                 className={cn(
                   'absolute top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-canvas border border-ink/10 shadow-md flex items-center justify-center hover:bg-surface-cool transition-colors cursor-pointer',
                   isRTL ? 'left-0 -ml-2' : 'right-0 -mr-2'

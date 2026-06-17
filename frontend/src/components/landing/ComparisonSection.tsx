@@ -22,7 +22,7 @@ export function ComparisonSection() {
           <h2 className="text-3xl sm:text-4xl font-bold text-ink font-display mb-4">
             {t('title')}
           </h2>
-          <p className="text-lg text-ink/60 font-body max-w-2xl mx-auto">
+          <p className="text-lg text-ink/70 font-body max-w-2xl mx-auto">
             {t('subtitle')}
           </p>
         </div>
@@ -60,7 +60,7 @@ export function ComparisonSection() {
         </div>
 
         <div className="text-center mt-8">
-          <p className="text-sm text-ink/60 font-body">
+          <p className="text-sm text-ink/70 font-body">
             {t('note')}
           </p>
         </div>

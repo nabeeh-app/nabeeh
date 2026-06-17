@@ -20,7 +20,7 @@ export function Hero() {
             <h1 className="hero-title text-4xl sm:text-5xl lg:text-6xl font-bold text-ink font-display leading-tight tracking-tight">
               {t('title')}
             </h1>
-            <p className="hero-subtitle text-lg text-ink/60 font-body max-w-lg leading-relaxed">
+            <p className="hero-subtitle text-lg text-ink/70 font-body max-w-lg leading-relaxed">
               {t('subtitle')}
             </p>
             <div className={cn('flex flex-wrap gap-4', isRTL ? 'flex-row-reverse justify-end' : 'justify-start')}>

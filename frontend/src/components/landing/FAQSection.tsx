@@ -21,7 +21,7 @@ export function FAQSection() {
           <h2 className="text-3xl sm:text-4xl font-bold text-ink font-display mb-4">
             {t('title')}
           </h2>
-          <p className="text-lg text-ink/60 font-body">{t('subtitle')}</p>
+          <p className="text-lg text-ink/70 font-body">{t('subtitle')}</p>
         </div>
 
         <Accordion type="single" collapsible className="space-y-3">
@@ -34,7 +34,7 @@ export function FAQSection() {
               <AccordionTrigger className="faq-question text-left text-ink font-display font-semibold py-4 hover:no-underline [&[data-state=open]]:text-primary">
                 {tQ(`${key}.question`)}
               </AccordionTrigger>
-              <AccordionContent className="text-sm text-ink/60 font-body leading-relaxed pb-4">
+              <AccordionContent className="text-sm text-ink/70 font-body leading-relaxed pb-4">
                 {tQ(`${key}.answer`)}
               </AccordionContent>
             </AccordionItem>

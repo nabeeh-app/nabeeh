@@ -198,7 +198,7 @@ export function WhatsAppDemo() {
 
         {/* Name picker */}
         <div className="p-6 space-y-4">
-          <p className="text-sm text-ink/60 font-body text-center">{t('pickName')}</p>
+          <p className="text-sm text-ink/70 font-body text-center">{t('pickName')}</p>
           <div className="space-y-2">
             {nameOptions.map(({ key, label }) => (
               <button
