@@ -43,7 +43,9 @@ const {
   whatsappLimiter,
   securityHeaders,
   sanitizeInput,
-  securityLogger
+  securityLogger,
+  csrfGenerate,
+  csrfValidate
 } = require('./middleware/security');
 
 // Initialize Express app
@@ -59,12 +61,13 @@ app.use(securityHeaders); // Enhanced security headers
 app.use(cors({
   origin: (process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || 'http://localhost:3000').split(','),
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
   credentials: true
 })); // Enable CORS
 app.use(express.json({ limit: '10mb' })); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 app.use(cookieParser()); // Parse cookies
+app.use(csrfGenerate); // Generate CSRF token cookie for authenticated requests
 app.use(sanitizeInput); // Input sanitization
 app.use(securityLogger); // Security logging
 app.use(logger(winstonLogger)); // Custom logging middleware
@@ -146,6 +149,8 @@ app.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
+
+app.use(csrfValidate); // Validate CSRF token on state-changing requests
 
 // API routes with specific rate limiting
 if (process.env.USE_MOCK_DB === 'true') {

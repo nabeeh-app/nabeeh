@@ -41,7 +41,7 @@ and update your row when done.
 | 004H | Hash password reset tokens at rest | P1 | M | — | DONE |
 | 002 | Migrate JWT from localStorage to httpOnly cookies | P1 | L | 001-RL | DONE |
 | 003 | Add auth to unprotected sensitive endpoints | P1 | S | — | DONE |
-| 005 | Add CSRF protection for cookie-based auth | P1 | M | 002 | TODO |
+| 005 | Add CSRF protection for cookie-based auth | P1 | M | 002 | DONE |
 | 038 | Add revocation check to verify-token endpoint | P1 | S | 001-RL | DONE |
 | 039 | Fix landing page redirect race condition | P1 | S | — | DONE |
 | 040 | Clear nabeeh_token cookie on logout | P1 | S | — | DONE |
@@ -84,8 +84,8 @@ Plans **003** and **038** — both are S-effort, independent, low risk. Can be d
 ### Phase 2: Cookie auth migration (P1, L-effort)
 Plan **002** — the highest-leverage security fix. Depends on 001-RL (already DONE).
 
-### Phase 3: CSRF protection (P1, M-effort)
-Plan **005** — must be deployed together with or after plan 002.
+### Phase 3: CSRF protection (P1, M-effort) — DONE
+Plan **005** — deployed together with plan 002.
 
 ### Phase 4: AEO (P1-P2)
 Plans 034+035 (parallel) → 036 → 037.

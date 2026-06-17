@@ -19,6 +19,14 @@ function setAuthCookie(res, token) {
     maxAge: 24 * 60 * 60 * 1000, // 24 hours, matches JWT_EXPIRES_IN default
     path: '/'
   });
+  const csrfToken = require('crypto').randomBytes(32).toString('hex');
+  res.cookie('csrf_token', csrfToken, {
+    httpOnly: false,
+    secure: isProd,
+    sameSite: isProd ? 'strict' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000,
+    path: '/'
+  });
 }
 
 // Initialize auth service

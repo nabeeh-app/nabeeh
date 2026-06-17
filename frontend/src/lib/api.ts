@@ -33,6 +33,12 @@ import {
 class ApiClient {
   public api: AxiosInstance;
 
+  private getCsrfToken(): string | null {
+    if (typeof document === 'undefined') return null;
+    const match = document.cookie.match(/csrf_token=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
   constructor() {
     this.api = axios.create({
       baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
@@ -41,6 +47,17 @@ class ApiClient {
       },
       withCredentials: true,
       timeout: 30000, // 30 second timeout to prevent long waits
+    });
+
+    this.api.interceptors.request.use((config) => {
+      const method = config.method?.toUpperCase();
+      if (method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+        const csrfToken = this.getCsrfToken();
+        if (csrfToken) {
+          config.headers['X-CSRF-Token'] = csrfToken;
+        }
+      }
+      return config;
     });
 
     // Add response interceptor for error handling with retry
