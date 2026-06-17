@@ -747,6 +747,7 @@ router.post('/logout', authenticateToken, async (req, res) => {
             }
         }
 
+        res.clearCookie('nabeeh_token', { path: '/' });
         res.json({
             success: true,
             message: 'Logged out successfully',

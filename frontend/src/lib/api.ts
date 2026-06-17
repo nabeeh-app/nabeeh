@@ -54,7 +54,7 @@ class ApiClient {
         if (error.response?.status === 401) {
           const path = window.location.pathname;
           const isPublicPage = ['/login', '/register', '/forgot-password'].some(p => path.includes(p));
-          const isLandingPage = /^\/(ar|en)\/?$/.test(path);
+          const isLandingPage = /^\/(ar|en)\/?$/.test(path) || path === '/';
           if (!isPublicPage && !isLandingPage) {
             const locale = path.split('/')[1] || 'ar';
             window.location.href = `/${locale}/login`;

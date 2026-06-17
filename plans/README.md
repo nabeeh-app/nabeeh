@@ -43,6 +43,8 @@ and update your row when done.
 | 003 | Add auth to unprotected sensitive endpoints | P1 | S | — | DONE |
 | 005 | Add CSRF protection for cookie-based auth | P1 | M | 002 | TODO |
 | 038 | Add revocation check to verify-token endpoint | P1 | S | 001-RL | DONE |
+| 039 | Fix landing page redirect race condition | P1 | S | — | DONE |
+| 040 | Clear nabeeh_token cookie on logout | P1 | S | — | DONE |
 
 ### Admin panel (all DONE)
 
@@ -73,6 +75,9 @@ and update your row when done.
 
 ## Recommended execution order
 
+### Phase 0: Landing page & logout fixes (P1, S-effort, no dependencies)
+Plans **039** and **040** — both are S-effort, independent, low risk. Can be done in parallel. Fixes the intermittent landing page redirect and stale cookie after logout.
+
 ### Phase 1: Quick auth fixes (P1, S-effort, no dependencies)
 Plans **003** and **038** — both are S-effort, independent, low risk. Can be done in parallel.
 
@@ -92,6 +97,7 @@ Plans 034+035 (parallel) → 036 → 037.
 - **038** depends on **001-RL**: `isTokenRevoked()` must exist
 - **036** depends on **034** and **035**: content references schema structure
 - **037** depends on **036**: comparison section uses the same AEO content pattern
+- **039** and **040** are independent — no dependencies on other plans
 
 ## Findings considered and rejected
 
