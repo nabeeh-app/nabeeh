@@ -100,15 +100,15 @@
     "fullName": "الاسم الكامل *",
     "emailAddress": "البريد الإلكتروني *",
     "phoneNumber": "رقم الهاتف *",
-    "phoneHint": "لازم يبدأ بـ + ورمز الدولة",
+    "phoneHint": "اكتب رمز الدولة أولاً (مثال: +20)",
     "whatsappNumber": "رقم الواتساب",
-    "whatsappPlaceholder": "اتركه فارغاً لاستخدام نفس رقم الهاتف",
+    "whatsappPlaceholder": "سيبه فاضي لو هو نفس رقم الموبايل",
     "passwordPlaceholder": "كلمة مرور قوية",
     "confirmPasswordPlaceholder": "أعد كتابة كلمة المرور",
     "additionalInfoOptional": "معلومات إضافية (اختيارية)",
     "institutionName": "اسم المؤسسة التعليمية",
     "subjectsYouTeach": "المواد اللي بتدرسها",
-    "subjectsHint": "فصل بين المواد بفاصلة",
+    "subjectsHint": "اكتب فاصلة (،) بين كل مادة ومادة",
     "creatingAccount": "جاري إنشاء الحساب...",
     "createTeacherAccount": "إنشاء حساب مدرس",
     "phoneRequired": "رقم الهاتف مطلوب",
@@ -250,9 +250,9 @@
       "englishName": "الاسم بالإنجليزية",
       "nameEn": "الاسم بالإنجليزية",
       "studentId": "رقم الطالب",
-      "gradeLevel": "المستوى الدراسي",
+      "gradeLevel": "السنة الدراسية",
       "dateOfBirth": "تاريخ الميلاد",
-      "gender": "الجنس",
+      "gender": "النوع",
       "subjects": "المواد",
       "enrollmentDate": "تاريخ التسجيل",
       "status": "الحالة",
@@ -274,7 +274,7 @@
       "addressPlaceholder": "أدخل عنوان الطالب",
       "parentNamePlaceholder": "أدخل اسم ولي الأمر",
       "parentPhonePlaceholder": "أدخل هاتف ولي الأمر",
-      "selectGrade": "اختر الصف"
+      "selectGrade": "اختار السنة الدراسية"
     },
     "status": {
       "active": "نشط",
@@ -347,7 +347,7 @@
     "noClasses": "مفيش فصول لسه.",
     "groupName": "اسم الفصل/المجموعة",
     "subject": "المادة",
-    "gradeLevel": "المستوى الدراسي",
+    "gradeLevel": "السنة الدراسية",
     "schedule": "الجدول",
     "status": "الحالة",
     "actions": "الإجراءات",
@@ -355,8 +355,8 @@
     "inactive": "غير نشط",
     "edit": "تعديل",
     "na": "غير متاح",
-    "setupRequired": "مطلوب إعداد مجموعة",
-    "setupDescription": "أنشئ مجموعة واحدة على الأقل قبل ما تسجل الحضور أو تدخل الدرجات."
+    "setupRequired": "لازم تعمل مجموعة الأول",
+    "setupDescription": "اعمل مجموعة واحدة على الأقل عشان تقدر تسجل غياب أو ترصد درجات."
   },
   "attendance": {
     "title": "متابعة الحضور",
@@ -379,7 +379,7 @@
       "noResultsDescription": "مفيش سجلات حضور مطابقة للتصفية الحالية."
     },
     "pleaseSelectClass": "اختار فصل",
-    "pleaseSelectClassDescription": "اختر فصلاً من القائمة المنسدلة أعلاه لإدارة الحضور.",
+    "pleaseSelectClassDescription": "اختار المجموعة من فوق عشان تسجل الحضور والغياب.",
     "statsTitle": "إحصائيات الحضور",
     "totalSessions": "إجمالي الجلسات",
     "attendanceRate": "معدل الحضور",
@@ -388,7 +388,7 @@
     "listView": "القائمة",
     "bulkAttendanceEntry": "تسجيل الحضور الجماعي",
     "bulkDateLabel": "تاريخ تسجيل الحضور الجماعي",
-    "quickActions": "إجراءات سريعة:",
+    "quickActions": "بضغطة واحدة:",
     "markAllPresent": "حضر الجميع",
     "markAllAbsent": "غاب الجميع",
     "saving": "جاري الحفظ...",
@@ -416,14 +416,14 @@
       "present": "حاضر",
       "absent": "غائب",
       "late": "متأخر",
-      "excused": "معذور"
+      "excused": "بإذن"
     },
     "summary": {
       "total": "إجمالي الطلبة",
       "present": "حاضر",
       "absent": "غائب",
       "late": "متأخر",
-      "excused": "معذور",
+      "excused": "بإذن",
       "percentage": "نسبة الحضور"
     },
     "actions": {
@@ -467,8 +467,8 @@
     "selectStudent": "اختر الطالب",
     "assessmentTypeLabel": "نوع التقييم",
     "assessmentNameLabel": "اسم التقييم",
-    "scoreLabel": "الدرجة المحققة",
-    "maxScoreLabel": "الدرجة الكاملة",
+    "scoreLabel": "درجة الطالب",
+    "maxScoreLabel": "الدرجة من كام",
     "dateLabel": "التاريخ",
     "notesLabel": "ملاحظات",
     "saving": "جاري الحفظ...",
@@ -485,7 +485,7 @@
     "midterm": "امتحان نصف الفصل",
     "final": "امتحان نهائي",
     "homework": "واجب",
-    "quizLabel": "مسابقة",
+    "quizLabel": "كويز",
     "deleteConfirm": "هل أنت متأكد من حذف هذه الدرجة؟",
     "fields": {
       "student": "الطالب",
@@ -493,14 +493,14 @@
       "assessmentType": "نوع التقييم",
       "assessmentName": "اسم التقييم",
       "score": "الدرجة",
-      "maxScore": "الدرجة العظمى",
+      "maxScore": "الدرجة النهائية",
       "percentage": "النسبة المئوية",
       "letterGrade": "التقدير",
       "date": "التاريخ",
       "notes": "ملاحظات"
     },
     "assessmentTypes": {
-      "quiz": "مسابقة",
+      "quiz": "كويز",
       "test": "اختبار",
       "exam": "امتحان",
       "assignment": "واجب",
@@ -671,7 +671,7 @@
     "statusQrTitle": "مطلوب إقران",
     "statusQrDescription": "امسح رمز QR باستخدام واتساب لإكمال الإقران.",
     "statusConnectingTitle": "جاري الاتصال",
-    "statusConnectingDescription": "نقوم بربط جلسة واتساب، قد يستغرق ذلك بضع ثوانٍ.",
+    "statusConnectingDescription": "بنربط حساب الواتساب بتاعك، ثواني وخليك معايا...",
     "statusErrorTitle": "مشكلة اتصال",
     "statusErrorDescription": "تعذر الاتصال بواتساب. أعد المحاولة أو ابدأ الإقران من جديد.",
     "statusDisconnectedTitle": "مفيش جلسة نشطة",
@@ -698,7 +698,7 @@
     "mayTakeFewSeconds": "قد يستغرق هذا بضع ثوانٍ",
     "connectionStepsTitle": "خطوات الربط",
     "stepOpenWhatsApp": "افتح واتساب على هاتفك",
-    "stepGoToLinkedDevices": "انتقل إلى الإعدادات \u2190 الأجهزة المرتبطة",
+    "stepGoToLinkedDevices": "افتح القائمة واختار \"الأجهزة المرتبطة\" (Linked Devices)",
     "stepScanQR": "اضغط \"ربط جهاز\" وامسح الرمز",
     "qrWillAppearHere": "سيظهر رمز QR هنا بعد الإنشاء",
     "alerts": {
@@ -707,7 +707,7 @@
       "testMessageSent": "تم إرسال الرسالة التجريبية بنجاح!",
       "testMessageFailed": "فشل في إرسال الرسالة التجريبية",
       "errorSendingTest": "خطأ في إرسال الرسالة التجريبية",
-      "freshSessionCreated": "تم إنشاء جلسة جديدة بنجاح!",
+      "freshSessionCreated": "حساب الواتساب اتربط وجاهز!",
       "freshSessionFailed": "فشل في إنشاء جلسة جديدة",
       "couldNotGenerateQR": "لا يمكن إنشاء رمز QR",
       "pairingCodeCopied": "تم نسخ رمز الإقران إلى الحافظة!",
@@ -729,7 +729,7 @@
     "noOfferings": "مفيش عروض مقررات",
     "noOfferingsDescription": "أنشئ أول عرض مقرر عشان تبدأ تدير الطلبة.",
     "subject": "المادة",
-    "gradeLevel": "المستوى الدراسي",
+    "gradeLevel": "السنة الدراسية",
     "academicYear": "العام الدراسي",
     "groups": "المجموعات",
     "students": "الطلاب",
@@ -892,9 +892,9 @@
   },
   "errors": {
     "generic": "حصل خطأ. حاول تاني.",
-    "network": "مشكلة في الشبكة. تأكد من الاتصال.",
-    "unauthorized": "مش عندك صلاحية تعمل الإجراء ده.",
-    "notFound": "المورد ده غير موجود.",
+    "network": "فيه مشكلة في الشبكة، اتأكد من التوصيل وجرب تاني.",
+    "unauthorized": "معندكش صلاحية تعمل الإجراء ده.",
+    "notFound": "الصفحة أو الملف ده مش موجود.",
     "validation": "تأكد من البيانات اللي أدخلتها وحاول تاني.",
     "serverError": "خطأ في السيرفر. حاول تاني بعد شوية."
   },
@@ -948,7 +948,7 @@
       },
       "solution": {
         "title": "نبيه: منصة واحدة لكل حاجة",
-        "description": "نبيه بيحل محل الإكسيل وجرجان الواتساب والتقارير اليدوية بمساعد تعليمي واحد. الحضور والدرجات والتواصل مع أولياء الأمور — كلها متنصلة."
+        "description": "نبيه بيحل محل الإكسيل وجرجان الواتساب والتقارير اليدوية بمساعد تعليمي واحد. الحضور والدرجات والتواصل مع أولياء الأمور — كلها في مكان واحد."
       }
     },
     "features": {
@@ -1105,7 +1105,7 @@
         },
         "grades": {
           "parentMessage": "أحمد عمل إزاي في امتحانه الأخير؟",
-          "botResponse": "درجات أحمد الأخيرة:\n\n📝 امتحان الرياضيات: 85/100 (أ)\n📝 مسابقة العلوم: 92/100 (أ+)\n📝 واجب الإنجليزي: 78/100 (ب+)\n\nالمتوسط العام: 85%"
+          "botResponse": "درجات أحمد الأخيرة:\n\n📝 امتحان الرياضيات: 85/100 (أ)\n📝 كويز العلوم: 92/100 (أ+)\n📝 واجب الإنجليزي: 78/100 (ب+)\n\nالمتوسط العام: 85%"
         },
         "schedule": {
           "parentMessage": "أحمد عنده إيه من مواد الأسبوع ده؟",
