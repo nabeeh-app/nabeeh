@@ -6,6 +6,8 @@ const publicPages = [
   { path: "", priority: 1.0, changeFrequency: "weekly" as const },
   { path: "/login", priority: 0.8, changeFrequency: "monthly" as const },
   { path: "/register", priority: 0.8, changeFrequency: "monthly" as const },
+  { path: "/terms", priority: 0.3, changeFrequency: "monthly" as const },
+  { path: "/privacy", priority: 0.3, changeFrequency: "monthly" as const },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

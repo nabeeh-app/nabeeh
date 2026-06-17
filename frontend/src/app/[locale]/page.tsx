@@ -5,6 +5,7 @@ import { LandingNav } from '@/components/landing/LandingNav';
 import { Hero } from '@/components/landing/Hero';
 import { ProblemSection } from '@/components/landing/ProblemSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
+import { ComparisonSection } from '@/components/landing/ComparisonSection';
 import { ScreenshotCarousel } from '@/components/landing/ScreenshotCarousel';
 import { PricingSection } from '@/components/landing/PricingSection';
 import { FAQSection } from '@/components/landing/FAQSection';
@@ -27,6 +28,7 @@ export default function LandingPage() {
           <Hero />
           <ProblemSection />
           <FeaturesSection />
+          <ComparisonSection />
           <ScreenshotCarousel />
           <PricingSection />
           <FAQSection />

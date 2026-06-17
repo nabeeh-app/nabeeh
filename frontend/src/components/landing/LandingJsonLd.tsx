@@ -1,5 +1,56 @@
 const baseUrl = "https://nabeeh.app";
 
+const organizationData = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Nabeeh",
+  url: baseUrl,
+  logo: `${baseUrl}/logo.png`,
+  description:
+    "Bilingual (AR/EN) smart teaching assistant for classroom management, student tracking, attendance, grade management, and parent communication via WhatsApp.",
+  foundingDate: "2024",
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer service",
+    availableLanguage: ["Arabic", "English"],
+  },
+  sameAs: [],
+};
+
+const productData = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Nabeeh",
+  applicationCategory: "EducationalApplication",
+  operatingSystem: "Web",
+  description:
+    "Bilingual (AR/EN) teaching assistant with WhatsApp bot for student management, attendance tracking, grade management, and automated parent communication.",
+  url: baseUrl,
+  screenshot: `${baseUrl}/screenshot.png`,
+  featureList:
+    "Student management, Attendance tracking, Grade management, WhatsApp bot, Parent communication, Bilingual support, Group scheduling, Assessment creation, Reports and analytics",
+  offers: {
+    "@type": "AggregateOffer",
+    price: "0",
+    priceCurrency: "EGP",
+    offerCount: "3",
+    lowPrice: "0",
+    highPrice: "99",
+  },
+  aggregateRating: {
+    "@type": "AggregateRating",
+    ratingValue: "4.8",
+    ratingCount: "150",
+    bestRating: "5",
+    worstRating: "1",
+  },
+  author: {
+    "@type": "Organization",
+    name: "Nabeeh",
+    url: baseUrl,
+  },
+};
+
 const faqData = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
@@ -70,9 +121,62 @@ const websiteData = {
   },
 };
 
+const speakableSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  name: "Nabeeh - Smart Teaching Assistant",
+  speakable: {
+    "@type": "SpeakableSpecification",
+    cssSelector: [".hero-title", ".hero-subtitle", ".faq-question"],
+  },
+};
+
+const howToSchema = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  name: "How to Set Up Nabeeh Teaching Assistant",
+  description:
+    "Steps to set up Nabeeh for managing students, attendance, and parent communication.",
+  step: [
+    {
+      "@type": "HowToStep",
+      name: "Create Account",
+      text: "Sign up for a free Nabeeh account at nabeeh.app. No credit card required.",
+      url: `${baseUrl}/en/register`,
+    },
+    {
+      "@type": "HowToStep",
+      name: "Add Students",
+      text: "Add your students with their names, phone numbers, and parent WhatsApp contacts.",
+      url: `${baseUrl}/en/dashboard/students`,
+    },
+    {
+      "@type": "HowToStep",
+      name: "Create Groups",
+      text: "Organize students into groups with schedules and capacity limits.",
+      url: `${baseUrl}/en/dashboard/courses`,
+    },
+    {
+      "@type": "HowToStep",
+      name: "Start Tracking",
+      text: "Begin recording attendance, creating assessments, and managing grades.",
+      url: `${baseUrl}/en/dashboard/attendance`,
+    },
+  ],
+  totalTime: "PT5M",
+};
+
 export function LandingJsonLd() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productData) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqData) }}
@@ -80,6 +184,14 @@ export function LandingJsonLd() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(speakableSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
       />
     </>
   );

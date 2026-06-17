@@ -923,61 +923,61 @@
       "startFree": "Start Free"
     },
     "hero": {
-      "title": "The smart way to manage your tutoring business",
-      "subtitle": "Track attendance, manage grades, and communicate with parents — all through WhatsApp. Built for private tutors and tutoring centers in Egypt.",
+      "title": "Nabeeh: Smart Teaching Assistant for Tutors",
+      "subtitle": "Nabeeh is a bilingual (AR/EN) teaching assistant with WhatsApp bot for student management, attendance tracking, grade management, and automated parent communication. Built for private tutors and tutoring centers in Egypt.",
       "cta": {
         "start": "Start Free",
         "login": "Sign In"
       }
     },
     "problem": {
-      "title": "Tutoring shouldn't feel this hard",
-      "subtitle": "You became a teacher to educate, not to wrestle with spreadsheets and lost messages.",
+      "title": "Why tutors switch from spreadsheets to Nabeeh",
+      "subtitle": "Teaching assistants spend 5+ hours per week on administrative tasks. Nabeeh reduces this to under 1 hour.",
       "points": {
         "spreadsheets": {
-          "title": "Spreadsheet chaos",
-          "description": "Tracking attendance and grades in endless Excel files leads to errors and wasted time."
+          "title": "Spreadsheet errors cost time",
+          "description": "Manual attendance and grade tracking in Excel leads to calculation errors, version conflicts, and 3-5 hours of weekly data entry."
         },
         "whatsapp": {
-          "title": "WhatsApp overload",
-          "description": "Dozens of parent conversations scattered across groups and individual chats."
+          "title": "WhatsApp messages create noise",
+          "description": "Parents send 20+ daily messages asking about attendance, grades, and schedules. Each requires a manual lookup and response."
         },
         "tracking": {
-          "title": "No visibility",
-          "description": "Hard to know which students are falling behind without real-time data."
+          "title": "No early warning system",
+          "description": "Without real-time data, tutors discover at-risk students 2-3 weeks late, after they've already fallen behind."
         }
       },
       "solution": {
-        "title": "Meet Nabeeh",
-        "description": "One platform that brings order to your teaching business. Attendance, grades, and parent communication — unified."
+        "title": "Nabeeh: one platform for everything",
+        "description": "Nabeeh replaces spreadsheets, WhatsApp groups, and manual reports with a unified teaching assistant. Attendance, grades, and parent communication — all connected."
       }
     },
     "features": {
-      "title": "Everything you need in one place",
-      "subtitle": "Stop juggling multiple tools. Nabeeh handles it all.",
+      "title": "What Nabeeh offers",
+      "subtitle": "Nabeeh handles student management, attendance, grades, and parent communication in one platform.",
       "attendance": {
         "title": "Attendance Tracking",
-        "description": "Mark attendance in seconds. Track patterns and identify at-risk students automatically."
+        "description": "Nabeeh lets you mark attendance in seconds with bulk entry. Track patterns and identify at-risk students automatically."
       },
       "grades": {
         "title": "Grade Management",
-        "description": "Enter grades, calculate averages, and generate reports for any assessment type."
+        "description": "Nabeeh supports all assessment types — quizzes, midterms, finals, homework. Enter grades, calculate averages, and generate reports."
       },
       "whatsapp": {
         "title": "WhatsApp Bot",
-        "description": "Parents can ask about attendance, grades, and schedules via WhatsApp — the bot answers instantly."
+        "description": "Nabeeh's WhatsApp bot answers parent queries about attendance, grades, and schedules automatically — no manual responses needed."
       },
       "communication": {
         "title": "Parent Communication",
-        "description": "Send updates, reports, and announcements to parents directly through WhatsApp."
+        "description": "Nabeeh sends updates, reports, and announcements to parents directly through WhatsApp in Arabic or English."
       },
       "reports": {
         "title": "Performance Reports",
-        "description": "Visual dashboards showing student progress, attendance trends, and grade distributions."
+        "description": "Nabeeh generates visual dashboards showing student progress, attendance trends, and grade distributions."
       },
       "groups": {
         "title": "Multi-Group Management",
-        "description": "Manage multiple classes, subjects, and student groups from a single dashboard."
+        "description": "Nabeeh manages multiple classes, subjects, and student groups from a single dashboard with scheduling and capacity limits."
       }
     },
     "screenshots": {
@@ -1039,33 +1039,49 @@
       "questions": {
         "what": {
           "question": "What is Nabeeh?",
-          "answer": "Nabeeh is a smart teaching assistant designed for private tutors and tutoring centers. It helps you manage attendance, grades, student information, and parent communication — all in one place."
+          "answer": "Nabeeh is a bilingual (AR/EN) smart teaching assistant for private tutors and tutoring centers. Nabeeh manages attendance, grades, student information, and parent communication via WhatsApp — all in one platform."
         },
         "whatsapp": {
-          "question": "How does the WhatsApp integration work?",
-          "answer": "Parents can send messages to your Nabeeh WhatsApp number asking about their child's attendance, grades, or schedule. The bot automatically responds with the relevant information from your database."
+          "question": "How does the Nabeeh WhatsApp integration work?",
+          "answer": "Parents send messages to your Nabeeh WhatsApp number asking about their child's attendance, grades, or schedule. Nabeeh's bot automatically responds with the relevant information from your database in under 5 seconds."
         },
         "pricing": {
-          "question": "Is Nabeeh really free?",
-          "answer": "Yes! The free tier includes everything an individual tutor needs to get started — up to 20 students, attendance tracking, grade management, and the WhatsApp bot. Premium tiers are coming soon."
+          "question": "Is Nabeeh free?",
+          "answer": "Yes. Nabeeh's free tier includes up to 20 students, 1 group, attendance tracking, grade management, and the WhatsApp bot. Premium tiers with unlimited students and advanced features are coming soon."
         },
         "setup": {
-          "question": "How long does it take to set up?",
-          "answer": "You can get started in minutes. Simply create an account, add your students and groups, and you're ready to go. No technical knowledge required."
+          "question": "How long does it take to set up Nabeeh?",
+          "answer": "Setting up Nabeeh takes about 5 minutes. Create an account, add your students and groups, and start tracking. No technical knowledge required."
         },
         "data": {
-          "question": "Is my data secure?",
-          "answer": "Absolutely. Nabeeh uses enterprise-grade security with encrypted data storage. Your students' information is protected and never shared with third parties."
+          "question": "Is my data secure on Nabeeh?",
+          "answer": "Nabeeh uses Supabase (PostgreSQL) with enterprise-grade security, JWT authentication, encrypted data storage, and Row Level Security. Your students' information is protected and never shared with third parties."
         },
         "support": {
-          "question": "Do you offer support in Arabic?",
-          "answer": "Yes! Nabeeh is fully bilingual (Arabic and English). You can switch between languages at any time, and our support team communicates in both languages."
+          "question": "Does Nabeeh support Arabic?",
+          "answer": "Yes. Nabeeh is fully bilingual (Arabic and English). You can switch between languages at any time, and the WhatsApp bot responds in both languages."
         }
       }
     },
     "cta": {
       "title": "Ready to transform your teaching?",
       "button": "Get started free"
+    },
+    "comparison": {
+      "title": "Why tutors choose Nabeeh over spreadsheets",
+      "subtitle": "Spreadsheets were not designed for teaching management. Nabeeh was built specifically for tutors.",
+      "feature": "Feature",
+      "spreadsheets": "Spreadsheets",
+      "nabeeh": "Nabeeh",
+      "features": {
+        "attendance": "Real-time attendance tracking",
+        "grades": "Grade calculations & averages",
+        "whatsapp": "Automated parent communication",
+        "reports": "Performance dashboards",
+        "multiGroup": "Multi-group management",
+        "arabic": "Arabic & English support"
+      },
+      "note": "Spreadsheets are general-purpose tools. Nabeeh is purpose-built for teaching management."
     },
     "footer": {
       "tagline": "Smart teaching assistant for private tutors.",

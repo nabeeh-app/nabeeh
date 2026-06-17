@@ -31,7 +31,7 @@ export function FAQSection() {
               value={key}
               className="bg-canvas border border-ink/10 rounded-xl px-4 overflow-hidden data-[state=open]:shadow-sm data-[state=open]:bg-surface-sage/30"
             >
-              <AccordionTrigger className="text-left text-ink font-display font-semibold py-4 hover:no-underline [&[data-state=open]]:text-primary">
+              <AccordionTrigger className="faq-question text-left text-ink font-display font-semibold py-4 hover:no-underline [&[data-state=open]]:text-primary">
                 {tQ(`${key}.question`)}
               </AccordionTrigger>
               <AccordionContent className="text-sm text-ink/60 font-body leading-relaxed pb-4">

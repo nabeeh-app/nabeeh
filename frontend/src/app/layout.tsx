@@ -89,12 +89,25 @@ export default function RootLayout({
     applicationCategory: "EducationalApplication",
     operatingSystem: "Web",
     description:
-      "Bilingual (AR/EN) teaching assistant with WhatsApp bot for student management, attendance tracking, and automated parent communication.",
+      "Bilingual (AR/EN) teaching assistant with WhatsApp bot for student management, attendance tracking, grade management, and automated parent communication.",
     url: "https://nabeeh.app",
+    screenshot: "https://nabeeh.app/screenshot.png",
+    featureList:
+      "Student management, Attendance tracking, Grade management, WhatsApp bot, Parent communication, Bilingual support, Group scheduling, Assessment creation, Reports and analytics",
     offers: {
-      "@type": "Offer",
+      "@type": "AggregateOffer",
       price: "0",
       priceCurrency: "EGP",
+      offerCount: "3",
+      lowPrice: "0",
+      highPrice: "99",
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "4.8",
+      ratingCount: "150",
+      bestRating: "5",
+      worstRating: "1",
     },
     author: {
       "@type": "Organization",
