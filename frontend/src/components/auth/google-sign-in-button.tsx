@@ -18,7 +18,7 @@ export function GoogleSignInButton({ className, mode = 'login' }: GoogleSignInBu
   const isRTL = locale === 'ar';
 
   const handleGoogleSignIn = async () => {
-    if (!isSupabaseConfigured) {
+    if (!isSupabaseConfigured || !supabase) {
       logger.error('Google sign-in is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
       return;
     }
