@@ -29,7 +29,7 @@ const localeNames: Record<string, { title: string; description: string; ogLocale
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
-  const meta = localeNames[locale] || localeNames.en;
+  const meta = localeNames[locale] || localeNames.ar;
 
   return {
     title: meta.title,

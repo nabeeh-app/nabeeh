@@ -60,7 +60,7 @@ class ApiClient {
         // Only auto-logout on 401 (Unauthorized) errors, not on network timeouts or other errors
         if (error.response?.status === 401) {
           this.removeToken();
-          const locale = window.location.pathname.split('/')[1] || 'en';
+          const locale = window.location.pathname.split('/')[1] || 'ar';
           window.location.href = `/${locale}/login`;
         }
         

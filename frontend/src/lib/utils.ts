@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function timeAgo(dateStr: string, locale: string = 'en'): string {
+export function timeAgo(dateStr: string, locale: string = 'ar'): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   const diffMs = now - then;
@@ -28,7 +28,7 @@ export function timeAgo(dateStr: string, locale: string = 'en'): string {
 }
 
 // Unified status badge utility
-export const getStatusBadge = (status: string, locale: 'en' | 'ar' = 'en') => {
+export const getStatusBadge = (status: string, locale: 'en' | 'ar' = 'ar') => {
   const statusMap: Record<string, { variant: 'default' | 'destructive' | 'secondary' | 'outline', label: string, labelAr: string }> = {
     // Common statuses
     active: { variant: 'default', label: 'Active', labelAr: 'نشط' },
