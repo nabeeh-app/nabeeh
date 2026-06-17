@@ -38,13 +38,17 @@ const mockAuthenticateUser = jest.fn();
 const mockGenerateToken = jest.fn().mockReturnValue('mock-jwt-token');
 const mockVerifyToken = jest.fn().mockReturnValue({ user_id: 'teacher-1', email: 'test@example.com' });
 const mockGenerateResetToken = jest.fn().mockReturnValue('mock-reset-token');
+const mockHashToken = jest.fn().mockImplementation((token) => 'hashed-' + token);
+const mockRevokeToken = jest.fn().mockResolvedValue();
 const mockValidatePasswordStrength = jest.fn().mockReturnValue({ isValid: true, errors: [] });
 
 jest.mock('../../lib/auth', () => ({
   TokenService: jest.fn().mockImplementation(() => ({
     generateToken: mockGenerateToken,
     verifyToken: mockVerifyToken,
-    generateResetToken: mockGenerateResetToken
+    generateResetToken: mockGenerateResetToken,
+    hashToken: mockHashToken,
+    revokeToken: mockRevokeToken
   })),
   AuthService: jest.fn().mockImplementation(() => ({
     passwordService: {
@@ -54,7 +58,9 @@ jest.mock('../../lib/auth', () => ({
     tokenService: {
       generateToken: mockGenerateToken,
       verifyToken: mockVerifyToken,
-      generateResetToken: mockGenerateResetToken
+      generateResetToken: mockGenerateResetToken,
+      hashToken: mockHashToken,
+      revokeToken: mockRevokeToken
     },
     authenticateUser: mockAuthenticateUser
   }))

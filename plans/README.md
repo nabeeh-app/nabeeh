@@ -26,6 +26,8 @@ honor its STOP conditions, and update your row when done.
 | D1 | Batch data-fetching layer | P2 | M | 007 | DONE |
 | D2 | Background job queue for AI operations | P2 | L | 009 | DONE |
 | D3 | Migrate frontend to React Query/SWR | P3 | L | — | DONE |
+| 004H | Hash password reset tokens at rest | P1 | M | — | DONE |
+| 001-RL | Revoke JWT tokens on logout | P1 | M | — | DONE |
 
 ## Dependency notes
 
@@ -51,6 +53,30 @@ Plans 008, 010, 011, 012, 013, 014, 015
 ### Phase 5: Architecture (P3, L-effort)
 Plan D3 (React Query/SWR) — largest scope, do last
 
+## AEO (Answer Engine Optimization) plans (2026-06-17)
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 034 | Add Organization, Product, and enhanced schemas | P1 | S | — | TODO |
+| 035 | Add Speakable and HowTo schemas | P1 | S | — | TODO |
+| 036 | Rewrite landing content for AEO extractability | P1 | M | 034, 035 | TODO |
+| 037 | Add comparison content and expand sitemap | P2 | M | 036 | TODO |
+
+### AEO recommended execution order
+
+#### Phase 1: Schema foundation (P1, S-effort)
+- **034** (Organization + Product schemas) and **035** (Speakable + HowTo schemas) — independent, can run in parallel
+
+#### Phase 2: Content optimization (P1, M-effort)
+- **036** (rewrite hero, features, FAQ for AEO) — depends on 034 and 035 being in place
+
+#### Phase 3: Expansion (P2, M-effort)
+- **037** (comparison content + sitemap) — depends on 036
+
+### AEO dependency notes
+- **036** depends on **034** and **035**: content changes reference the schema structure (Speakable cssSelector, HowTo steps)
+- **037** depends on **036**: comparison section uses the same AED content pattern established in 036
+
 ## Findings considered and rejected
 
 - None — all findings from the audit are planned
@@ -71,6 +97,7 @@ Plan D3 (React Query/SWR) — largest scope, do last
 | 030 | Extract shared LoadingSpinner and StatusBadge components | P2 | S | — | DONE |
 | 031 | Centralize session route Supabase client and add Zod validation | P2 | S | — | DONE |
 | 032 | Add error handling and loading states to mutation operations | P2 | S | — | DONE |
+| 033 | Add authentication to unprotected sensitive endpoints | P1 | S | — | DONE |
 
 ### Admin panel recommended execution order
 

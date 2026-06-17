@@ -23,7 +23,8 @@ class TokenService {
         const payload = {
             user_id: user.id,
             email: user.email,
-            role: user.role || 'teacher'
+            role: user.role || 'teacher',
+            jti: crypto.randomUUID()
         };
 
         return jwt.sign(payload, this.jwtSecret, {
@@ -55,6 +56,43 @@ class TokenService {
      */
     generateResetToken() {
         return crypto.randomBytes(32).toString('hex');
+    }
+
+    /**
+     * Hash a token using SHA-256 for secure storage
+     * @param {string} token - Plain token
+     * @returns {string} - Hex-encoded SHA-256 hash
+     */
+    hashToken(token) {
+        return crypto.createHash('sha256').update(token).digest('hex');
+    }
+
+    /**
+     * Revoke a JWT token by storing its jti in the revoked_tokens table
+     * @param {string} token - JWT token to revoke
+     */
+    async revokeToken(token) {
+        const decoded = this.verifyToken(token);
+        const expiresAt = new Date(decoded.exp * 1000);
+        const { error } = await require('../config/database').supabaseAdmin
+            .from('revoked_tokens')
+            .insert({ jti: decoded.jti, expires_at: expiresAt.toISOString() });
+        if (error) throw error;
+    }
+
+    /**
+     * Check if a token's jti has been revoked
+     * @param {string} jti - JWT ID to check
+     * @returns {boolean} - true if revoked
+     */
+    async isTokenRevoked(jti) {
+        const { data, error } = await require('../config/database').supabaseAdmin
+            .from('revoked_tokens')
+            .select('id')
+            .eq('jti', jti)
+            .maybeSingle();
+        if (error) throw error;
+        return !!data;
     }
 }
 

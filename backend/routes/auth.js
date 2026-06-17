@@ -715,9 +715,10 @@ router.post('/logout', authenticateToken, async (req, res) => {
 
         if (token) {
             try {
-                const decoded = authService.tokenService.verifyToken(token);
+                // Revoke the token
+                await authService.tokenService.revokeToken(token);
 
-                // Log logout event
+                const decoded = authService.tokenService.verifyToken(token);
                 await logAuthEvent(
                     decoded.user_id,
                     'logout',
@@ -725,12 +726,8 @@ router.post('/logout', authenticateToken, async (req, res) => {
                     ipAddress,
                     userAgent
                 );
-
-                // TODO: Add token to blacklist or invalidate session in user_sessions table
-
             } catch (error) {
-                // Token might be expired or invalid, but still allow logout
-                logger.info('Token verification failed during logout', { error: error.message });
+                logger.info('Token revocation failed during logout', { error: error.message });
             }
         }
 
@@ -739,7 +736,6 @@ router.post('/logout', authenticateToken, async (req, res) => {
             message: 'Logged out successfully',
             messageAr: 'تم تسجيل الخروج بنجاح'
         });
-
     } catch (error) {
         logger.error('Logout error', { error: error.message });
         res.status(500).json({
@@ -1149,10 +1145,11 @@ router.post('/request-reset', resetLimiter, validate(requestResetSchema), async 
 
         if (user) {
             // Generate reset token
-            const resetToken = authService.tokenService.generateResetToken();
+            const resetTokenPlain = authService.tokenService.generateResetToken();
+            const resetToken = authService.tokenService.hashToken(resetTokenPlain);
             const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-            // Store reset token in database
+            // Store hashed reset token in database
             const { error } = await supabaseAdmin
                 .from('password_reset_tokens')
                 .insert({
@@ -1164,7 +1161,7 @@ router.post('/request-reset', resetLimiter, validate(requestResetSchema), async 
             if (!error) {
                 // Send password reset email
                 const frontendUrl = process.env.FRONTEND_URL || 'https://nabeeh.app';
-                const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
+                const resetLink = `${frontendUrl}/reset-password?token=${resetTokenPlain}`;
                 const lang = user.preferred_language || 'ar';
                 const { getPasswordResetTemplate } = require('../lib/emailTemplates');
                 const resetEmail = getPasswordResetTemplate({ name: user.name, resetLink, language: lang });
@@ -1247,10 +1244,11 @@ router.get('/reset/:token', async (req, res) => {
         const { token } = req.params;
 
         // Check if token exists and is not expired
+        const hashedToken = authService.tokenService.hashToken(token);
         const { data: resetToken, error } = await supabaseAdmin
             .from('password_reset_tokens')
             .select('id, teacher_id, expires_at, used')
-            .eq('token', token)
+            .eq('token', hashedToken)
             .single();
 
         if (error || !resetToken) {
@@ -1368,10 +1366,11 @@ router.post('/reset-password', validate(resetPasswordSchema), async (req, res) =
         }
 
         // Validate reset token (same logic as GET /reset/:token)
+        const hashedToken = authService.tokenService.hashToken(token);
         const { data: resetToken, error } = await supabaseAdmin
             .from('password_reset_tokens')
             .select('id, teacher_id, expires_at, used')
-            .eq('token', token)
+            .eq('token', hashedToken)
             .single();
 
         if (error || !resetToken || resetToken.used || new Date() > new Date(resetToken.expires_at)) {
@@ -1430,6 +1429,8 @@ router.post('/reset-password', validate(resetPasswordSchema), async (req, res) =
  *     tags: [Auth]
  *     summary: Check if a user has a teacher profile
  *     description: Used during OAuth flow to check whether the authenticated user already has a teacher profile or assistant link. Accepts user_id or email.
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -1487,7 +1488,7 @@ router.post('/reset-password', validate(resetPasswordSchema), async (req, res) =
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/oauth/check-profile', async (req, res) => {
+router.post('/oauth/check-profile', authenticateToken, async (req, res) => {
     try {
         const { user_id, email } = req.body;
 

@@ -181,6 +181,7 @@ qr-code*.png
 *.sql
 *.dump
 !backend/database/*.sql
+!database/migrations/*.sql
 
 # ===========================
 # ===== AI & API KEYS =====

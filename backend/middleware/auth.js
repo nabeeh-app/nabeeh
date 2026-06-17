@@ -39,6 +39,15 @@ const authenticateToken = async (req, res, next) => {
         // Verify token
         const decoded = tokenService.verifyToken(token);
 
+        // Check if token has been revoked
+        if (decoded.jti && await tokenService.isTokenRevoked(decoded.jti)) {
+            return res.status(401).json({
+                success: false,
+                message: 'Token has been revoked',
+                messageAr: 'تم إلغاء الرمز'
+            });
+        }
+
         // First, try to find the user as a teacher
         const { data: teacher, error: teacherError } = await supabaseAdmin
             .from('teachers')
@@ -219,6 +228,15 @@ const optionalAuth = async (req, res, next) => {
         if (token) {
             try {
                 const decoded = tokenService.verifyToken(token);
+
+                // Check if token has been revoked
+                if (decoded.jti && await tokenService.isTokenRevoked(decoded.jti)) {
+                    return res.status(401).json({
+                        success: false,
+                        message: 'Token has been revoked',
+                        messageAr: 'تم إلغاء الرمز'
+                    });
+                }
 
                 // Try teacher first
                 const { data: teacher } = await supabaseAdmin
