@@ -14,14 +14,13 @@ const organizationData = {
     contactType: "customer service",
     availableLanguage: ["Arabic", "English"],
   },
-  sameAs: [],
 };
 
 const productData = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   name: "Nabeeh",
-  applicationCategory: "EducationalApplication",
+  applicationCategory: "EducationApplication",
   operatingSystem: "Web",
   description:
     "Bilingual (AR/EN) teaching assistant with WhatsApp bot for student management, attendance tracking, grade management, and automated parent communication.",
@@ -111,20 +110,13 @@ const websiteData = {
   "@type": "WebSite",
   name: "Nabeeh",
   url: baseUrl,
-  potentialAction: {
-    "@type": "SearchAction",
-    target: {
-      "@type": "EntryPoint",
-      urlTemplate: `${baseUrl}/en/dashboard/students?q={search_term_string}`,
-    },
-    "query-input": "required name=search_term_string",
-  },
 };
 
 const speakableSchema = {
   "@context": "https://schema.org",
   "@type": "WebPage",
   name: "Nabeeh - Smart Teaching Assistant",
+  dateModified: new Date().toISOString().split('T')[0],
   speakable: {
     "@type": "SpeakableSpecification",
     cssSelector: [".hero-title", ".hero-subtitle", ".faq-question"],
@@ -137,6 +129,7 @@ const howToSchema = {
   name: "How to Set Up Nabeeh Teaching Assistant",
   description:
     "Steps to set up Nabeeh for managing students, attendance, and parent communication.",
+  dateModified: new Date().toISOString().split('T')[0],
   step: [
     {
       "@type": "HowToStep",
@@ -166,6 +159,63 @@ const howToSchema = {
   totalTime: "PT5M",
 };
 
+const pricingData = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: "Nabeeh Pricing Plans",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      item: {
+        "@type": "Offer",
+        name: "Basic (Free)",
+        price: "0",
+        priceCurrency: "EGP",
+        description: "Up to 20 students, 1 group, attendance tracking, basic grade management, WhatsApp bot.",
+        url: `${baseUrl}/en/register`,
+      },
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      item: {
+        "@type": "Offer",
+        name: "Pro",
+        price: "99",
+        priceCurrency: "EGP",
+        description: "Unlimited students, unlimited groups, advanced reports, parent communication, priority support.",
+        url: `${baseUrl}/en/register`,
+      },
+    },
+    {
+      "@type": "ListItem",
+      position: 3,
+      item: {
+        "@type": "Offer",
+        name: "Center",
+        price: "Coming Soon",
+        priceCurrency: "EGP",
+        description: "Multi-teacher support, institution branding, custom WhatsApp bot, dedicated support.",
+        url: `${baseUrl}/en/register`,
+      },
+    },
+  ],
+};
+
+const breadcrumbData = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: baseUrl,
+    },
+  ],
+};
+
 export function LandingJsonLd() {
   return (
     <>
@@ -192,6 +242,14 @@ export function LandingJsonLd() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(pricingData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
       />
     </>
   );

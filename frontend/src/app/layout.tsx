@@ -43,7 +43,7 @@ export const metadata: Metadata = {
       "Bilingual (AR/EN) teaching assistant with WhatsApp bot for student management, attendance tracking, and automated parent communication.",
     images: [
       {
-        url: "/api/og",
+        url: "https://nabeeh.app/api/og",
         width: 1200,
         height: 630,
         alt: "Nabeeh - Smart Teaching Assistant",
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     title: "Nabeeh - Smart Teaching Assistant for Tutors",
     description:
       "Bilingual (AR/EN) teaching assistant with WhatsApp bot for student management, attendance tracking, and automated parent communication.",
-    images: ["/api/og"],
+    images: ["https://nabeeh.app/api/og"],
   },
   robots: {
     index: true,
@@ -82,47 +82,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Nabeeh",
-    applicationCategory: "EducationalApplication",
-    operatingSystem: "Web",
-    description:
-      "Bilingual (AR/EN) teaching assistant with WhatsApp bot for student management, attendance tracking, grade management, and automated parent communication.",
-    url: "https://nabeeh.app",
-    screenshot: "https://nabeeh.app/screenshot.png",
-    featureList:
-      "Student management, Attendance tracking, Grade management, WhatsApp bot, Parent communication, Bilingual support, Group scheduling, Assessment creation, Reports and analytics",
-    offers: {
-      "@type": "AggregateOffer",
-      price: "0",
-      priceCurrency: "EGP",
-      offerCount: "3",
-      lowPrice: "0",
-      highPrice: "99",
-    },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: "4.8",
-      ratingCount: "150",
-      bestRating: "5",
-      worstRating: "1",
-    },
-    author: {
-      "@type": "Organization",
-      name: "Nabeeh",
-      url: "https://nabeeh.app",
-    },
-  };
-
   return (
     <html suppressHydrationWarning>
       <head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
         <script
           type="text/javascript"
           dangerouslySetInnerHTML={{

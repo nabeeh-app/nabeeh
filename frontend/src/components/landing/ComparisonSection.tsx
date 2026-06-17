@@ -16,7 +16,7 @@ export function ComparisonSection() {
   const t = useTranslations('landing.comparison');
 
   return (
-    <section className="py-20 bg-surface-sage/50">
+    <section id="comparison" className="py-20 bg-surface-sage/50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-ink font-display mb-4">
