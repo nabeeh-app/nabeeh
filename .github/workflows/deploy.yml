@@ -18,7 +18,7 @@ jobs:
       - name: Deploy nabeeh backend + frontend
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no exe.dev \
-            "ssh tagooza 'cd /home/exedev/nabeeh && git fetch origin master && git reset --hard origin/master && docker compose -f docker-compose.prod.yml build --no-cache frontend && docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans'"
+            "ssh tagooza 'cd /home/exedev/nabeeh && git fetch origin master && git reset --hard origin/master && docker compose -f docker-compose.prod.yml build frontend && docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans'"
 
       - name: Verify containers
         run: |
@@ -30,3 +30,8 @@ jobs:
         run: |
           sleep 5
           curl -sf https://nabeeh.app/api/health || echo "Health check failed"
+
+      - name: Cleanup old Docker images
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no exe.dev \
+            "ssh tagooza 'docker image prune -f && docker builder prune -f --keep-storage 500MB'"
