@@ -66,13 +66,11 @@ class ApiClient {
       async (error) => {
         const config = error.config;
         
-        // Only redirect to login on 401 if we're on a protected route (dashboard pages)
-        // Public pages (landing, login, register) should not redirect on 401
+        // Only redirect to login on 401 for dashboard (protected) pages
         if (error.response?.status === 401) {
           const path = window.location.pathname;
-          const isPublicPage = ['/login', '/register', '/forgot-password'].some(p => path.includes(p));
-          const isLandingPage = /^\/(ar|en)\/?$/.test(path) || path === '/';
-          if (!isPublicPage && !isLandingPage) {
+          const isDashboardPage = path.includes('/dashboard');
+          if (isDashboardPage) {
             const locale = path.split('/')[1] || 'ar';
             window.location.href = `/${locale}/login`;
           }
