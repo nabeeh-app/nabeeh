@@ -109,7 +109,7 @@ export default async function PrivacyPolicy({
                   <li>تصدير بياناتك بصيغة منظمة</li>
                 </ul>
                 <p className="mt-2">
-                  لممارسة هذه الحقوق، تواصل معنا على <a href="mailto:hello@nabeeh.com" className="text-primary hover:underline">hello@nabeeh.com</a>.
+                  لممارسة هذه الحقوق، تواصل معنا على <a href="mailto:hello@nabeeh.app" className="text-primary hover:underline">hello@nabeeh.app</a>.
                 </p>
               </Section>
 
@@ -138,7 +138,7 @@ export default async function PrivacyPolicy({
                   لأي استفسارات بشأن هذه السياسة، يُرجى التواصل معنا على:
                 </p>
                 <ul className="list-disc pl-6 space-y-1">
-                  <li>البريد الإلكتروني: <a href="mailto:hello@nabeeh.com" className="text-primary hover:underline">hello@nabeeh.com</a></li>
+                  <li>البريد الإلكتروني: <a href="mailto:hello@nabeeh.app" className="text-primary hover:underline">hello@nabeeh.app</a></li>
                   <li>واتساب: <a href="https://wa.me/201234567890" className="text-primary hover:underline">تواصل معنا</a></li>
                 </ul>
               </Section>
@@ -204,7 +204,7 @@ export default async function PrivacyPolicy({
                   <li>Export your data in a structured format</li>
                 </ul>
                 <p className="mt-2">
-                  To exercise these rights, contact us at <a href="mailto:hello@nabeeh.com" className="text-primary hover:underline">hello@nabeeh.com</a>.
+                  To exercise these rights, contact us at <a href="mailto:hello@nabeeh.app" className="text-primary hover:underline">hello@nabeeh.app</a>.
                 </p>
               </Section>
 
@@ -233,7 +233,7 @@ export default async function PrivacyPolicy({
                   For any questions about this Privacy Policy, please contact us at:
                 </p>
                 <ul className="list-disc pl-6 space-y-1">
-                  <li>Email: <a href="mailto:hello@nabeeh.com" className="text-primary hover:underline">hello@nabeeh.com</a></li>
+                  <li>Email: <a href="mailto:hello@nabeeh.app" className="text-primary hover:underline">hello@nabeeh.app</a></li>
                   <li>WhatsApp: <a href="https://wa.me/201234567890" className="text-primary hover:underline">Contact us</a></li>
                 </ul>
               </Section>

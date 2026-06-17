@@ -140,7 +140,7 @@ export default async function TermsOfService({
                   لأي استفسارات بشأن هذه الشروط، يُرجى التواصل معنا على:
                 </p>
                 <ul className="list-disc pl-6 space-y-1">
-                  <li>البريد الإلكتروني: <a href="mailto:hello@nabeeh.com" className="text-primary hover:underline">hello@nabeeh.com</a></li>
+                  <li>البريد الإلكتروني: <a href="mailto:hello@nabeeh.app" className="text-primary hover:underline">hello@nabeeh.app</a></li>
                   <li>واتساب: <a href="https://wa.me/201234567890" className="text-primary hover:underline">تواصل معنا</a></li>
                 </ul>
               </Section>
@@ -237,7 +237,7 @@ export default async function TermsOfService({
                   For any questions about these Terms, please contact us at:
                 </p>
                 <ul className="list-disc pl-6 space-y-1">
-                  <li>Email: <a href="mailto:hello@nabeeh.com" className="text-primary hover:underline">hello@nabeeh.com</a></li>
+                  <li>Email: <a href="mailto:hello@nabeeh.app" className="text-primary hover:underline">hello@nabeeh.app</a></li>
                   <li>WhatsApp: <a href="https://wa.me/201234567890" className="text-primary hover:underline">Contact us</a></li>
                 </ul>
               </Section>

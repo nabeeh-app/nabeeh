@@ -11,7 +11,7 @@ export function Footer() {
   const isRTL = locale === 'ar';
 
   const phone = process.env.NEXT_PUBLIC_WHATSAPP_MARKETING_PHONE || '201234567890';
-  const email = 'hello@nabeeh.com';
+  const email = 'hello@nabeeh.app';
 
   return (
     <footer className="bg-ink text-canvas">
