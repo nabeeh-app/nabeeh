@@ -26,7 +26,7 @@ const authenticateToken = async (req, res, next) => {
         const authHeader = req.headers.authorization;
         const token = authHeader && authHeader.startsWith('Bearer ') 
             ? authHeader.substring(7) 
-            : null;
+            : req.cookies?.nabeeh_token || null;
 
         if (!token) {
             return res.status(401).json({
@@ -223,7 +223,7 @@ const optionalAuth = async (req, res, next) => {
         const authHeader = req.headers.authorization;
         const token = authHeader && authHeader.startsWith('Bearer ') 
             ? authHeader.substring(7) 
-            : null;
+            : req.cookies?.nabeeh_token || null;
 
         if (token) {
             try {

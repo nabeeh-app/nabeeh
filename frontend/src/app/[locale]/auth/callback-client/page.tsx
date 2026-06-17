@@ -4,7 +4,6 @@ import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { useLocale } from 'next-intl';
-import { apiClient } from '@/lib/client';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -56,6 +55,7 @@ function CallbackHandler() {
         const response = await fetch(`${backendUrl}/auth/oauth/callback`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             access_token: session.access_token,
             provider: 'google'
@@ -64,11 +64,9 @@ function CallbackHandler() {
 
         const data = await response.json();
 
-        if (data.success && data.data?.token) {
-          // Use apiClient.setToken() to dispatch auth:token-changed event,
-          // which triggers AuthProvider to re-check auth state.
-          // This eliminates the race condition with the initial useEffect check.
-          apiClient.setToken(data.data.token);
+        if (data.success) {
+          // Cookie is set by the backend Set-Cookie header.
+          // Redirect to dashboard — AuthProvider will pick up the session.
           router.replace(`/${locale}/dashboard`);
         } else {
           router.replace(`/${locale}/login?error=backend_token_failed`);

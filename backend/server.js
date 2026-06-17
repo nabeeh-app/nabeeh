@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 
 // Load environment variables
@@ -35,6 +36,7 @@ whatsappRouter.use(whatsappRoutes);
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const logger = require('./middleware/logger');
+const { authenticateToken, requireRole } = require('./middleware/auth');
 const {
   apiLimiter,
   authLimiter,
@@ -62,6 +64,7 @@ app.use(cors({
 })); // Enable CORS
 app.use(express.json({ limit: '10mb' })); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+app.use(cookieParser()); // Parse cookies
 app.use(sanitizeInput); // Input sanitization
 app.use(securityLogger); // Security logging
 app.use(logger(winstonLogger)); // Custom logging middleware
@@ -86,8 +89,24 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Admin WhatsApp health endpoint (no teacher auth required)
-app.get('/api/admin/whatsapp-health', (req, res) => {
+/**
+ * @openapi
+ * /api/admin/whatsapp-health:
+ *   get:
+ *     tags: [WhatsApp]
+ *     summary: Get WhatsApp connection status (admin only)
+ *     description: Returns the current WhatsApp session status. Requires admin role.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Status retrieved
+ *       401:
+ *         $ref: '#/components/schemas/ErrorEnvelope'
+ *       403:
+ *         $ref: '#/components/schemas/ErrorEnvelope'
+ */
+app.get('/api/admin/whatsapp-health', authenticateToken, requireRole('admin'), (req, res) => {
   try {
     const { baileysClient } = require('./lib/baileys');
     const status = baileysClient.getStatus();

@@ -44,16 +44,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(true);
       setError(null);
 
-      const token = apiClient.getToken();
-      if (!token) {
-        setTeacher(null);
-        setLoading(false);
-        return;
-      }
-
-      // Verify token and get teacher data
-      // The Axios interceptor handles 401 by removing token + hard redirect,
-      // so we don't remove token here to avoid re-triggering via auth:token-changed.
+      // Cookie-based auth: always try getMe(). The httpOnly cookie is sent
+      // automatically. If absent, the 401 interceptor handles redirect.
       const teacherData = await apiClient.getMe();
       if (!controller.signal.aborted) {
         setTeacher(teacherData);
@@ -89,30 +81,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await checkAuthStatus();
     })();
 
-    const handleTokenChange = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail?.action === 'remove') {
-        setTeacher(null);
-        setLoading(false);
-        setError(null);
-        return;
-      }
-      checkAuthStatus();
-    };
-
-    window.addEventListener('auth:token-changed', handleTokenChange);
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'nabeeh_token' && !e.newValue) {
-        setTeacher(null);
-        setLoading(false);
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-
     return () => {
-      window.removeEventListener('auth:token-changed', handleTokenChange);
-      window.removeEventListener('storage', handleStorageChange);
       abortRef.current?.abort();
     };
   }, []);
@@ -139,13 +108,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const logout = () => {
-    apiClient.removeToken();
+  const logout = async () => {
+    try {
+      await apiClient.api.post('/auth/logout');
+    } catch {
+      // Ignore errors — cookie may already be expired
+    }
     setTeacher(null);
     setError(null);
-
     if (typeof window !== 'undefined') {
-      // Get current locale from URL or default to 'en'
       const currentLocale = window.location.pathname.split('/')[1] || 'en';
       window.location.href = `/${currentLocale}/login`;
     }

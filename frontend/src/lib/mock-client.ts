@@ -67,14 +67,12 @@ class MockApiClient extends ApiClient {
   async login(_data: LoginRequest): Promise<AuthResponse> {
     await delay();
     const token = 'mock-jwt-token-' + Date.now();
-    this.setToken(token);
     return { teacher: mockTeacher, token };
   }
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
     await delay();
     const token = 'mock-jwt-token-' + Date.now();
-    this.setToken(token);
     return { teacher: { ...mockTeacher, name: data.name, email: data.email }, token };
   }
 

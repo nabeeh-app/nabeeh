@@ -9,6 +9,18 @@ const { sendEmail } = require('../lib/email');
 
 const router = express.Router();
 
+const isProd = process.env.NODE_ENV === 'production';
+
+function setAuthCookie(res, token) {
+  res.cookie('nabeeh_token', token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'strict' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours, matches JWT_EXPIRES_IN default
+    path: '/'
+  });
+}
+
 // Initialize auth service
 const authService = new AuthService();
 const teacherSelectFields = `
@@ -320,6 +332,8 @@ router.post('/register', registerLimiter, validate(registerSchema), async (req, 
             req.get('User-Agent'),
             { email: teacher.email }
         );
+
+        setAuthCookie(res, token);
 
         res.status(201).json({
             success: true,
@@ -634,6 +648,8 @@ router.post('/login', loginLimiter, validate(loginSchema), async (req, res) => {
                 { email: normalizedEmail }
             );
 
+            setAuthCookie(res, result.token);
+
             res.json({
                 success: true,
                 data: {
@@ -806,7 +822,7 @@ router.post('/logout', authenticateToken, async (req, res) => {
  */
 router.get('/verify-token', async (req, res) => {
     try {
-        const token = req.headers.authorization?.replace('Bearer ', '') || req.body.token;
+        const token = req.headers.authorization?.replace('Bearer ', '');
 
         if (!token) {
             return res.status(401).json({
@@ -817,6 +833,15 @@ router.get('/verify-token', async (req, res) => {
         }
 
         const decoded = authService.tokenService.verifyToken(token);
+
+        // Check if token has been revoked
+        if (decoded.jti && await authService.tokenService.isTokenRevoked(decoded.jti)) {
+            return res.status(401).json({
+                success: false,
+                message: 'Token has been revoked',
+                messageAr: 'تم إلغاء الرمز'
+            });
+        }
 
         // Get fresh user data to ensure user still exists
         const user = await getUserByEmail(decoded.email);
@@ -1703,6 +1728,8 @@ router.post('/oauth/callback', async (req, res) => {
                     { provider, email }
                 );
 
+                setAuthCookie(res, token);
+
                 return res.json({
                     success: true,
                     data: {
@@ -1746,6 +1773,8 @@ router.post('/oauth/callback', async (req, res) => {
                     { provider, email }
                 );
 
+                setAuthCookie(res, token);
+
                 return res.json({
                     success: true,
                     data: {
@@ -1773,6 +1802,8 @@ router.post('/oauth/callback', async (req, res) => {
                 req.get('User-Agent'),
                 { provider, email, linkedTo: existingTeacher.id }
             );
+
+            setAuthCookie(res, token);
 
             return res.json({
                 success: true,
@@ -1836,6 +1867,8 @@ router.post('/oauth/callback', async (req, res) => {
                     { provider, email, teacherId: invite.teacher_id }
                 );
 
+                setAuthCookie(res, token);
+
                 return res.json({
                     success: true,
                     data: {
@@ -1889,6 +1922,8 @@ router.post('/oauth/callback', async (req, res) => {
                     { provider, email }
                 );
 
+                setAuthCookie(res, token);
+
                 return res.json({
                     success: true,
                     data: {
@@ -1914,6 +1949,8 @@ router.post('/oauth/callback', async (req, res) => {
             req.get('User-Agent'),
             { provider, email }
         );
+
+        setAuthCookie(res, token);
 
         res.status(201).json({
             success: true,

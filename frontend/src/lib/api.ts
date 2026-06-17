@@ -39,16 +39,8 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      withCredentials: true,
       timeout: 30000, // 30 second timeout to prevent long waits
-    });
-
-    // Add request interceptor to include auth token
-    this.api.interceptors.request.use((config) => {
-      const token = this.getToken();
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
     });
 
     // Add response interceptor for error handling with retry
@@ -59,7 +51,6 @@ class ApiClient {
         
         // Only auto-logout on 401 (Unauthorized) errors, not on network timeouts or other errors
         if (error.response?.status === 401) {
-          this.removeToken();
           const locale = window.location.pathname.split('/')[1] || 'ar';
           window.location.href = `/${locale}/login`;
         }
@@ -95,45 +86,14 @@ class ApiClient {
     );
   }
 
-  // Token management
-  // Fires a custom event on token change so AuthProvider can react without polling.
-  // Pattern: Auth0, Clerk, Supabase — custom event + storage event for cross-tab sync.
-
-  getToken(): string | null {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('nabeeh_token');
-    }
-    return null;
-  }
-
-  setToken(token: string): void {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('nabeeh_token', token);
-      window.dispatchEvent(new CustomEvent('auth:token-changed', { detail: { token, action: 'set' } }));
-    }
-  }
-
-  removeToken(): void {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('nabeeh_token');
-      window.dispatchEvent(new CustomEvent('auth:token-changed', { detail: { token: null, action: 'remove' } }));
-    }
-  }
-
   // Authentication API
   async login(data: LoginRequest): Promise<AuthResponse> {
     const response: AxiosResponse<ApiResponse<AuthResponse>> = await this.api.post('/auth/login', data);
-    if (response.data.success && response.data.data) {
-      this.setToken(response.data.data.token);
-    }
     return response.data.data;
   }
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
     const response: AxiosResponse<ApiResponse<AuthResponse>> = await this.api.post('/auth/register', data);
-    if (response.data.success && response.data.data) {
-      this.setToken(response.data.data.token);
-    }
     return response.data.data;
   }
 
