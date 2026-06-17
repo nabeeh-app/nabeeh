@@ -20,14 +20,10 @@ export async function GET(request: Request) {
   const origin = getOrigin(request);
 
   if (code) {
-    try {
-      const supabase = await createClient();
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (!error) {
-        return NextResponse.redirect(`${origin}/${locale}/auth/callback-client`);
-      }
-    } catch (err) {
-      console.error('OAuth code exchange failed:', err);
+    const supabase = await createClient();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      return NextResponse.redirect(`${origin}/${locale}/auth/callback-client`);
     }
   }
 
