@@ -133,8 +133,12 @@ app.get('/api/admin/whatsapp-health', authenticateToken, requireRole('admin'), (
   }
 });
 
-// API Documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+// API Documentation — admin-only in production
+const swaggerAuth = process.env.NODE_ENV === 'production'
+  ? [authenticateToken, requireRole('admin')]
+  : [];
+
+app.use('/api-docs', ...swaggerAuth, swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'Nabeeh API Docs',
   customCss: '.swagger-ui .topbar { display: none }',
   swaggerOptions: {
@@ -145,7 +149,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 }));
 
 // Serve raw OpenAPI spec
-app.get('/api-docs.json', (req, res) => {
+app.get('/api-docs.json', ...swaggerAuth, (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
