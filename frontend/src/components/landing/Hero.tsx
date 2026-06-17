@@ -23,7 +23,7 @@ export function Hero() {
             <p className="text-lg text-ink/60 font-body max-w-lg leading-relaxed">
               {t('subtitle')}
             </p>
-            <div className={cn('flex flex-wrap gap-4', isRTL ? 'flex-row-reverse' : '')}>
+            <div className={cn('flex flex-wrap gap-4', isRTL ? 'flex-row-reverse justify-end' : 'justify-start')}>
               <Button size="lg" asChild>
                 <Link href={`/${locale}/register`}>{t('cta.start')}</Link>
               </Button>
