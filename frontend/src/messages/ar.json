@@ -270,7 +270,7 @@
       "arabicNamePlaceholder": "أدخل اسم الطالب بالعربية",
       "englishNamePlaceholder": "أدخل اسم الطالب بالإنجليزية",
       "emailPlaceholder": "student@example.com",
-      "phonePlaceholder": "+966XXXXXXXXX",
+      "phonePlaceholder": "+201XXXXXXXXX",
       "addressPlaceholder": "أدخل عنوان الطالب",
       "parentNamePlaceholder": "أدخل اسم ولي الأمر",
       "parentPhonePlaceholder": "أدخل هاتف ولي الأمر",
@@ -482,7 +482,7 @@
     "assessment": "التقييم",
     "actions": "الإجراءات",
     "studentsCount": "{count} طالب",
-    "midterm": "امتحان نصف الفصل",
+      "midterm": "امتحان الميدترم",
     "final": "امتحان نهائي",
     "homework": "واجب",
     "quizLabel": "كويز",
@@ -507,7 +507,7 @@
       "project": "مشروع",
       "participation": "مشاركة",
       "homework": "واجب",
-      "midterm": "امتحان نصف الفصل",
+    "midterm": "امتحان الميدترم",
       "final": "امتحان نهائي"
     },
     "letterGrades": {
@@ -770,7 +770,7 @@
     "selectPeriod": "اختر الفترة",
     "lastWeek": "الأسبوع الماضي",
     "lastMonth": "الشهر الماضي",
-    "lastSemester": "الفصل الماضي",
+    "lastSemester": "الترم اللي فات",
     "customRange": "نطاق مخصص",
     "loading": "جاري تحميل التقارير...",
     "totalStudents": "إجمالي الطلاب",
@@ -870,7 +870,7 @@
     "selectPeriod": "اختر الفترة",
     "lastWeek": "الأسبوع الماضي",
     "lastMonth": "الشهر الماضي",
-    "lastSemester": "الفصل الماضي",
+    "lastSemester": "الترم اللي فات",
     "customRange": "نطاق مخصص"
   },
   "settings": {
