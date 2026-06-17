@@ -7,10 +7,15 @@ export async function GET(request: Request) {
   const locale = requestUrl.pathname.split('/')[1] || 'ar';
 
   if (code) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return NextResponse.redirect(`${requestUrl.origin}/${locale}/auth/callback-client`);
+    try {
+      const supabase = await createClient();
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (!error) {
+        return NextResponse.redirect(`${requestUrl.origin}/${locale}/auth/callback-client`);
+      }
+    } catch (err) {
+      // Log but don't crash — fall through to error redirect
+      console.error('OAuth code exchange failed:', err);
     }
   }
 
