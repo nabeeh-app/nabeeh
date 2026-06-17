@@ -48,12 +48,33 @@ const authenticateToken = async (req, res, next) => {
             });
         }
 
-        // First, try to find the user as a teacher
-        const { data: teacher, error: teacherError } = await supabaseAdmin
+        // First, try to find the user as a teacher by ID or auth_id
+        let teacher = null;
+        let teacherError = null;
+
+        // Try by primary key first
+        const byId = await supabaseAdmin
             .from('teachers')
             .select('id, email, name, role, preferred_language, is_active')
             .eq('id', decoded.user_id)
             .single();
+
+        if (byId.data && !byId.error) {
+            teacher = byId.data;
+        } else {
+            // Try by auth_id (OAuth-linked accounts)
+            const byAuthId = await supabaseAdmin
+                .from('teachers')
+                .select('id, email, name, role, preferred_language, is_active')
+                .eq('auth_id', decoded.user_id)
+                .single();
+
+            if (byAuthId.data && !byAuthId.error) {
+                teacher = byAuthId.data;
+            } else {
+                teacherError = byId.error || byAuthId.error;
+            }
+        }
 
         if (teacher && !teacherError) {
             if (!teacher.is_active) {

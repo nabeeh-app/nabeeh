@@ -1,12 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get('code');
   const locale = requestUrl.pathname.split('/')[1] || 'ar';
 
-  // Supabase handles the OAuth flow and redirects here with tokens in the URL
-  // We just need to redirect to the client-side callback page that handles the session
-  return NextResponse.redirect(
-    new URL(`/${locale}/auth/callback-client`, request.url)
-  );
+  if (code) {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      return NextResponse.redirect(`${requestUrl.origin}/${locale}/auth/callback-client`);
+    }
+  }
+
+  return NextResponse.redirect(`${requestUrl.origin}/${locale}/login?error=oauth_exchange_failed`);
 }

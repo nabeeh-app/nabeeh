@@ -77,7 +77,7 @@ describe('Unprotected Endpoints - Auth Required', () => {
   describe('POST /api/auth/oauth/check-profile', () => {
     it('should return 200 with valid token', async () => {
       const mockTeacher = {
-        id: 'teacher-1',
+        id: '550e8400-e29b-41d4-a716-446655440000',
         name: 'Test Teacher',
         email: 'test@example.com'
       };
@@ -91,7 +91,7 @@ describe('Unprotected Endpoints - Auth Required', () => {
 
       const res = await request(app)
         .post('/api/auth/oauth/check-profile')
-        .send({ user_id: 'teacher-1' });
+        .send({ user_id: '550e8400-e29b-41d4-a716-446655440000' });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);

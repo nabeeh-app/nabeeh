@@ -2,11 +2,9 @@
 
 import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
 import { useLocale } from 'next-intl';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+import { createClient } from '@/utils/supabase/client';
+import logger from '@/lib/logger';
 
 function CallbackHandler() {
   const router = useRouter();
@@ -14,44 +12,39 @@ function CallbackHandler() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabase = createClient();
 
     const handleCallback = async () => {
-      const code = searchParams.get('code');
+      try {
+        // Session was already established by the server-side code exchange
+        // in the Route Handler. Read it from cookies.
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (code) {
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error) {
-          router.replace(`/${locale}/login?error=oauth_exchange_failed`);
+        if (sessionError) {
+          logger.error('Failed to get session after OAuth:', sessionError);
+          router.replace(`/${locale}/login?error=session_error`);
           return;
         }
-        if (data.session) {
-          await exchangeForBackendToken(data.session);
+
+        if (!session) {
+          router.replace(`/${locale}/login?error=no_session`);
           return;
         }
-      }
 
-      const hash = window.location.hash;
-      if (hash && hash.includes('access_token')) {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          await exchangeForBackendToken(data.session);
-          return;
-        }
+        // Exchange Supabase session for backend JWT
+        await exchangeForBackendToken(session);
+      } catch (err) {
+        logger.error('OAuth callback error:', err);
+        router.replace(`/${locale}/login?error=callback_error`);
       }
-
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) {
-        await exchangeForBackendToken(sessionData.session);
-        return;
-      }
-
-      router.replace(`/${locale}/login?error=no_session`);
     };
 
-    const exchangeForBackendToken = async (session: { access_token: string; user: { id: string; email?: string } }) => {
+    const exchangeForBackendToken = async (session: { access_token: string }) => {
       try {
         const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+
         const response = await fetch(`${backendUrl}/auth/oauth/callback`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -59,19 +52,21 @@ function CallbackHandler() {
           body: JSON.stringify({
             access_token: session.access_token,
             provider: 'google'
-          })
+          }),
+          signal: controller.signal
         });
+        clearTimeout(timeout);
 
         const data = await response.json();
 
         if (data.success) {
-          // Cookie is set by the backend Set-Cookie header.
-          // Redirect to dashboard — AuthProvider will pick up the session.
           router.replace(`/${locale}/dashboard`);
         } else {
+          logger.error('Backend token exchange failed:', data.message);
           router.replace(`/${locale}/login?error=backend_token_failed`);
         }
-      } catch {
+      } catch (err) {
+        logger.error('Backend token exchange error:', err);
         router.replace(`/${locale}/login?error=backend_exchange_failed`);
       }
     };

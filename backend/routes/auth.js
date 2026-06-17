@@ -2,7 +2,7 @@ const express = require('express');
 const { supabase, supabaseAdmin } = require('../config/database');
 const { TokenService, AuthService } = require('../lib/auth');
 const { authenticateToken, requireRole } = require('../middleware/auth');
-const { validate, registerSchema, loginSchema, requestResetSchema, resetPasswordSchema, updateProfileSchema, createTeacherSchema } = require('../middleware/validate');
+const { validate, registerSchema, loginSchema, requestResetSchema, resetPasswordSchema, updateProfileSchema, createTeacherSchema, oauthCallbackSchema, checkProfileSchema } = require('../middleware/validate');
 const rateLimit = require('express-rate-limit');
 const logger = require('../lib/logger');
 const { sendEmail } = require('../lib/email');
@@ -1522,17 +1522,9 @@ router.post('/reset-password', validate(resetPasswordSchema), async (req, res) =
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/oauth/check-profile', authenticateToken, async (req, res) => {
+router.post('/oauth/check-profile', authenticateToken, validate(checkProfileSchema), async (req, res) => {
     try {
-        const { user_id, email } = req.body;
-
-        if (!user_id && !email) {
-            return res.status(400).json({
-                success: false,
-                message: 'user_id or email is required',
-                messageAr: 'user_id أو البريد الإلكتروني مطلوب'
-            });
-        }
+        const { user_id, email } = req.validated.body;
 
         let teacher = null;
 
@@ -1679,17 +1671,9 @@ router.post('/oauth/check-profile', authenticateToken, async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/oauth/callback', async (req, res) => {
+router.post('/oauth/callback', validate(oauthCallbackSchema), async (req, res) => {
     try {
-        const { access_token, provider } = req.body;
-
-        if (!access_token || provider !== 'google') {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid OAuth callback parameters',
-                messageAr: 'معلمات تسجيل الدخول عبر OAuth غير صالحة'
-            });
-        }
+        const { access_token, provider } = req.validated.body;
 
         // Exchange access token for user info via Supabase
         const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(access_token);
@@ -1714,102 +1698,24 @@ router.post('/oauth/callback', async (req, res) => {
             });
         }
 
-        // Check if this email matches an existing teacher
-        const { data: existingTeacher } = await supabaseAdmin
+        // Step 1: Check if this auth user is already linked to a teacher
+        const { data: linkedTeacher } = await supabaseAdmin
             .from('teachers')
             .select('id, email, name')
-            .eq('email', email)
+            .eq('auth_id', user.id)
             .single();
 
-        if (existingTeacher) {
-            // Account linking: link the Google auth user to existing teacher
-            // Check if the auth user ID already matches the teacher ID
-            if (user.id === existingTeacher.id) {
-                // Already linked - just generate token and return
-                const token = authService.tokenService.generateToken(existingTeacher);
-
-                await logAuthEvent(
-                    existingTeacher.id,
-                    'oauth_login',
-                    true,
-                    req.ip || req.connection.remoteAddress,
-                    req.get('User-Agent'),
-                    { provider, email }
-                );
-
-                setAuthCookie(res, token);
-
-                return res.json({
-                    success: true,
-                    data: {
-                        teacher: formatTeacherResponse(existingTeacher),
-                        token,
-                        isNewUser: false
-                    },
-                    message: 'Login successful',
-                    messageAr: 'تم تسجيل الدخول بنجاح'
-                });
-            }
-
-            // Auth user ID doesn't match teacher ID - need to link them
-            // Update the teacher's ID to match the auth user's ID
-            const { error: linkError } = await supabaseAdmin
-                .from('teachers')
-                .update({ 
-                    id: user.id,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', existingTeacher.id);
-
-            if (linkError) {
-                // If ID update fails (likely due to FK constraints), try alternative approach
-                // Create a new auth user with the existing teacher's ID
-                logger.info('Account linking: ID update failed, checking existing auth user', { error: linkError.message });
-                
-                // The user is already authenticated via Google, so use their ID
-                const token = authService.tokenService.generateToken({ 
-                    id: user.id, 
-                    email, 
-                    name: existingTeacher.name 
-                });
-
-                await logAuthEvent(
-                    existingTeacher.id,
-                    'oauth_login',
-                    true,
-                    req.ip || req.connection.remoteAddress,
-                    req.get('User-Agent'),
-                    { provider, email }
-                );
-
-                setAuthCookie(res, token);
-
-                return res.json({
-                    success: true,
-                    data: {
-                        teacher: formatTeacherResponse({ ...existingTeacher, id: user.id }),
-                        token,
-                        isNewUser: false
-                    },
-                    message: 'Login successful',
-                    messageAr: 'تم تسجيل الدخول بنجاح'
-                });
-            }
-
-            // Successfully linked
-            const token = authService.tokenService.generateToken({ 
-                id: user.id, 
-                email, 
-                name: existingTeacher.name 
-            });
+        if (linkedTeacher) {
+            // Already linked — generate token and return
+            const token = authService.tokenService.generateToken(linkedTeacher);
 
             await logAuthEvent(
-                user.id,
-                'oauth_account_linked',
+                linkedTeacher.id,
+                'oauth_login',
                 true,
                 req.ip || req.connection.remoteAddress,
                 req.get('User-Agent'),
-                { provider, email, linkedTo: existingTeacher.id }
+                { provider, email }
             );
 
             setAuthCookie(res, token);
@@ -1817,7 +1723,73 @@ router.post('/oauth/callback', async (req, res) => {
             return res.json({
                 success: true,
                 data: {
-                    teacher: formatTeacherResponse({ ...existingTeacher, id: user.id }),
+                    teacher: formatTeacherResponse(linkedTeacher),
+                    token,
+                    isNewUser: false
+                },
+                message: 'Login successful',
+                messageAr: 'تم تسجيل الدخول بنجاح'
+            });
+        }
+
+        // Step 2: Check if a teacher exists with this email (registered via email/password)
+        const { data: existingTeacher } = await supabaseAdmin
+            .from('teachers')
+            .select('id, email, name, auth_id')
+            .eq('email', email)
+            .single();
+
+        if (existingTeacher) {
+            if (existingTeacher.auth_id && existingTeacher.auth_id !== user.id) {
+                // Another auth user is already linked to this teacher — conflict
+                logger.warn('OAuth account linking conflict', {
+                    teacherId: existingTeacher.id,
+                    existingAuthId: existingTeacher.auth_id,
+                    newAuthId: user.id,
+                    email
+                });
+                return res.status(409).json({
+                    success: false,
+                    message: 'This email is already linked to another account',
+                    messageAr: 'هذا البريد الإلكتروني مرتبط بحساب آخر'
+                });
+            }
+
+            // Link: set auth_id to the Google auth user ID
+            const { error: linkError } = await supabaseAdmin
+                .from('teachers')
+                .update({
+                    auth_id: user.id,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', existingTeacher.id);
+
+            if (linkError) {
+                logger.error('Failed to link OAuth account', { error: linkError.message, teacherId: existingTeacher.id });
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to link account',
+                    messageAr: 'فشل ربط الحساب'
+                });
+            }
+
+            const token = authService.tokenService.generateToken(existingTeacher);
+
+            await logAuthEvent(
+                existingTeacher.id,
+                'oauth_account_linked',
+                true,
+                req.ip || req.connection.remoteAddress,
+                req.get('User-Agent'),
+                { provider, email }
+            );
+
+            setAuthCookie(res, token);
+
+            return res.json({
+                success: true,
+                data: {
+                    teacher: formatTeacherResponse(existingTeacher),
                     token,
                     isNewUser: false
                 },
@@ -1903,6 +1875,7 @@ router.post('/oauth/callback', async (req, res) => {
             .from('teachers')
             .insert({
                 id: user.id,
+                auth_id: user.id,
                 name: name,
                 email: email,
                 updated_at: new Date().toISOString()

@@ -296,6 +296,24 @@ const updateAssistantStatusSchema = z.object({
   params: z.object({ id: z.string().uuid() })
 });
 
+// ==================== OAUTH SCHEMAS ====================
+
+const oauthCallbackSchema = z.object({
+  body: z.object({
+    access_token: z.string().min(1, 'Access token is required'),
+    provider: z.literal('google', { errorMap: () => ({ message: 'Only Google provider is supported' }) })
+  })
+});
+
+const checkProfileSchema = z.object({
+  body: z.object({
+    user_id: z.string().uuid().optional(),
+    email: z.string().email().optional()
+  }).refine(data => data.user_id || data.email, {
+    message: 'At least one of user_id or email is required'
+  })
+});
+
 module.exports = {
   validate,
   registerSchema,
@@ -321,5 +339,7 @@ module.exports = {
   inviteAssistantSchema,
   acceptInviteSchema,
   updateAssistantPermissionsSchema,
-  updateAssistantStatusSchema
+  updateAssistantStatusSchema,
+  oauthCallbackSchema,
+  checkProfileSchema
 };
