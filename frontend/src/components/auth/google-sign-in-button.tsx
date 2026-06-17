@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { createClient, isSupabaseConfigured } from '@/utils/supabase/client';
 import { cn } from '@/lib/utils';
 import logger from '@/lib/logger';
 
@@ -18,13 +18,14 @@ export function GoogleSignInButton({ className, mode = 'login' }: GoogleSignInBu
   const isRTL = locale === 'ar';
 
   const handleGoogleSignIn = async () => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured) {
       logger.error('Google sign-in is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
       return;
     }
 
     try {
       setIsLoading(true);
+      const supabase = createClient();
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
