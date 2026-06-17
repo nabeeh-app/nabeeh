@@ -86,6 +86,31 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Admin WhatsApp health endpoint (no teacher auth required)
+app.get('/api/admin/whatsapp-health', (req, res) => {
+  try {
+    const { baileysClient } = require('./lib/baileys');
+    const status = baileysClient.getStatus();
+    res.json({
+      success: true,
+      data: {
+        status: status.status || 'disconnected',
+        phone: status.phone || null,
+        lastCheck: new Date().toISOString(),
+      }
+    });
+  } catch (error) {
+    res.json({
+      success: true,
+      data: {
+        status: 'disconnected',
+        phone: null,
+        lastCheck: new Date().toISOString(),
+      }
+    });
+  }
+});
+
 // API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'Nabeeh API Docs',

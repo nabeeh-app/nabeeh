@@ -217,7 +217,7 @@ export default function WhatsAppDashboardPage() {
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-surface-sage flex items-center justify-center">
-                <CheckCircle className="h-5 w-5 text-[#026370]" />
+                <CheckCircle className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-ink">{t('statusConnectedTitle')}</p>
@@ -239,7 +239,7 @@ export default function WhatsAppDashboardPage() {
                   disabled={isLoading}
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 border-[#c53030]/20 text-[#c53030] hover:bg-[#c53030]/10"
+                  className="gap-1.5 border-destructive/20 text-destructive hover:bg-destructive/10"
                 >
                   <Unlink className="h-3.5 w-3.5" />
                   {t('logout')}
@@ -367,7 +367,7 @@ export default function WhatsAppDashboardPage() {
                         className="h-10 w-10 p-0"
                       >
                         {codeCopied ? (
-                          <Check className="h-4 w-4 text-green-600" />
+                          <Check className="h-4 w-4 text-success" />
                         ) : (
                           <Copy className="h-4 w-4" />
                         )}
@@ -396,9 +396,9 @@ export default function WhatsAppDashboardPage() {
 
               {/* Error state — only shown on actual errors */}
               {whatsappStatus.status === 'error' && (
-                <div className="flex items-start gap-3 p-3 bg-[#c53030]/5 border border-[#c53030]/10 rounded-lg">
-                  <AlertCircle className="h-4 w-4 text-[#c53030] mt-0.5 shrink-0" />
-                  <p className="text-sm text-[#c53030]">{t('statusErrorDescription')}</p>
+                <div className="flex items-start gap-3 p-3 bg-destructive/5 border border-destructive/10 rounded-lg">
+                  <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                  <p className="text-sm text-destructive">{t('statusErrorDescription')}</p>
                 </div>
               )}
 

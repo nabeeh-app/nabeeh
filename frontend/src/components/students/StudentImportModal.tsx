@@ -188,7 +188,7 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>
+          <div className="mb-4 rounded-lg bg-error/10 p-3 text-sm text-error">{error}</div>
         )}
 
         {loading && (
@@ -238,8 +238,8 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
 
         {!loading && step === 'complete' && importResult && (
           <div className="text-center py-8 space-y-4">
-            <div className="rounded-full bg-green-50 p-4 mx-auto w-fit">
-              <Check className="h-8 w-8 text-green-500" />
+            <div className="rounded-full bg-success/10 p-4 mx-auto w-fit">
+              <Check className="h-8 w-8 text-success" />
             </div>
             <h3 className="text-lg font-semibold text-[var(--color-ink)]">{t('complete.title')}</h3>
             <p className="text-sm text-[var(--color-ink)]/60">

@@ -94,7 +94,7 @@ export default function InviteAcceptPage() {
       <div className="min-h-screen flex items-center justify-center bg-[var(--color-canvas)] p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
-            <XCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
+            <XCircle className="w-12 h-12 mx-auto mb-4 text-error" />
             <h1 className="text-lg font-semibold text-[var(--color-ink)] font-body mb-2">Invitation Error</h1>
             <p className="text-sm text-[var(--color-ink)]/60 font-body">{error}</p>
           </CardContent>
@@ -108,7 +108,7 @@ export default function InviteAcceptPage() {
       <div className="min-h-screen flex items-center justify-center bg-[var(--color-canvas)] p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
-            <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500" />
+            <CheckCircle className="w-12 h-12 mx-auto mb-4 text-success" />
             <h1 className="text-lg font-semibold text-[var(--color-ink)] font-body mb-2">Invitation Accepted!</h1>
             <p className="text-sm text-[var(--color-ink)]/60 font-body mb-4">
               You are now an assistant. Please log in to access your account.
@@ -146,7 +146,7 @@ export default function InviteAcceptPage() {
                 .filter(([, enabled]) => enabled)
                 .map(([key]) => (
                   <div key={key} className="flex items-center gap-2 text-sm text-[var(--color-ink)] font-body">
-                    <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                    <CheckCircle className="w-3.5 h-3.5 text-success" />
                     {PERMISSION_LABELS[key]?.en || key}
                   </div>
                 ))}

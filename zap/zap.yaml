@@ -1,0 +1,47 @@
+env:
+  contexts:
+  - excludePaths: []
+    name: baseline
+    urls:
+    - http://admin:3001
+  parameters:
+    failOnError: true
+    progressToStdout: true
+jobs:
+- parameters:
+    enableTags: false
+    maxAlertsPerRule: 10
+  type: passiveScan-config
+- parameters:
+    maxDuration: 10
+    url: http://admin:3001
+  type: spider
+- parameters:
+    maxDuration: 60
+  type: passiveScan-wait
+- parameters:
+    format: Long
+    summaryFile: /home/zap/zap_out.json
+  rules: []
+  type: outputSummary
+- parameters:
+    reportDescription: ''
+    reportDir: /zap/wrk/
+    reportFile: zap-admin-report.html
+    reportTitle: ZAP Scanning Report
+    template: traditional-html
+  type: report
+- parameters:
+    reportDescription: ''
+    reportDir: /zap/wrk/
+    reportFile: zap-admin-report.xml
+    reportTitle: ZAP Scanning Report
+    template: traditional-xml
+  type: report
+- parameters:
+    reportDescription: ''
+    reportDir: /zap/wrk/
+    reportFile: zap-admin-report.json
+    reportTitle: ZAP Scanning Report
+    template: traditional-json
+  type: report

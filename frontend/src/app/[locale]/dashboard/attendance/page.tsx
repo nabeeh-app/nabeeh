@@ -215,8 +215,8 @@ export default function AttendancePage() {
 
   const getStatusIcon = (status: string | null) => {
     switch (status) {
-      case 'present': return <CheckCircle className="h-4 w-4 text-[#026370]" />;
-      case 'absent': return <XCircle className="h-4 w-4 text-[#c53030]" />;
+      case 'present': return <CheckCircle className="h-4 w-4 text-primary" />;
+      case 'absent': return <XCircle className="h-4 w-4 text-destructive" />;
       case 'late': return <Clock className="h-4 w-4 text-ink/70" />;
       case 'excused': return <AlertCircle className="h-4 w-4 text-primary" />;
       default: return <div className="h-4 w-4 rounded-pill border-2 border-ink/20" />;
@@ -226,7 +226,7 @@ export default function AttendancePage() {
   const getStatusBadge = (status: string) => {
     const statusMap = {
       present: { variant: 'default' as const, label: t('attendance.status.present'), color: 'bg-surface-sage text-ink' },
-      absent: { variant: 'destructive' as const, label: t('attendance.status.absent'), color: 'bg-[#c53030]/10 text-[#c53030]' },
+      absent: { variant: 'destructive' as const, label: t('attendance.status.absent'), color: 'bg-destructive/10 text-destructive' },
       late: { variant: 'outline' as const, label: t('attendance.status.late'), color: 'bg-surface-cool text-ink/70' },
       excused: { variant: 'secondary' as const, label: t('attendance.status.excused'), color: 'bg-primary/10 text-primary' }
     };
@@ -347,21 +347,21 @@ export default function AttendancePage() {
                     <div className="text-sm text-ink/60">{t('attendance.totalSessions')}</div>
                   </div>
                   <div className="text-center p-4 bg-surface-sage rounded-lg">
-                    <div className="text-2xl font-bold text-[#026370]">{attendanceStats.attendance_rate}%</div>
+                    <div className="text-2xl font-bold text-primary">{attendanceStats.attendance_rate}%</div>
                     <div className="text-sm text-ink/60">{t('attendance.attendanceRate')}</div>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-[#026370]" />
+                      <CheckCircle className="h-4 w-4 text-primary" />
                       {t('attendance.status.present')}
                     </span>
                     <span className="font-medium">{attendanceStats.present_count}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2">
-                      <XCircle className="h-4 w-4 text-[#c53030]" />
+                      <XCircle className="h-4 w-4 text-destructive" />
                       {t('attendance.status.absent')}
                     </span>
                     <span className="font-medium">{attendanceStats.absent_count}</span>
@@ -447,7 +447,7 @@ export default function AttendancePage() {
                         >
                           <div>{day.date.getDate()}</div>
                           {day.hasAttendance && (
-                            <div className="w-1 h-1 bg-[#026370] rounded-full mx-auto mt-1"></div>
+                            <div className="w-1 h-1 bg-primary rounded-full mx-auto mt-1"></div>
                           )}
                         </button>
                       ))}

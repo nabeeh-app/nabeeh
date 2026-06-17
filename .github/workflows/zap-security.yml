@@ -1,0 +1,196 @@
+name: OWASP ZAP Security Scan
+
+on:
+  schedule:
+    # Run weekly on Monday at 2 AM UTC
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type of ZAP scan to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - baseline
+          - api
+          - full
+          - all
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'admin/**'
+      - 'zap/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  DOCKER_COMPOSE_VERSION: '2.24.0'
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/v${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
+
+      - name: Create environment file
+        run: |
+          cat > .env << EOF
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+          CORS_ORIGIN=http://localhost:3000
+          FRONTEND_URL=http://localhost:3000
+          NEXT_PUBLIC_API_URL=http://localhost:5000/api
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM=${{ secrets.EMAIL_FROM }}
+          EOF
+
+      - name: Build and start services
+        run: |
+          docker-compose build
+          docker-compose up -d backend frontend admin
+          sleep 30
+
+      - name: Wait for services to be healthy
+        run: |
+          echo "Waiting for backend to be healthy..."
+          for i in $(seq 1 30); do
+            if docker-compose ps backend | grep -q "healthy"; then
+              echo "Backend is healthy"
+              break
+            fi
+            sleep 5
+          done
+
+          echo "Waiting for frontend to be healthy..."
+          for i in $(seq 1 30); do
+            if docker-compose ps frontend | grep -q "healthy"; then
+              echo "Frontend is healthy"
+              break
+            fi
+            sleep 5
+          done
+
+          echo "Waiting for admin to be healthy..."
+          for i in $(seq 1 30); do
+            if docker-compose ps admin | grep -q "healthy"; then
+              echo "Admin is healthy"
+              break
+            fi
+            sleep 5
+          done
+
+      - name: Run ZAP Baseline Scan
+        if: >
+          github.event_name == 'schedule' ||
+          github.event.inputs.scan_type == 'baseline' ||
+          github.event.inputs.scan_type == 'all' ||
+          github.event_name == 'push'
+        run: |
+          docker-compose up zap-baseline
+          mkdir -p reports
+          docker cp nabeeh-zap-baseline:/zap/wrk/reports/ reports/ 2>/dev/null || true
+
+      - name: Run ZAP API Scan
+        if: >
+          github.event_name == 'schedule' ||
+          github.event.inputs.scan_type == 'api' ||
+          github.event.inputs.scan_type == 'all' ||
+          github.event_name == 'push'
+        run: |
+          docker-compose up zap-api
+          mkdir -p reports
+          docker cp nabeeh-zap-api:/zap/wrk/reports/ reports/ 2>/dev/null || true
+
+      - name: Run ZAP Admin Scan
+        if: >
+          github.event_name == 'schedule' ||
+          github.event.inputs.scan_type == 'baseline' ||
+          github.event.inputs.scan_type == 'all' ||
+          github.event_name == 'push'
+        run: |
+          docker-compose up zap-admin
+          mkdir -p reports
+          docker cp nabeeh-zap-admin:/zap/wrk/reports/ reports/ 2>/dev/null || true
+
+      - name: Run ZAP Full Scan
+        if: >
+          github.event.inputs.scan_type == 'full' ||
+          github.event.inputs.scan_type == 'all'
+        run: |
+          docker-compose up zap-full
+          mkdir -p reports
+          docker cp nabeeh-zap-full:/zap/wrk/reports/ reports/ 2>/dev/null || true
+
+      - name: Check for high-risk vulnerabilities
+        if: always()
+        run: |
+          if [ -d reports ]; then
+            echo "Checking for high-risk vulnerabilities..."
+            for report in reports/*.json; do
+              if [ -f "$report" ]; then
+                high_risk=$(jq '.site[0].alerts[] | select(.riskdesc | contains("High"))' "$report" 2>/dev/null | wc -l)
+                if [ "$high_risk" -gt 0 ]; then
+                  echo "⚠️  High-risk vulnerabilities found in $report"
+                  jq '.site[0].alerts[] | select(.riskdesc | contains("High")) | {name: .name, risk: .riskdesc, count: .count}' "$report"
+                  exit 1
+                fi
+              fi
+            done
+            echo "✅ No high-risk vulnerabilities found"
+          else
+            echo "⚠️  No report files found"
+          fi
+
+      - name: Upload scan reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-security-reports-${{ github.run_number }}
+          path: reports/
+          retention-days: 30
+
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## OWASP ZAP Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Scan Type: ${{ github.event.inputs.scan_type || 'scheduled/push' }}" >> $GITHUB_STEP_SUMMARY
+          echo "Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Reports" >> $GITHUB_STEP_SUMMARY
+          if [ -d reports ]; then
+            for report in reports/*.html; do
+              if [ -f "$report" ]; then
+                echo "- [$(basename $report)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "Download detailed reports from the artifacts section." >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker-compose down -v
+          docker system prune -f

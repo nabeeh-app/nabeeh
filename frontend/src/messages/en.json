@@ -1342,5 +1342,10 @@
     "noDigest": "No digest available",
     "noDigestDesc": "Your weekly digest will appear here every Sunday",
     "viewFullReport": "View Full Report"
+  },
+  "cookie": {
+    "message": "We use cookies to improve your experience and analyze site traffic. By clicking \"Accept\", you consent to the use of cookies. Read our Privacy Policy for more details.",
+    "accept": "Accept",
+    "reject": "Reject"
   }
 }

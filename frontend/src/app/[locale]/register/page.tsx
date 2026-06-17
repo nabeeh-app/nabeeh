@@ -194,7 +194,7 @@ export default function RegisterPage({ params: _params }: Props) {
         )}
 
         {errors.general && (
-          <div className="bg-[#c53030]/10 border border-[#c53030]/20 text-[#c53030] px-4 py-3 rounded-none font-body">
+          <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-none font-body">
             {errors.general}
           </div>
         )}
@@ -224,10 +224,10 @@ export default function RegisterPage({ params: _params }: Props) {
                     placeholder={isRTL ? 'أحمد محمد حسن' : 'John Smith'}
                     className={cn(
                       isRTL && 'text-right',
-                      errors.name && 'border-[#c53030]'
+                      errors.name && 'border-destructive'
                     )}
                   />
-                  {errors.name && <p className="text-base text-[#c53030]">{errors.name}</p>}
+                  {errors.name && <p className="text-base text-destructive">{errors.name}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -241,9 +241,9 @@ export default function RegisterPage({ params: _params }: Props) {
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder={isRTL ? 'ahmed@example.com' : 'john@example.com'}
-                    className={errors.email ? 'border-[#c53030]' : ''}
+                    className={errors.email ? 'border-destructive' : ''}
                   />
-                  {errors.email && <p className="text-base text-[#c53030]">{errors.email}</p>}
+                  {errors.email && <p className="text-base text-destructive">{errors.email}</p>}
                 </div>
               </div>
 
@@ -258,9 +258,9 @@ export default function RegisterPage({ params: _params }: Props) {
                     value={formData.phone}
                     onChange={(e) => handlePhoneChange('phone', e.target.value)}
                     placeholder="+201234567890"
-                    className={errors.phone ? 'border-[#c53030]' : ''}
+                    className={errors.phone ? 'border-destructive' : ''}
                   />
-                  {errors.phone && <p className="text-base text-[#c53030]">{errors.phone}</p>}
+                  {errors.phone && <p className="text-base text-destructive">{errors.phone}</p>}
                   <p className="text-xs text-ink/60 font-mono uppercase tracking-wider">
                     {t('phoneHint')}
                   </p>
@@ -276,9 +276,9 @@ export default function RegisterPage({ params: _params }: Props) {
                     value={formData.whatsapp_number}
                     onChange={(e) => handlePhoneChange('whatsapp_number', e.target.value)}
                     placeholder={t('whatsappPlaceholder')}
-                    className={errors.whatsapp_number ? 'border-[#c53030]' : ''}
+                    className={errors.whatsapp_number ? 'border-destructive' : ''}
                   />
-                  {errors.whatsapp_number && <p className="text-base text-[#c53030]">{errors.whatsapp_number}</p>}
+                  {errors.whatsapp_number && <p className="text-base text-destructive">{errors.whatsapp_number}</p>}
                 </div>
               </div>
 
@@ -296,7 +296,7 @@ export default function RegisterPage({ params: _params }: Props) {
                       placeholder={t('passwordPlaceholder')}
                       className={cn(
                         'pr-10',
-                        errors.password && 'border-[#c53030]'
+                        errors.password && 'border-destructive'
                       )}
                     />
                     <button
@@ -307,7 +307,7 @@ export default function RegisterPage({ params: _params }: Props) {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {errors.password && <p className="text-base text-[#c53030]">{errors.password}</p>}
+                  {errors.password && <p className="text-base text-destructive">{errors.password}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -323,7 +323,7 @@ export default function RegisterPage({ params: _params }: Props) {
                       placeholder={t('confirmPasswordPlaceholder')}
                       className={cn(
                         'pr-10',
-                        errors.confirmPassword && 'border-[#c53030]'
+                        errors.confirmPassword && 'border-destructive'
                       )}
                     />
                     <button
@@ -334,7 +334,7 @@ export default function RegisterPage({ params: _params }: Props) {
                       {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {errors.confirmPassword && <p className="text-base text-[#c53030]">{errors.confirmPassword}</p>}
+                  {errors.confirmPassword && <p className="text-base text-destructive">{errors.confirmPassword}</p>}
                 </div>
               </div>
 

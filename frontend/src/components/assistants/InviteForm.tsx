@@ -202,7 +202,7 @@ export function InviteForm({ onClose, onSuccess }: InviteFormProps) {
             <p className="text-sm text-destructive font-body">{error}</p>
           )}
           {success && (
-            <p className="text-sm text-green-600 font-body">{success}</p>
+            <p className="text-sm text-success font-body">{success}</p>
           )}
 
           <DialogFooter>

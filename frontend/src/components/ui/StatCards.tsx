@@ -6,13 +6,13 @@ const bgMap: Record<StatColor, string> = {
   primary: 'bg-surface-sage',
   success: 'bg-surface-sage',
   warning: 'bg-surface-cool',
-  destructive: 'bg-[#c53030]/10',
+  destructive: 'bg-destructive/10',
   accent: 'bg-surface-cool',
 };
 
 const textMap: Record<StatColor, string> = {
   primary: 'text-primary',
-  success: 'text-[#026370]',
+  success: 'text-primary',
   warning: 'text-ink/60',
   destructive: 'text-destructive',
   accent: 'text-ink/70',

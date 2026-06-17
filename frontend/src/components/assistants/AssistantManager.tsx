@@ -60,7 +60,9 @@ export function AssistantManager() {
   }, []);
 
   useEffect(() => {
-    fetchAssistants();
+    void (async () => {
+      await fetchAssistants();
+    })();
   }, [fetchAssistants]);
 
   const handleToggleStatus = async (assistant: Assistant) => {

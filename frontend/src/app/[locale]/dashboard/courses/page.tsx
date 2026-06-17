@@ -286,7 +286,7 @@ export default function CoursesPage() {
               />
             </div>
             {formError && (
-              <div className="text-[#c53030] text-sm bg-[#c53030]/10 p-3 rounded">
+              <div className="text-destructive text-sm bg-destructive/10 p-3 rounded">
                 {formError}
               </div>
             )}

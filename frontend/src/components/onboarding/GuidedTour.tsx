@@ -103,8 +103,10 @@ export function GuidedTour({ forceShow }: GuidedTourProps) {
 
   useEffect(() => {
     if (forceShow) {
-      setIsVisible(true);
-      setCurrentStep(0);
+      queueMicrotask(() => {
+        setIsVisible(true);
+        setCurrentStep(0);
+      });
       return;
     }
 
@@ -144,7 +146,7 @@ export function GuidedTour({ forceShow }: GuidedTourProps) {
 
   useEffect(() => {
     if (!isVisible) return;
-    updateSpotlight(currentStep);
+    queueMicrotask(() => updateSpotlight(currentStep));
 
     const handleResize = () => updateSpotlight(currentStep);
     window.addEventListener('resize', handleResize);

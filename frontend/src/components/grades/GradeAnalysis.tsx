@@ -37,7 +37,7 @@ export function GradeAnalysis() {
 
   useEffect(() => {
     if (offerings && offerings.length > 0 && !selectedOffering) {
-      setSelectedOffering(offerings[0].id);
+      queueMicrotask(() => setSelectedOffering(offerings[0].id));
     }
   }, [offerings, selectedOffering]);
 
@@ -69,7 +69,9 @@ export function GradeAnalysis() {
 
   useEffect(() => {
     if (selectedOffering) {
-      loadAnalysis(selectedOffering);
+      void (async () => {
+        await loadAnalysis(selectedOffering);
+      })();
     }
   }, [selectedOffering, loadAnalysis]);
 

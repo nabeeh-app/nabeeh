@@ -51,7 +51,7 @@ export function ReportSendDialog({ open, onOpenChange, draftId, studentName, onS
       <DialogContent className="sm:max-w-md">
         {sent ? (
           <div className="text-center py-6">
-            <CheckCircle className="h-12 w-12 mx-auto text-green-600 mb-3" />
+            <CheckCircle className="h-12 w-12 mx-auto text-success mb-3" />
             <p className="text-lg font-semibold text-ink font-display">{t('sentSuccess')}</p>
             <p className="text-sm text-ink/60 font-body mt-1">
               {t('sentToParent', { name: studentName || '' })}

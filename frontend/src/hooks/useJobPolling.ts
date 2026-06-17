@@ -26,11 +26,11 @@ export function useJobPolling(jobId: string | null, intervalMs = 2000) {
 
   useEffect(() => {
     if (!jobId) {
-      setJob({ status: 'pending', result: null, error: null });
+      queueMicrotask(() => setJob({ status: 'pending', result: null, error: null }));
       return;
     }
 
-    setIsPolling(true);
+    queueMicrotask(() => setIsPolling(true));
 
     const poll = async () => {
       try {

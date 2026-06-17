@@ -25,7 +25,9 @@ export function NotificationBell() {
   }, []);
 
   useEffect(() => {
-    fetchUnreadCount();
+    void (async () => {
+      await fetchUnreadCount();
+    })();
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
   }, [fetchUnreadCount]);

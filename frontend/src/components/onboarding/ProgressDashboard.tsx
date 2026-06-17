@@ -55,8 +55,10 @@ export default function ProgressDashboard() {
     CHECKPOINTS.forEach((cp) => {
       steps[cp.key] = localStorage.getItem(STORAGE_KEYS[cp.key]) === 'true';
     });
-    setCompletedSteps(steps);
-    setVisible(true);
+    queueMicrotask(() => {
+      setCompletedSteps(steps);
+      setVisible(true);
+    });
   }, []);
 
   const handleDismiss = () => {

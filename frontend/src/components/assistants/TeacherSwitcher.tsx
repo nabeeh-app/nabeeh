@@ -48,7 +48,9 @@ export function TeacherSwitcher() {
   }, [teacher]);
 
   useEffect(() => {
-    fetchLinkedTeachers();
+    void (async () => {
+      await fetchLinkedTeachers();
+    })();
   }, [fetchLinkedTeachers]);
 
   const handleSwitch = async (targetTeacher: LinkedTeacher) => {

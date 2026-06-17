@@ -60,7 +60,9 @@ export function NotificationPreferences() {
   }, [teacher]);
 
   useEffect(() => {
-    fetchPrefs();
+    void (async () => {
+      await fetchPrefs();
+    })();
   }, [fetchPrefs]);
 
   const handleToggle = (key: keyof Prefs) => {
@@ -181,7 +183,7 @@ export function NotificationPreferences() {
             {saving ? t('saving') : t('savePreferences')}
           </Button>
           {saved && (
-            <span className="flex items-center gap-1 text-sm text-green-600 font-body">
+            <span className="flex items-center gap-1 text-sm text-success font-body">
               <CheckCircle className="h-4 w-4" />
               {t('saved')}
             </span>

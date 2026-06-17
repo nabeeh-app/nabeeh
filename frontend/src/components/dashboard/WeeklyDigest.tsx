@@ -34,7 +34,9 @@ export function WeeklyDigest() {
   }, []);
 
   useEffect(() => {
-    fetchDigest();
+    void (async () => {
+      await fetchDigest();
+    })();
   }, [fetchDigest]);
 
   const formatDate = (dateStr: string) => {
@@ -91,7 +93,7 @@ export function WeeklyDigest() {
         {digest_data.improved.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="h-4 w-4 text-green-600" />
+              <TrendingUp className="h-4 w-4 text-success" />
               <h4 className="text-sm font-semibold text-ink font-body">
                 {t('improved')}
               </h4>
@@ -103,7 +105,7 @@ export function WeeklyDigest() {
               {digest_data.improved.slice(0, 3).map((item, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between text-sm p-2 rounded bg-green-500/5 border border-green-500/10"
+                  className="flex items-center justify-between text-sm p-2 rounded bg-success/100/5 border border-green-500/10"
                 >
                   <span className="font-body text-ink">
                     <span className="font-medium">{item.student_name}</span>
@@ -149,7 +151,7 @@ export function WeeklyDigest() {
         {digest_data.action_items.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Lightbulb className="h-4 w-4 text-yellow-500" />
+              <Lightbulb className="h-4 w-4 text-warning" />
               <h4 className="text-sm font-semibold text-ink font-body">
                 {t('actionItems')}
               </h4>

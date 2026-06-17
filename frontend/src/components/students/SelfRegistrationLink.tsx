@@ -81,7 +81,7 @@ export default function SelfRegistrationLink({ groupId }: SelfRegistrationLinkPr
               title={t('copyLink')}
             >
               {copied ? (
-                <Check className="h-4 w-4 text-green-500" />
+                <Check className="h-4 w-4 text-success" />
               ) : (
                 <Copy className="h-4 w-4 text-[var(--color-ink)]/60" />
               )}
@@ -111,7 +111,7 @@ export default function SelfRegistrationLink({ groupId }: SelfRegistrationLinkPr
         </div>
       )}
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && <p className="text-sm text-error">{error}</p>}
     </div>
   );
 }

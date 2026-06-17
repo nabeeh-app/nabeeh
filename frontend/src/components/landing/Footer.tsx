@@ -65,10 +65,20 @@ export function Footer() {
             </h4>
             <ul className="space-y-2">
               <li>
-                <span className="text-sm text-canvas/50 font-body">{t('terms')}</span>
+                <a
+                  href={`/${locale}/terms`}
+                  className="text-sm text-canvas/50 hover:text-canvas transition-colors font-body"
+                >
+                  {t('terms')}
+                </a>
               </li>
               <li>
-                <span className="text-sm text-canvas/50 font-body">{t('privacy')}</span>
+                <a
+                  href={`/${locale}/privacy`}
+                  className="text-sm text-canvas/50 hover:text-canvas transition-colors font-body"
+                >
+                  {t('privacy')}
+                </a>
               </li>
             </ul>
           </div>

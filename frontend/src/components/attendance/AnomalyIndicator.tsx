@@ -68,7 +68,7 @@ export function AnomalyIndicator({ offeringId }: AnomalyIndicatorProps) {
       >
         <CardTitle className="flex items-center justify-between text-ink font-display">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            <AlertTriangle className="h-5 w-5 text-warning" />
             {t('anomaliesDetected')}
             <Badge variant={criticalCount > 0 ? 'destructive' : 'warning'} className="text-xs">
               {anomalies.length}

@@ -249,7 +249,7 @@ export default function MessagesPage() {
       )}
 
       {sendStatus && (
-        <div className={`p-4 rounded-md text-sm ${sendStatus.type === 'success' ? 'bg-surface-sage text-ink' : 'bg-[#c53030]/10 text-[#c53030]'}`}>
+        <div className={`p-4 rounded-md text-sm ${sendStatus.type === 'success' ? 'bg-surface-sage text-ink' : 'bg-destructive/10 text-destructive'}`}>
           {sendStatus.message}
         </div>
       )}
@@ -330,7 +330,7 @@ export default function MessagesPage() {
           </CardHeader>
           <CardContent>
             {error && (
-              <div className="mb-4 rounded-lg border border-[#c53030]/20 bg-[#c53030]/10 p-3 text-sm text-[#c53030]">
+              <div className="mb-4 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
                 {error}
               </div>
             )}

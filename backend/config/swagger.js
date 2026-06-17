@@ -15,6 +15,7 @@ const options = {
     },
     servers: [
       { url: 'http://localhost:5000', description: 'Local development' },
+      { url: 'http://backend:5000', description: 'Docker' },
     ],
     components: {
       securitySchemes: {

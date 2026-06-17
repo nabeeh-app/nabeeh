@@ -95,9 +95,9 @@ const getLetterGrade = (percentage: number): string => {
 };
 
 const getGradeColor = (percentage: number): string => {
-  if (percentage >= 85) return 'text-[#026370] bg-surface-sage';
+  if (percentage >= 85) return 'text-primary bg-surface-sage';
   if (percentage >= 70) return 'text-ink/70 bg-surface-cool';
-  return 'text-[#c53030] bg-[#c53030]/10';
+  return 'text-destructive bg-destructive/10';
 };
 
 export default function GradesPage() {
@@ -473,11 +473,11 @@ export default function GradesPage() {
                     </div>
                     <div>
                       <div className="text-ink/60">{t('grades.stats.highestScore')}</div>
-                      <div className="font-medium text-[#026370]">{stat.highest_score}%</div>
+                      <div className="font-medium text-primary">{stat.highest_score}%</div>
                     </div>
                     <div>
                       <div className="text-ink/60">{t('grades.stats.lowestScore')}</div>
-                      <div className="font-medium text-[#c53030]">{stat.lowest_score}%</div>
+                      <div className="font-medium text-destructive">{stat.lowest_score}%</div>
                     </div>
                     <div>
                       <div className="text-ink/60">{t('grades.stats.totalAssessments')}</div>
@@ -555,7 +555,7 @@ export default function GradesPage() {
                 <textarea id="notes" className="w-full border rounded px-3 py-2" rows={3} value={newGrade.notes} onChange={(e) => setNewGrade(s => ({ ...s, notes: e.target.value }))} placeholder={t('grades.notesPlaceholder')} />
               </div>
               {formError && (
-                <div className="text-[#c53030] text-sm bg-[#c53030]/10 p-3 rounded">{formError}</div>
+                <div className="text-destructive text-sm bg-destructive/10 p-3 rounded">{formError}</div>
               )}
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setAddGradeModalOpen(false)} disabled={submitting}>{t('common.cancel')}</Button>
@@ -739,7 +739,7 @@ export default function GradesPage() {
                           <Button variant="ghost" size="sm" onClick={() => handleEditGrade(grade)} title={t('common.edit')}>
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteGrade(grade)} className="text-[#c53030] hover:text-[#c53030]/80" title={t('common.delete')}>
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteGrade(grade)} className="text-destructive hover:text-destructive/80" title={t('common.delete')}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
@@ -776,7 +776,7 @@ export default function GradesPage() {
               <textarea id="edit_notes" className="w-full border rounded px-3 py-2" rows={3} value={newGrade.notes} onChange={(e) => setNewGrade(s => ({ ...s, notes: e.target.value }))} placeholder={t('grades.notesPlaceholder')} />
             </div>
             {formError && (
-              <div className="text-[#c53030] text-sm bg-[#c53030]/10 p-3 rounded">{formError}</div>
+              <div className="text-destructive text-sm bg-destructive/10 p-3 rounded">{formError}</div>
             )}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setEditModalOpen(false)} disabled={submitting}>{t('common.cancel')}</Button>

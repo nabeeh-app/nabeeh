@@ -141,6 +141,17 @@ docker-data/
 volumes/
 
 # ===========================
+# ===== OWASP ZAP =====
+# ===========================
+# ZAP scan reports (generated, don't commit)
+zap/reports/
+zap/*.json
+zap/*.html
+zap/*.xml
+!zap/zap-config.yaml
+!zap/zap-rules.tsv
+
+# ===========================
 # ===== WHATSAPP / WAHA =====
 # ===========================
 # WhatsApp session data (contains sensitive auth info)

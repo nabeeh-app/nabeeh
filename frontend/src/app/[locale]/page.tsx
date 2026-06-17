@@ -9,10 +9,12 @@ import { ScreenshotCarousel } from '@/components/landing/ScreenshotCarousel';
 import { PricingSection } from '@/components/landing/PricingSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { Footer } from '@/components/landing/Footer';
+import { LandingJsonLd } from '@/components/landing/LandingJsonLd';
 
 export default function LandingPage() {
   return (
     <div className="relative min-h-screen bg-canvas">
+      <LandingJsonLd />
       <GridPattern
         width={30}
         height={30}

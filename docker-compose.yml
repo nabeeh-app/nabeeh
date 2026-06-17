@@ -1,0 +1,205 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nabeeh-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAIL_FROM=${EMAIL_FROM}
+    volumes:
+      - backend_logs:/app/logs
+      - backend_session:/app/auth_info_baileys
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - nabeeh-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5000/api}
+    container_name: nabeeh-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://backend:5000/api}
+      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_USE_MOCK=false
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - nabeeh-network
+
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    container_name: nabeeh-admin
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://backend:5000/api}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - nabeeh-network
+
+  # OWASP ZAP - Full Scan
+  zap-full:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: nabeeh-zap-full
+    ports:
+      - "8090:8090"   # ZAP API
+      - "8080:8080"   # ZAP Proxy
+    volumes:
+      - ./zap:/zap/wrk/:rw
+      - zap_reports:/zap/wrk/reports:rw
+    command: >
+      zap-full-scan.py
+        -t http://frontend:3000
+        -r zap-full-report.html
+        -J zap-full-report.json
+        -x zap-full-report.xml
+        -d
+        -I
+        -m 10
+        -T 60
+    depends_on:
+      frontend:
+        condition: service_healthy
+    environment:
+      - ZAP_PORT=8080
+    networks:
+      - nabeeh-network
+
+  # OWASP ZAP - API Scan
+  zap-api:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: nabeeh-zap-api
+    ports:
+      - "8091:8090"
+    volumes:
+      - ./zap:/zap/wrk/:rw
+      - zap_reports:/zap/wrk/reports:rw
+    command: >
+      zap-api-scan.py
+        -t http://backend:5000/api-docs.json
+        -f openapi
+        -r zap-api-report.html
+        -J zap-api-report.json
+        -x zap-api-report.xml
+        -d
+        -I
+        -m 10
+        -T 60
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - ZAP_PORT=8080
+    networks:
+      - nabeeh-network
+
+  # OWASP ZAP - Baseline Scan (passive, fast)
+  zap-baseline:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: nabeeh-zap-baseline
+    ports:
+      - "8092:8090"
+    volumes:
+      - ./zap:/zap/wrk/:rw
+      - zap_reports:/zap/wrk/reports:rw
+    command: >
+      zap-baseline.py
+        -t http://frontend:3000
+        -r zap-baseline-report.html
+        -J zap-baseline-report.json
+        -x zap-baseline-report.xml
+        -d
+        -I
+        -m 10
+        -T 60
+    depends_on:
+      frontend:
+        condition: service_healthy
+    environment:
+      - ZAP_PORT=8080
+    networks:
+      - nabeeh-network
+
+  # OWASP ZAP - Admin Baseline Scan
+  zap-admin:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: nabeeh-zap-admin
+    ports:
+      - "8093:8090"
+    volumes:
+      - ./zap:/zap/wrk/:rw
+      - zap_reports:/zap/wrk/reports:rw
+    command: >
+      zap-baseline.py
+        -t http://admin:3001
+        -r zap-admin-report.html
+        -J zap-admin-report.json
+        -x zap-admin-report.xml
+        -d
+        -I
+        -m 10
+        -T 60
+    depends_on:
+      admin:
+        condition: service_healthy
+    environment:
+      - ZAP_PORT=8080
+    networks:
+      - nabeeh-network
+
+volumes:
+  backend_logs:
+  backend_session:
+  zap_reports:
+
+networks:
+  nabeeh-network:
+    driver: bridge

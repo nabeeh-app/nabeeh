@@ -54,3 +54,36 @@ Plan D3 (React Query/SWR) — largest scope, do last
 ## Findings considered and rejected
 
 - None — all findings from the audit are planned
+
+## Admin panel audit plans (2026-06-16)
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 021 | Wire up admin auth middleware | P1 | S | — | DONE (proxy.ts already works in Next.js 16) |
+| 022 | Add auth to admin API routes | P1 | M | 021 | DONE |
+| 023 | Secure cookie auth flow (httpOnly JWT) | P1 | M | 022 | DONE |
+| 024 | Add audit logging to payment/ticket patches | P1 | S | 022 | DONE (included in 022) |
+| 025 | Deduplicate AdminRole/AdminUser types | P2 | S | — | DONE |
+| 026 | Add Zod validation to admin PATCH endpoints | P2 | S | 024 | DONE |
+| 027 | Fix login cookie security and centralize Supabase client | P1 | S | — | DONE |
+| 028 | Standardize API response envelopes across all admin routes | P1 | M | — | DONE |
+| 029 | Replace hardcoded colors with design system CSS variables | P2 | M | — | DONE |
+| 030 | Extract shared LoadingSpinner and StatusBadge components | P2 | S | — | DONE |
+| 031 | Centralize session route Supabase client and add Zod validation | P2 | S | — | DONE |
+| 032 | Add error handling and loading states to mutation operations | P2 | S | — | DONE |
+
+### Admin panel recommended execution order
+
+#### Phase 1: Security (P1)
+- **027** (login cookie security) → **031** (session route cleanup) — both fix Supabase client duplication; 027 first since it touches the login flow, 031 follows on the API side
+- **028** (API envelopes) — independent, can run in parallel with 027/031
+
+#### Phase 2: UX + tech debt (P2)
+- **029** (hardcoded colors) — independent
+- **030** (extract shared components) — independent
+- **032** (mutation error handling) — independent
+
+### Admin panel dependency notes
+
+- **031** should run after **027**: both touch the login/session flow; 027's changes to the login page should land first
+- **032** benefits from **028**: the error handling in 032 checks `json.success` which only works after 028 standardizes the response envelopes. If 032 runs before 028, the `json.message` fallback handles this gracefully.

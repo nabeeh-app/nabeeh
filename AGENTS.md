@@ -324,6 +324,7 @@ npm run lint         # ESLint (must pass before pushing)
 5. No secrets in code (check `.env.example`, not `.env`)
 6. Zod validation on all new endpoints
 7. Standard envelope response format
+8. ZAP baseline scan passes (for security-sensitive changes)
 
 ---
 
@@ -346,6 +347,130 @@ npm run lint         # ESLint (must pass before pushing)
 - [ ] No `console.log` of sensitive data
 - [ ] CORS origin checked (not `origin: true`)
 - [ ] RBAC check if endpoint is admin-only
+
+---
+
+## OWASP ZAP Security Scanning
+
+OWASP ZAP (Zed Attack Proxy) is configured for automated security scanning of the Nabeeh application.
+
+### Quick Start
+
+```bash
+# Run baseline scan (passive, ~5 min)
+./scripts/zap-scan.sh baseline
+
+# Run API scan (~15-30 min)
+./scripts/zap-scan.sh api
+
+# Run full active scan (~30-60 min)
+./scripts/zap-scan.sh full
+
+# Run all scans sequentially
+./scripts/zap-scan.sh all
+
+# Stop all ZAP containers
+./scripts/zap-scan.sh stop
+
+# View report locations
+./scripts/zap-scan.sh reports
+```
+
+### Scan Types
+
+| Scan Type | Description | Duration | Use Case |
+|-----------|-------------|----------|----------|
+| **Baseline** | Passive scan, checks for common issues without attacking | ~5 min | Every push to main/develop |
+| **API** | Scans API endpoints using OpenAPI spec | ~15-30 min | API changes |
+| **Full** | Active scan that attempts to exploit vulnerabilities | ~30-60 min | Weekly schedule, major releases |
+
+### Docker Services
+
+The `docker-compose.yml` includes three ZAP services:
+
+- `zap-baseline` — Passive scan of frontend (port 8092)
+- `zap-api` — API scan using OpenAPI spec (port 8091)
+- `zap-full` — Full active scan (port 8090)
+
+### Configuration Files
+
+- `zap/zap-config.yaml` — ZAP scan configuration and authentication settings
+- `zap/zap-rules.tsv` — Custom rule thresholds and actions
+- `docker-compose.yml` — Service definitions and ZAP integration
+
+### CI/CD Integration
+
+GitHub Actions workflow runs ZAP scans automatically:
+
+- **On push to main/develop:** Baseline + API scan
+- **Weekly schedule:** All scans (Monday 2 AM UTC)
+- **Manual trigger:** Choose scan type via workflow_dispatch
+
+Reports are uploaded as artifacts with 30-day retention.
+
+### Viewing Reports
+
+After a scan completes:
+
+```bash
+# Reports are saved to zap/reports/
+ls -la zap/reports/
+
+# Open HTML report in browser
+open zap/reports/zap-full-report.html
+
+# Parse JSON report
+cat zap/reports/zap-full-report.json | jq '.site[0].alerts[]'
+```
+
+### Interpreting Results
+
+ZAP categorizes vulnerabilities by risk level:
+
+- **High (Red):** Immediate attention required. Must fix before deployment.
+- **Medium (Orange):** Should be addressed. Review and prioritize.
+- **Low (Yellow):** Consider fixing. Good practice.
+- **Informational (Blue):** For awareness. No immediate action needed.
+
+### Customizing Rules
+
+Edit `zap/zap-rules.tsv` to adjust scan sensitivity:
+
+```
+# Format: Rule ID  Strength  Threshold  Action
+# Strength: 0=OFF, 1=LOW, 2=MEDIUM, 3=HIGH
+# Threshold: 0=OFF, 1=LOW, 2=MEDIUM, 3=HIGH
+
+# Example: Disable specific rule
+10105  0  0  pass  # Password Autocomplete Detection (disabled for dev)
+
+# Example: Increase sensitivity for SQL injection
+40018  3  3  pass  # SQL Injection - active scan
+```
+
+### Troubleshooting
+
+**ZAP container fails to start:**
+```bash
+# Check Docker is running
+docker info
+
+# Check service health
+docker compose ps
+
+# View ZAP logs
+docker compose logs zap-full
+```
+
+**No reports generated:**
+```bash
+# Ensure reports directory exists
+mkdir -p zap/reports
+
+# Check container permissions
+docker compose up zap-baseline
+docker exec nabeeh-zap-baseline ls -la /zap/wrk/reports/
+```
 
 ---
 

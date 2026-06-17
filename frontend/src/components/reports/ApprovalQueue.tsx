@@ -41,8 +41,10 @@ export function ApprovalQueue({ onSelectDraft, refreshKey }: ApprovalQueueProps)
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    fetchDrafts();
+    queueMicrotask(() => setLoading(true));
+    void (async () => {
+      await fetchDrafts();
+    })();
   }, [fetchDrafts, refreshKey]);
 
   if (loading) {

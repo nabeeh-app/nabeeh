@@ -38,11 +38,11 @@ export default function OnboardingPage() {
     if (savedStep) {
       const parsed = parseInt(savedStep, 10);
       if (parsed >= 0 && parsed < TOTAL_STEPS) {
-        setStep(parsed);
+        queueMicrotask(() => setStep(parsed));
       }
     }
 
-    setMounted(true);
+    queueMicrotask(() => setMounted(true));
   }, [router, locale]);
 
   const saveProgress = (nextStep: number) => {

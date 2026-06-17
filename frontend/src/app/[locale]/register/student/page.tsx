@@ -89,11 +89,11 @@ export default function StudentRegistrationPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-canvas)] p-4">
         <div className="max-w-md text-center space-y-4">
-          <div className="rounded-full bg-red-50 p-4 mx-auto w-fit">
+          <div className="rounded-full bg-error/10 p-4 mx-auto w-fit">
             <span className="text-2xl">⚠️</span>
           </div>
           <h1 className="text-xl font-semibold text-[var(--color-ink)]">{t('formTitle')}</h1>
-          <p className="text-sm text-red-500">{error}</p>
+          <p className="text-sm text-error">{error}</p>
         </div>
       </div>
     );
@@ -103,8 +103,8 @@ export default function StudentRegistrationPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-canvas)] p-4">
         <div className="max-w-md text-center space-y-4">
-          <div className="rounded-full bg-green-50 p-4 mx-auto w-fit">
-            <CheckCircle className="h-12 w-12 text-green-500" />
+          <div className="rounded-full bg-success/10 p-4 mx-auto w-fit">
+            <CheckCircle className="h-12 w-12 text-success" />
           </div>
           <h1 className="text-xl font-semibold text-[var(--color-ink)]">{t('successTitle')}</h1>
           <p className="text-sm text-[var(--color-ink)]/60">{t('successMessage')}</p>
@@ -168,7 +168,7 @@ export default function StudentRegistrationPage() {
             />
           </div>
 
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <p className="text-sm text-error">{error}</p>}
 
           <button
             type="submit"

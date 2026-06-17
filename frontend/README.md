@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nabeeh Frontend
 
-## Getting Started
+Bilingual (AR/EN) smart teaching assistant frontend. Built with Next.js 16, React 19, and Tailwind v4.
 
-First, run the development server:
+## Prerequisites
+
+- Node.js 18+
+- Backend server running (see `backend/` directory)
+- Supabase project (for OAuth authentication)
+
+## Environment Setup
+
+1. Copy `.env.example` to `.env.local`:
+   ```bash
+   cp .env.example .env.local
+   ```
+
+2. Fill in the required variables:
+   | Variable | Description | Required |
+   |----------|-------------|----------|
+   | `NEXT_PUBLIC_API_URL` | Backend API URL | Yes |
+   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes (for OAuth) |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | Yes (for OAuth) |
+   | `NEXT_PUBLIC_USE_MOCK` | Enable mock data mode (`true`/`false`) | No |
+
+## Development
 
 ```bash
+# Install dependencies
+npm install
+
+# Start dev server (Turbopack)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The dev server runs at [http://localhost:3000](http://localhost:3000) with locale-based routing (`/en/...`, `/ar/...`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Available Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start dev server with Turbopack |
+| `npm run build` | Production build |
+| `npm start` | Start production server |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run Vitest tests |
+| `npm run test:watch` | Run tests in watch mode |
 
-## Learn More
+## Mock Mode
 
-To learn more about Next.js, take a look at the following resources:
+For development without a running backend, enable mock mode:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+NEXT_PUBLIC_USE_MOCK=true npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This uses mock data so you can work on UI without API dependencies.
 
-## Deploy on Vercel
+## Feature Flags
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Feature visibility is controlled by environment variables in `src/config/featureFlags.ts`. Each feature can be toggled via `NEXT_PUBLIC_FEATURE_*` env vars:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Flag | Env Var | Default | Description |
+|------|---------|---------|-------------|
+| `grades` | `NEXT_PUBLIC_FEATURE_GRADES` | `true` | Grades CRUD page |
+| `reports` | `NEXT_PUBLIC_FEATURE_REPORTS` | `true` | Reports dashboard |
+| `messaging` | `NEXT_PUBLIC_FEATURE_MESSAGING` | `false` | WhatsApp messaging |
+| `courses` | `NEXT_PUBLIC_FEATURE_COURSES` | `true` | Course management |
+| `monitor` | `NEXT_PUBLIC_FEATURE_MONITOR` | `true` | System monitor |
+| `assistants` | `NEXT_PUBLIC_FEATURE_ASSISTANTS` | `true` | Teacher management |
+| `aiFeatures` | `NEXT_PUBLIC_FEATURE_AI` | `true` | AI-powered features |
+| `alerts` | `NEXT_PUBLIC_FEATURE_ALERTS` | `true` | Alert configuration |
+| `notifications` | `NEXT_PUBLIC_FEATURE_NOTIFICATIONS` | `false` | Notifications |
+| `gradeAnalysis` | `NEXT_PUBLIC_FEATURE_GRADE_ANALYSIS` | `false` | Grade analysis |
+
+## Project Structure
+
+```
+src/
+├── app/[locale]/     # Locale-segmented routes (AR/EN)
+├── components/       # React components
+│   ├── ui/          # Shared UI components (shadcn/ui)
+│   └── auth/        # Authentication components
+├── config/          # Feature flags, navigation
+├── hooks/           # React Query hooks
+├── lib/             # API client, utilities
+├── messages/        # i18n translation files (en.json, ar.json)
+└── types/           # TypeScript interfaces
+```
+
+## Architecture
+
+See `AGENTS.md` in the project root for full architecture documentation, domain language, and coding conventions.

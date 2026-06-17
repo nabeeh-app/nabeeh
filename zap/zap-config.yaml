@@ -1,0 +1,87 @@
+---
+env:
+  contexts:
+    - name: "Nabeeh Backend API"
+      urls:
+        - "http://backend:5000"
+      includePaths:
+        - "http://backend:5000.*"
+      excludePaths:
+        - "http://backend:5000/health"
+        - "http://backend:5000/api/health"
+      authentication:
+        method: "form"
+        parameters:
+          loginUrl: "http://backend:5000/api/auth/login"
+          loginRequestData: "email={%urlencoded:email}&password={%urlencoded:password}"
+          logoutUrl: "http://backend:5000/api/auth/logout"
+        verification:
+          method: "response"
+          loggedInRegex: "\\Qtoken\\E"
+          loggedOutRegex: "\\Qunauthorized\\E"
+
+    - name: "Nabeeh Frontend"
+      urls:
+        - "http://frontend:3000"
+      includePaths:
+        - "http://frontend:3000.*"
+      excludePaths:
+        - "http://frontend:3000/api.*"
+        - "http://localhost:3000/_next.*"
+
+  parameters:
+    failOnError: true
+    progressToStdout: true
+
+  policies:
+    - name: "Nabeeh Security Policy"
+      rules:
+        # Passive scan rules
+        10021: {strength: medium, threshold: medium}
+        10023: {strength: medium, threshold: medium}
+        10024: {strength: medium, threshold: medium}
+        10025: {strength: medium, threshold: medium}
+        10027: {strength: medium, threshold: low}
+        10098: {strength: medium, threshold: medium}
+        10105: {strength: off, threshold: off}
+        10109: {strength: medium, threshold: medium}
+
+        # Active scan rules
+        40012: {strength: high, threshold: high}
+        40014: {strength: high, threshold: high}
+        40018: {strength: high, threshold: high}
+        40019: {strength: high, threshold: high}
+        40020: {strength: high, threshold: high}
+        40021: {strength: high, threshold: high}
+        40022: {strength: high, threshold: high}
+        40023: {strength: high, threshold: high}
+        90018: {strength: high, threshold: high}
+        90019: {strength: high, threshold: high}
+        90020: {strength: high, threshold: high}
+
+  scanner:
+    maxScanDurationInMins: 60
+    maxRuleDurationInMins: 10
+    threadPerHost: 5
+    maxChildNodes: 10
+    maxDepth: 5
+    maxChildren: 50
+
+  spider:
+    maxDepth: 5
+    maxChildren: 10
+    subtreeOnly: false
+
+  ajaxSpider:
+    enabled: true
+
+  passiveScan:
+    maxAlertsPerRule: 10
+    scanFuzzerFailures: false
+
+  reporter:
+    outputDir: "/zap/wrk/reports"
+    formats:
+      - html
+      - json
+      - xml

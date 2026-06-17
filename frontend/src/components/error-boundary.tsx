@@ -54,8 +54,8 @@ class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-screen flex items-center justify-center bg-canvas p-4">
           <Card className="w-full max-w-md">
             <CardHeader className="text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-none bg-[#c53030]/10">
-                <AlertTriangle className="h-6 w-6 text-[#c53030]" />
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-none bg-destructive/10">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
               </div>
               <CardTitle className="text-xl font-semibold text-ink font-display">
                 Something went wrong
@@ -66,9 +66,9 @@ class ErrorBoundary extends Component<Props, State> {
             </CardHeader>
             <CardContent className="space-y-4">
               {process.env.NODE_ENV === 'development' && this.state.error && (
-                <div className="rounded-md bg-[#c53030]/10 p-3">
-                  <h4 className="text-sm font-medium text-[#c53030] mb-2 font-mono uppercase tracking-wider">Error Details:</h4>
-                  <pre className="text-xs text-[#c53030] overflow-auto max-h-32 font-mono">
+                <div className="rounded-md bg-destructive/10 p-3">
+                  <h4 className="text-sm font-medium text-destructive mb-2 font-mono uppercase tracking-wider">Error Details:</h4>
+                  <pre className="text-xs text-destructive overflow-auto max-h-32 font-mono">
                     {this.state.error.message}
                     {this.state.errorInfo?.componentStack}
                   </pre>
