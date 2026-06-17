@@ -27,6 +27,12 @@ export async function GET(request: Request) {
 
   const cookieStore = await cookies();
 
+  // Create the redirect response first so setAll can write cookies on it.
+  // exchangeCodeForSession fires onAuthStateChange which calls setAll
+  // asynchronously via applyServerStorage. Writing to the response object
+  // (not cookieStore) ensures cookies are included even after the handler returns.
+  const response = NextResponse.redirect(`${origin}/${locale}/auth/callback-client`);
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -36,13 +42,9 @@ export async function GET(request: Request) {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // Server Component — safe to ignore
-          }
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
         },
       },
     }
@@ -50,7 +52,7 @@ export async function GET(request: Request) {
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (!error) {
-    return NextResponse.redirect(`${origin}/${locale}/auth/callback-client`);
+    return response;
   }
 
   return NextResponse.redirect(`${origin}/${locale}/login?error=oauth_exchange_failed`);
