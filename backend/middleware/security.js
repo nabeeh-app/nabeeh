@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const logger = require('../lib/logger');
@@ -39,9 +40,9 @@ const securityHeaders = helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://www.clarity.ms"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://api.supabase.co", "https://generativelanguage.googleapis.com"],
+      connectSrc: ["'self'", "https://api.supabase.co", "https://generativelanguage.googleapis.com", "https://www.clarity.ms"],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -121,11 +122,53 @@ const securityLogger = (req, res, next) => {
   next();
 };
 
+// CSRF token generation — sets a readable cookie with a random token
+const csrfGenerate = (req, res, next) => {
+  if (!req.cookies?.nabeeh_token) {
+    return next();
+  }
+  if (req.cookies?.csrf_token) {
+    return next();
+  }
+  const csrfToken = crypto.randomBytes(32).toString('hex');
+  res.cookie('csrf_token', csrfToken, {
+    httpOnly: false,
+    secure: isProd,
+    sameSite: isProd ? 'strict' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000,
+    path: '/'
+  });
+  next();
+};
+
+// CSRF token validation — checks X-CSRF-Token header matches csrf_token cookie
+const csrfValidate = (req, res, next) => {
+  const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
+  if (safeMethods.includes(req.method)) {
+    return next();
+  }
+  if (!req.cookies?.nabeeh_token) {
+    return next();
+  }
+  const cookieToken = req.cookies?.csrf_token;
+  const headerToken = req.headers['x-csrf-token'];
+  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+    return res.status(403).json({
+      success: false,
+      message: 'CSRF token validation failed',
+      messageAr: 'فشل التحقق من رمز CSRF'
+    });
+  }
+  next();
+};
+
 module.exports = {
   apiLimiter,
   authLimiter,
   whatsappLimiter,
   securityHeaders,
   sanitizeInput,
-  securityLogger
+  securityLogger,
+  csrfGenerate,
+  csrfValidate
 };
