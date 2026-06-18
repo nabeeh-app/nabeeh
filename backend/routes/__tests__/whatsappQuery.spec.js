@@ -453,6 +453,185 @@ describe('whatsappQuery', () => {
     });
   });
 
+  describe('getAllStudentAttendance', () => {
+    it('should return all attendance records for a student', async () => {
+      const mockAttendance = [
+        { status: 'present' },
+        { status: 'absent' },
+        { status: 'present' }
+      ];
+
+      const chain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve) => {
+          resolve({ data: mockAttendance, error: null });
+        })
+      };
+
+      supabase.from.mockReturnValueOnce(chain);
+
+      const result = await whatsappQuery.getAllStudentAttendance('s1');
+
+      expect(result).toEqual(mockAttendance);
+      expect(result).toHaveLength(3);
+    });
+
+    it('should return empty array when no records exist', async () => {
+      const chain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve) => {
+          resolve({ data: [], error: null });
+        })
+      };
+
+      supabase.from.mockReturnValueOnce(chain);
+
+      const result = await whatsappQuery.getAllStudentAttendance('s1');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array when data is null', async () => {
+      const chain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve) => {
+          resolve({ data: null, error: null });
+        })
+      };
+
+      supabase.from.mockReturnValueOnce(chain);
+
+      const result = await whatsappQuery.getAllStudentAttendance('s1');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getStudentGrades - subject filtering', () => {
+    it('should apply subject filter with .or() clause', async () => {
+      const recentChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnValue({
+          then: jest.fn().mockImplementation((resolve) => {
+            resolve({ data: [], error: null });
+          })
+        })
+      };
+
+      const allChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve) => {
+          resolve({ data: [], error: null });
+        })
+      };
+
+      supabase.from
+        .mockReturnValueOnce(recentChain)
+        .mockReturnValueOnce(allChain);
+
+      const result = await whatsappQuery.getStudentGrades('s1', 'Math');
+
+      expect(recentChain.or).toHaveBeenCalledWith(
+        expect.stringContaining('name_en.ilike.Math')
+      );
+      expect(allChain.or).toHaveBeenCalledWith(
+        expect.stringContaining('name_en.ilike.Math')
+      );
+    });
+
+    it('should handle max_score of 0 without division by zero in flattenGrades', async () => {
+      const mockRawGrades = [
+        {
+          score: 0,
+          assessment: { name: 'Zero', max_score: 0, date: '2026-06-01', type: 'quiz' },
+          enrollment: {
+            student_id: 's1',
+            group: { offering: { subject: { name_en: 'Math', name_ar: null, code: 'MATH' } } }
+          }
+        }
+      ];
+
+      const recentChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnValue({
+          then: jest.fn().mockImplementation((resolve) => {
+            resolve({ data: mockRawGrades, error: null });
+          })
+        })
+      };
+
+      const allChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve) => {
+          resolve({ data: [], error: null });
+        })
+      };
+
+      supabase.from
+        .mockReturnValueOnce(recentChain)
+        .mockReturnValueOnce(allChain);
+
+      const result = await whatsappQuery.getStudentGrades('s1', null);
+
+      expect(result.recentGrades[0].percentage).toBe('N/A');
+    });
+
+    it('should return 0 percentage in flattenAllGrades when max_score is 0', async () => {
+      const mockAllGrades = [
+        {
+          score: 0,
+          assessment: { max_score: 0, type: 'quiz' },
+          enrollment: {
+            student_id: 's1',
+            group: { offering: { subject: { name_en: 'Math', code: 'MATH' } } }
+          }
+        }
+      ];
+
+      const recentChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnValue({
+          then: jest.fn().mockImplementation((resolve) => {
+            resolve({ data: [], error: null });
+          })
+        })
+      };
+
+      const allChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve) => {
+          resolve({ data: mockAllGrades, error: null });
+        })
+      };
+
+      supabase.from
+        .mockReturnValueOnce(recentChain)
+        .mockReturnValueOnce(allChain);
+
+      const result = await whatsappQuery.getStudentGrades('s1', null);
+
+      expect(result.allGrades[0].percentage).toBe(0);
+    });
+  });
+
   describe('getMatchingFaq', () => {
     it('should match FAQ when message contains a pattern', async () => {
       const mockFaqs = [

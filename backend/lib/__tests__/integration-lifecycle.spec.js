@@ -518,6 +518,32 @@ describe('Integration: Full multi-session lifecycle', () => {
     });
   });
 
+  describe('startPairing()', () => {
+    test('startPairing calls logout then connect', async () => {
+      const client = await sessionManager.getOrCreateSession('teacher-1');
+      mockSocket.ev.emit('connection.update', { connection: 'open' });
+      await new Promise(r => setTimeout(r, 10));
+
+      const spy = { logout: jest.spyOn(client, 'logout'), connect: jest.spyOn(client, 'connect') };
+
+      const status = await client.startPairing();
+
+      expect(client.logout).toHaveBeenCalled();
+      expect(client.connect).toHaveBeenCalled();
+      expect(status).toHaveProperty('status');
+    });
+
+    test('startPairing returns status object', async () => {
+      const client = await sessionManager.getOrCreateSession('teacher-1');
+      const status = await client.startPairing();
+
+      expect(status).toEqual(expect.objectContaining({
+        status: expect.any(String),
+        teacherId: 'teacher-1'
+      }));
+    });
+  });
+
   describe('logout() flow', () => {
     test('logout clears socket and credentials', async () => {
       const client = await sessionManager.getOrCreateSession('teacher-1');

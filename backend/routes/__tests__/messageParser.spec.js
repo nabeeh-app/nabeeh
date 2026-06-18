@@ -132,5 +132,106 @@ describe('messageParser', () => {
       const result = messageParser.formatAttendanceResponse('Ahmed', null, 'en');
       expect(result).toContain('not recorded yet');
     });
+
+    it('should format late attendance in English', () => {
+      const result = messageParser.formatAttendanceResponse('Ahmed', { status: 'late' }, 'en');
+      expect(result).toContain('was late');
+    });
+
+    it('should format late attendance in Arabic', () => {
+      const result = messageParser.formatAttendanceResponse('أحمد', { status: 'late' }, 'ar');
+      expect(result).toContain('تأخر');
+    });
+
+    it('should format excused attendance in English', () => {
+      const result = messageParser.formatAttendanceResponse('Ahmed', { status: 'excused' }, 'en');
+      expect(result).toContain('was excused');
+    });
+
+    it('should format excused attendance in Arabic', () => {
+      const result = messageParser.formatAttendanceResponse('أحمد', { status: 'excused' }, 'ar');
+      expect(result).toContain('معذور');
+    });
+
+    it('should handle null attendance in Arabic', () => {
+      const result = messageParser.formatAttendanceResponse('أحمد', null, 'ar');
+      expect(result).toContain('لم يتم تسجيل الحضور');
+    });
+
+    it('should handle unknown status gracefully by falling back to present', () => {
+      const result = messageParser.formatAttendanceResponse('Ahmed', { status: 'unknown' }, 'en');
+      expect(result).toContain('attended');
+    });
+  });
+
+  describe('detectIntent - English grades', () => {
+    it('should detect grades intent in English', () => {
+      const result = messageParser.detectIntent('what are the grades', 'en');
+      expect(result.intent).toBe('grades');
+      expect(result.confidence).toBe(0.85);
+    });
+
+    it('should detect grades with English subject', () => {
+      const result = messageParser.detectIntent('show me math grades', 'en');
+      expect(result.intent).toBe('grades');
+      expect(result.params.subject).toBe('Math');
+      expect(result.confidence).toBe(0.95);
+    });
+
+    it('should detect grades with science subject', () => {
+      const result = messageParser.detectIntent('science scores', 'en');
+      expect(result.intent).toBe('grades');
+      expect(result.params.subject).toBe('Science');
+    });
+
+    it('should detect grades with english subject keyword', () => {
+      const result = messageParser.detectIntent('english grades', 'en');
+      expect(result.intent).toBe('grades');
+      expect(result.params.subject).toBe('English');
+    });
+
+    it('should detect grades with history subject', () => {
+      const result = messageParser.detectIntent('history marks', 'en');
+      expect(result.intent).toBe('grades');
+      expect(result.params.subject).toBe('History');
+    });
+
+    it('should detect attendance in English with absent keyword', () => {
+      const result = messageParser.detectIntent('is Ahmed absent today?', 'en');
+      expect(result.intent).toBe('attendance');
+    });
+
+    it('should detect help in English with "what can i" keyword', () => {
+      const result = messageParser.detectIntent('what can i do?', 'en');
+      expect(result.intent).toBe('help');
+    });
+
+    it('should detect grades with "mark" keyword', () => {
+      const result = messageParser.detectIntent('what is my mark', 'en');
+      expect(result.intent).toBe('grades');
+    });
+
+    it('should detect grades with "average" keyword', () => {
+      const result = messageParser.detectIntent('show average', 'en');
+      expect(result.intent).toBe('grades');
+    });
+  });
+
+  describe('getHelpMessage', () => {
+    it('should return Arabic help message', () => {
+      const result = messageParser.getHelpMessage('أحمد', 'ar');
+      expect(result).toContain('أحمد');
+      expect(result).toContain('الدرجات');
+      expect(result).toContain('الحضور');
+      expect(result).toContain('مساعدة');
+    });
+
+    it('should return English help message', () => {
+      const result = messageParser.getHelpMessage('Ahmed', 'en');
+      expect(result).toContain('Ahmed');
+      expect(result).toContain('Grades');
+      expect(result).toContain('Attendance');
+      expect(result).toContain('help');
+    });
   });
 });
