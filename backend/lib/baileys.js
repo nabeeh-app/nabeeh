@@ -229,6 +229,24 @@ class BaileysClient extends EventEmitter {
     }
   }
 
+  _cleanupSocket() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.clearQrExpiryTimer();
+    this.stopWatchdog();
+    if (this.sock) {
+      if (typeof this.sock.removeAllListeners === 'function') {
+        this.sock.removeAllListeners();
+      }
+      if (typeof this.sock.end === 'function') {
+        this.sock.end();
+      }
+      this.sock = null;
+    }
+  }
+
   /**
    * Clear auth state for this teacher from the database
    */
@@ -297,27 +315,11 @@ class BaileysClient extends EventEmitter {
    */
   async disconnect() {
     try {
-      if (this.reconnectTimer) {
-        clearTimeout(this.reconnectTimer);
-        this.reconnectTimer = null;
-      }
-
-      this.clearQrExpiryTimer();
-      this.stopWatchdog();
-
       if (this._flushPendingSave) {
         await this._flushPendingSave();
       }
 
-      if (this.sock) {
-        if (typeof this.sock.removeAllListeners === 'function') {
-          this.sock.removeAllListeners();
-        }
-        if (typeof this.sock.end === 'function') {
-          this.sock.end();
-        }
-        this.sock = null;
-      }
+      this._cleanupSocket();
 
       this.status = 'disconnected';
       this.reconnectAttempts = 0;
@@ -335,14 +337,6 @@ class BaileysClient extends EventEmitter {
    */
   async logout() {
     try {
-      if (this.reconnectTimer) {
-        clearTimeout(this.reconnectTimer);
-        this.reconnectTimer = null;
-      }
-
-      this.clearQrExpiryTimer();
-      this.stopWatchdog();
-
       if (this._flushPendingSave) {
         await this._flushPendingSave();
       }
@@ -353,12 +347,9 @@ class BaileysClient extends EventEmitter {
         } catch (error) {
           logger.warn('Baileys logout warning', { teacherId: this.teacherId, error: error.message });
         }
-
-        if (typeof this.sock.end === 'function') {
-          this.sock.end();
-        }
-        this.sock = null;
       }
+
+      this._cleanupSocket();
 
       await this.clearSession();
       this.status = 'disconnected';
