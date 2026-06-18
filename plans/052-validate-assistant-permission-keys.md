@@ -89,9 +89,9 @@ const { error: updateError } = await supabaseAdmin
 
 ## Done criteria
 
-- [ ] Permissions are filtered against `VALID_PERMISSIONS` before database write
-- [ ] Unknown keys are silently dropped (not rejected — teacher may omit keys)
-- [ ] `cd backend && npm test` exits 0
+- [x] Permissions are filtered against `VALID_PERMISSIONS` before database write
+- [x] Unknown keys are silently dropped (not rejected — teacher may omit keys)
+- [x] `cd backend && npm test` exits 0
 
 ## STOP conditions
 

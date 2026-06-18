@@ -83,8 +83,8 @@ for (let i = 0; i < dbSessions.length; i += BATCH_SIZE) {
 
 ## Done criteria
 
-- [ ] `connectAll` uses batched parallel connects instead of sequential blocking
-- [ ] `cd backend && npm test` exits 0
+- [x] `connectAll` uses batched parallel connects instead of sequential blocking
+- [x] `cd backend && npm test` exits 0
 
 ## STOP conditions
 

@@ -85,22 +85,45 @@ and update your row when done.
 | 046 | Move require() to module level in assistants.js | P3 | S | — | DONE |
 | 047 | Filter connectAll by status to skip disconnected sessions | P2 | S | — | DONE |
 
-### WhatsApp post-execution audit fixes (2026-06-18)
+### WhatsApp post-execution audit fixes #1 (2026-06-18)
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 048 | Redact pairing code from logs | P1 | S | — | TODO |
-| 049 | Fix race condition in getOrCreateSession | P1 | S | — | TODO |
-| 050 | Remove dead setupAllSessionHandlers function | P3 | S | — | TODO |
-| 051 | Fix broken /api/admin/whatsapp-health endpoint | P1 | S | — | TODO |
+| 048 | Redact pairing code from logs | P1 | S | — | DONE |
+| 049 | Fix race condition in getOrCreateSession | P1 | S | — | DONE |
+| 050 | Remove dead setupAllSessionHandlers function | P3 | S | — | DONE |
+| 051 | Fix broken /api/admin/whatsapp-health endpoint | P1 | S | — | DONE |
 | 052 | Validate assistant permission keys against allowed set | P1 | S | — | DONE |
 | 053 | Resolve multi-teacher parent message routing | P2 | M | — | DONE |
-| 054 | Add dedup step to migration 016 before adding PK | P2 | S | — | TODO |
-| 055 | Debounce saveCreds DB upsert | P2 | S | — | TODO |
-| 056 | Add TTL eviction to marketingResponseCache | P3 | S | — | TODO |
-| 057 | Replace blocking setTimeout in connectAll | P2 | S | — | TODO |
-| 058 | Consolidate duplicate phone normalization | P2 | S | — | TODO |
-| 059 | Add unit tests for BaileysClient class | P2 | M | — | TODO |
+| 054 | Add dedup step to migration 016 before adding PK | P2 | S | — | DONE |
+| 055 | Debounce saveCreds DB upsert | P2 | S | — | DONE |
+| 056 | Add TTL eviction to marketingResponseCache | P3 | S | — | DONE |
+| 057 | Replace blocking setTimeout in connectAll | P2 | S | — | DONE |
+| 058 | Consolidate duplicate phone normalization | P2 | S | — | DONE |
+| 059 | Add unit tests for BaileysClient class | P2 | M | — | DONE |
+
+### WhatsApp post-execution audit fixes #2 (2026-06-18)
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 060 | Fix clearSession legacy wipe of all auth keys | P1 | S | — | TODO |
+| 061 | Flush saveCreds debounce timer on shutdown | P1 | S | — | TODO |
+| 062 | Fix waitForReady overwriting _readyResolve | P1 | S | — | TODO |
+| 063 | Schedule reconnect when connect() throws | P1 | S | — | TODO |
+| 064 | Clear pending reconnect timer before reconnecting | P1 | S | — | TODO |
+| 065 | Await _evictInactiveSession before creating new session | P1 | S | — | TODO |
+| 066 | Cancel pending saveCreds before clearSession deletes rows | P2 | S | 061 | TODO |
+| 067 | Add Zod validation to POST /bot/resume | P2 | S | — | TODO |
+| 068 | Validate teacher_id in leaveTeacher route | P2 | S | — | TODO |
+| 069 | Redact PII (phone numbers, JIDs) from info-level logs | P2 | S | — | TODO |
+| 070 | Expose getSessionsSnapshot instead of raw .sessions Map | P2 | S | — | TODO |
+| 071 | Rename misleading supabase variable to supabaseAdmin | P2 | S | — | TODO |
+| 072 | Remove dead whatsappRouter wrapper in server.js | P2 | S | — | TODO |
+| 073 | Extract shared _cleanupSocket helper from disconnect/logout | P2 | S | — | TODO |
+| 074 | Parallelize clearSession DB deletes | P2 | S | 060 | TODO |
+| 075 | Fix duplicate getStatus() call in admin health endpoint | P3 | S | — | TODO |
+| 076 | Parallelize inviteAssistant DB queries | P3 | S | — | TODO |
+| 077 | Consolidate phone normalization into shared lib/phone.js | P2 | S | — | TODO |
 
 ## Recommended execution order
 
@@ -119,15 +142,20 @@ Plan **005** — deployed together with plan 002.
 ### Phase 4: AEO (P1-P2)
 Plans 034+035 (parallel) → 036 → 037.
 
-### Phase 5: WhatsApp multi-session (P1, parallel)
+### Phase 5: WhatsApp multi-session (P1, parallel) — DONE
 Plans **041**, **042**, **043** — all P1, independent, can be done in parallel. These fix critical bugs in the multi-session implementation.
 Then plan **045** (tests, depends on 041), then **044**, **046**, **047** (P2-P3, independent).
 
-### Phase 6: WhatsApp post-execution fixes (P1, sequential recommended)
-Plans **048**, **049**, **051**, **052** — P1, S-effort, independent. Can be done in parallel.
+### Phase 6: WhatsApp post-execution fixes #1 (P1, sequential) — DONE
+Plans **048**, **049**, **051**, **052** — P1, S-effort, independent.
 Then **053**, **054**, **055**, **057**, **058** — P2, independent.
 Then **050**, **056** — P3, independent.
-Then **059** — P2 tests, can run any time.
+Then **059** — P2 tests.
+
+### Phase 7: WhatsApp post-execution fixes #2 (P1, sequential recommended)
+Plans **060**, **061**, **062**, **063**, **064**, **065** — P1, S-effort, independent. Can be done in parallel.
+Then **066** (depends on 061), **067**, **068**, **069**, **070**, **071**, **072**, **073**, **077** — P2, independent.
+Then **074** (depends on 060), **075**, **076** — P2-P3, independent.
 
 ## Dependency notes
 
@@ -138,15 +166,25 @@ Then **059** — P2 tests, can run any time.
 - **037** depends on **036**: comparison section uses the same AEO content pattern
 - **039** and **040** are independent — no dependencies on other plans
 - **045** depends on **041**: sessionCreated emit must exist for handler tests
+- **066** depends on **061**: flush method must exist before cancel method
+- **074** depends on **060**: clearSession must be refactored before parallelizing
 
 ## Findings considered and rejected
 
 - **No refresh token rotation**: deferred to future work. Current 24h JWT expiry is acceptable for MVP; refresh tokens add significant complexity (token rotation, family detection, secure storage).
 - **authenticateToken DB query caching**: performance optimization, not a security fix. Deferred.
 - **Password complexity (no special chars)**: PasswordService validates uppercase+lowercase+number; Supabase Auth handles hashing. Adding special char requirement is a product decision, not a security finding.
-- **_evictInactiveSession returns before destroySession completes**: transient overshoot, self-healing. Not worth the complexity.
-- **Dead whatsappRouter variable in server.js**: dead code, not a security issue.
+- **_evictInactiveSession returns before destroySession completes**: addressed in plan 065.
+- **Dead whatsappRouter variable in server.js**: addressed in plan 072.
 - **LRU ordering under concurrent access**: soft guarantee, acceptable for MVP.
+- **BUG-09 (QR status flicker)**: cosmetic, self-healing. Not worth a plan.
+- **BUG-11 (pair-code logout/connect race)**: MED confidence, narrow window. Deferred.
+- **SEC-06 (CORS localhost fallback)**: deployment config, not code. Set CORS_ORIGINS env var.
+- **SEC-07 (404 reflects URL)**: JSON response, no XSS. Low risk.
+- **PERF-03 (status DB write storm)**: MED confidence, needs production data to verify.
+- **PERF-05 (duplicate getStatus)**: trivial, <1ms. Covered by plan 075.
+- **BUG-06 (duplicate listeners)**: MED confidence, minor. Deferred.
+- **BUG-10 (error state stuck)**: pre-existing, not introduced by this branch.
 
 ## Cleaned up 2026-06-17
 
