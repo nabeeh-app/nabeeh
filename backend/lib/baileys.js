@@ -71,6 +71,14 @@ class BaileysClient extends EventEmitter {
     this._readyWaiters = [];
   }
 
+  _rejectWaiters(error) {
+    for (const waiter of this._readyWaiters) {
+      clearTimeout(waiter.timer);
+      waiter.reject(error);
+    }
+    this._readyWaiters = [];
+  }
+
   async connect() {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
@@ -111,6 +119,7 @@ class BaileysClient extends EventEmitter {
       logger.error('Baileys connect error', { teacherId: this.teacherId, error: error.message });
       this.status = 'error';
       this.emitStatus({ error: error.message });
+      this._rejectWaiters(error);
       this.scheduleReconnect();
     } finally {
       this.isInitializing = false;
