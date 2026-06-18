@@ -229,9 +229,9 @@ class WhatsAppSessionManager extends EventEmitter {
   }
 
   /**
-   * Find which teacher should handle a message from a phone number
+   * Find which teacher(s) should handle a message from a phone number
    * @param {string} phone - Phone number (with or without +)
-   * @returns {Promise<string|null>} teacherId or null
+   * @returns {Promise<string[]|null>} array of teacherIds or null
    */
   async getTeacherForPhone(phone) {
     const cleanPhone = phone.replace('+', '').replace(/[^0-9]/g, '');
@@ -259,9 +259,15 @@ class WhatsAppSessionManager extends EventEmitter {
 
     if (error || !parent) return null;
 
-    // Get first teacher from enrollments
-    const teacherId = parent?.students?.[0]?.enrollments?.[0]?.group?.offering?.teacher_id;
-    return teacherId || null;
+    const teacherIds = new Set();
+    for (const student of parent.students || []) {
+      for (const enrollment of student.enrollments || []) {
+        const teacherId = enrollment?.group?.offering?.teacher_id;
+        if (teacherId) teacherIds.add(teacherId);
+      }
+    }
+
+    return teacherIds.size > 0 ? Array.from(teacherIds) : null;
   }
 
   /**

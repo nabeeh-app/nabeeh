@@ -93,8 +93,8 @@ and update your row when done.
 | 049 | Fix race condition in getOrCreateSession | P1 | S | — | TODO |
 | 050 | Remove dead setupAllSessionHandlers function | P3 | S | — | TODO |
 | 051 | Fix broken /api/admin/whatsapp-health endpoint | P1 | S | — | TODO |
-| 052 | Validate assistant permission keys against allowed set | P1 | S | — | TODO |
-| 053 | Resolve multi-teacher parent message routing | P2 | M | — | TODO |
+| 052 | Validate assistant permission keys against allowed set | P1 | S | — | DONE |
+| 053 | Resolve multi-teacher parent message routing | P2 | M | — | DONE |
 | 054 | Add dedup step to migration 016 before adding PK | P2 | S | — | TODO |
 | 055 | Debounce saveCreds DB upsert | P2 | S | — | TODO |
 | 056 | Add TTL eviction to marketingResponseCache | P3 | S | — | TODO |

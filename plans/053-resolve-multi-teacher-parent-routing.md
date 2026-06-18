@@ -19,6 +19,7 @@
 - **Depends on**: none
 - **Category**: bug
 - **Planned at**: commit `6e6ee99`, 2026-06-18
+- **Done at**: 2026-06-18
 
 ## Why this matters
 
