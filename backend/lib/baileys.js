@@ -222,15 +222,12 @@ class BaileysClient extends EventEmitter {
    */
   async clearSession() {
     try {
-      if (this.teacherId && this.teacherId !== 'default') {
-        // Teacher-specific: delete by teacher_id
-        await supabaseAdmin.from('whatsapp_auth_keys').delete().eq('teacher_id', this.teacherId);
-        await supabaseAdmin.from('whatsapp_auth_creds').delete().eq('teacher_id', this.teacherId);
-      } else {
-        // Legacy: delete default
-        await supabaseAdmin.from('whatsapp_auth_keys').delete().neq('type', '__none__');
-        await supabaseAdmin.from('whatsapp_auth_creds').delete().eq('id', 'default');
+      if (!this.teacherId || this.teacherId === 'default') {
+        logger.warn('Refusing to clear session without valid teacherId', { teacherId: this.teacherId });
+        return;
       }
+      await supabaseAdmin.from('whatsapp_auth_keys').delete().eq('teacher_id', this.teacherId);
+      await supabaseAdmin.from('whatsapp_auth_creds').delete().eq('teacher_id', this.teacherId);
     } catch (err) {
       logger.warn('Error clearing auth state', { teacherId: this.teacherId, error: err.message });
     }

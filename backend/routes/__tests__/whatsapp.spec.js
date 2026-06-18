@@ -18,14 +18,26 @@ jest.mock('../../middleware/auth', () => ({
   requirePermission: () => (req, res, next) => next()
 }));
 
-jest.mock('../../lib/baileys', () => ({
-  baileysClient: {
+jest.mock('../../lib/sessionManager', () => ({
+  on: jest.fn(),
+  getSession: jest.fn().mockReturnValue({
     on: jest.fn(),
     getStatus: jest.fn().mockReturnValue({ status: 'connected', qr: null }),
     sendMessage: jest.fn().mockResolvedValue(true),
     startPairing: jest.fn().mockResolvedValue(true),
     logout: jest.fn().mockResolvedValue(true)
-  }
+  }),
+  getOrCreateSession: jest.fn().mockResolvedValue({
+    on: jest.fn(),
+    getStatus: jest.fn().mockReturnValue({ status: 'connected', qr: null }),
+    sendMessage: jest.fn().mockResolvedValue(true),
+    startPairing: jest.fn().mockResolvedValue(true),
+    logout: jest.fn().mockResolvedValue(true)
+  }),
+  getTeacherStatus: jest.fn().mockReturnValue({ status: 'connected', qr: null }),
+  destroySession: jest.fn().mockResolvedValue(true),
+  getStatus: jest.fn().mockReturnValue({ totalSessions: 0, maxSessions: 50, sessions: {} }),
+  sessions: new Map()
 }));
 
 jest.mock('../../lib/whatsappQuery', () => ({
@@ -159,8 +171,10 @@ describe('WhatsApp Routes', () => {
     });
 
     it('should return 503 when WhatsApp is disconnected', async () => {
-      const { baileysClient } = require('../../lib/baileys');
-      baileysClient.getStatus.mockReturnValue({ status: 'disconnected', qr: null });
+      const sessionManager = require('../../lib/sessionManager');
+      sessionManager.getSession.mockReturnValue({
+        getStatus: jest.fn().mockReturnValue({ status: 'disconnected', qr: null })
+      });
 
       const res = await request(app)
         .post('/api/whatsapp/send-to-number')
@@ -270,8 +284,8 @@ describe('WhatsApp Routes', () => {
 
   describe('GET /api/whatsapp/status', () => {
     it('should return status payload', async () => {
-      const { baileysClient } = require('../../lib/baileys');
-      baileysClient.getStatus.mockReturnValue({ status: 'connected', qr: null });
+      const sessionManager = require('../../lib/sessionManager');
+      sessionManager.getTeacherStatus.mockReturnValue({ status: 'connected', qr: null });
 
       const res = await request(app).get('/api/whatsapp/status');
 
@@ -358,6 +372,17 @@ describe('WhatsApp Routes', () => {
 
       expect(res.status).toBe(404);
       expect(res.body.success).toBe(false);
+    });
+  });
+
+  describe('DELETE /api/whatsapp/sessions/:teacherId', () => {
+    it('should reject invalid teacherId UUID format', async () => {
+      const res = await request(app)
+        .delete('/api/whatsapp/sessions/not-a-uuid');
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.code).toBe('VALIDATION_ERROR');
     });
   });
 });
