@@ -4,6 +4,7 @@ const EventEmitter = require('events');
 const logger = require('./logger');
 const { useSupabaseAuthState } = require('./baileysAuthState');
 const { supabaseAdmin } = require('../config/database');
+const { normalizePhoneNumber } = require('./phone');
 
 function redactPhone(phone) {
   if (!phone || phone.length < 4) return '****';
@@ -295,7 +296,7 @@ class BaileysClient extends EventEmitter {
       throw new Error('WhatsApp socket not initialized');
     }
 
-    const cleaned = to.replace('+', '').replace(/[^0-9]/g, '');
+    const cleaned = normalizePhoneNumber(to);
     const jid = `${cleaned}@s.whatsapp.net`;
     logger.info('Sending message', { to: redactPhone(cleaned), teacherId: this.teacherId });
     await this.sock.sendMessage(jid, { text: content });

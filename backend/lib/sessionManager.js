@@ -2,6 +2,7 @@ const EventEmitter = require('events');
 const logger = require('./logger');
 const { supabaseAdmin } = require('../config/database');
 const { BaileysClient } = require('./baileys');
+const { normalizePhoneNumber } = require('./phone');
 
 /**
  * Manages multiple WhatsApp sessions, one per teacher.
@@ -247,15 +248,7 @@ class WhatsAppSessionManager extends EventEmitter {
    * @returns {Promise<string[]|null>} array of teacherIds or null
    */
   async getTeacherForPhone(phone) {
-    // Normalize phone: strip +, spaces, dashes, parentheses
-    let cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
-
-    // Handle Egyptian numbers: 0020 → 20, 0 → 20 (local to international)
-    if (cleanPhone.startsWith('0020')) {
-      cleanPhone = '20' + cleanPhone.slice(4);
-    } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
-      cleanPhone = '20' + cleanPhone.slice(1);
-    }
+    const cleanPhone = normalizePhoneNumber(phone);
 
     // Ensure it starts with country code (no leading zeros after country code)
     if (!cleanPhone.match(/^[1-9]\d+$/)) {
