@@ -29,10 +29,6 @@ const notificationRoutes = require('./routes/notifications');
 const reportRoutes = require('./routes/reports');
 const gradeAnalysisRoutes = require('./routes/gradeAnalysis');
 
-// Create a router for WhatsApp routes
-const whatsappRouter = express.Router();
-whatsappRouter.use(whatsappRoutes);
-
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const logger = require('./middleware/logger');
