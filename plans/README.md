@@ -140,7 +140,7 @@ and update your row when done.
 | 086 | Add logger.error to server.js health endpoint catch block | P3 | S | — | DONE |
 | 087 | Add unit tests for baileysAuthState module | P2 | M | — | DONE |
 | 088 | Add dedicated unit tests for lib/phone.js | P2 | S | — | DONE |
-| 089 | Deduplicate sessionManager require in server.js | P3 | S | — | TODO |
+| 089 | Deduplicate sessionManager require in server.js | P3 | S | — | DONE |
 
 ## Recommended execution order
 

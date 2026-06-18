@@ -33,6 +33,7 @@ const gradeAnalysisRoutes = require('./routes/gradeAnalysis');
 const errorHandler = require('./middleware/errorHandler');
 const logger = require('./middleware/logger');
 const { authenticateToken, requireRole } = require('./middleware/auth');
+const sessionManager = require('./lib/sessionManager');
 const {
   apiLimiter,
   authLimiter,
@@ -107,7 +108,6 @@ app.get('/api/health', (req, res) => {
  */
 app.get('/api/admin/whatsapp-health', authenticateToken, requireRole('admin'), (req, res) => {
   try {
-    const sessionManager = require('./lib/sessionManager');
     const sessions = sessionManager.getSessionsSnapshot();
 
     res.json({
@@ -204,7 +204,6 @@ const server = app.listen(PORT, async () => {
   startCronJobs();
 
   // Initialize WhatsApp session manager (connects all teacher sessions)
-  const sessionManager = require('./lib/sessionManager');
   sessionManager.start().catch((err) => {
     winstonLogger.error('WhatsApp session manager start failed', { error: err.message });
   });
@@ -215,7 +214,6 @@ const gracefulShutdown = async (signal) => {
   winstonLogger.info(`${signal} received, shutting down gracefully...`);
 
   // Stop WhatsApp session manager
-  const sessionManager = require('./lib/sessionManager');
   await sessionManager.stop().catch((err) => {
     winstonLogger.error('Error stopping session manager', { error: err.message });
   });
