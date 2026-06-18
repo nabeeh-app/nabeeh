@@ -66,6 +66,10 @@ const removeParamsSchema = z.object({
   params: z.object({ id: z.string().uuid() })
 });
 
+const leaveTeacherSchema = z.object({
+  teacher_id: z.string().uuid()
+});
+
 // --- Helpers ---
 
 async function getTeacherTier(teacherId) {
@@ -521,16 +525,17 @@ const removeAssistant = async (req, res) => {
 // POST /api/assistants/leave — Assistant leaves a teacher
 const leaveTeacher = async (req, res) => {
   try {
-    const assistantId = req.user.id;
-    const { teacher_id } = req.body;
-
-    if (!teacher_id) {
-      return res.status(400).json({ success: false, message: 'teacher_id is required' });
+    const parsed = leaveTeacherSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, message: parsed.error.issues[0].message });
     }
+    const { teacher_id } = parsed.data;
+
+    const assistantId = req.user.id;
 
     const { data: link, error: fetchError } = await supabaseAdmin
       .from('teacher_assistants')
-      .select('id')
+      .select('id, assistant_id')
       .eq('teacher_id', teacher_id)
       .eq('assistant_id', assistantId)
       .eq('status', 'active')
@@ -538,6 +543,10 @@ const leaveTeacher = async (req, res) => {
 
     if (fetchError || !link) {
       return res.status(404).json({ success: false, message: 'Active assistant link not found' });
+    }
+
+    if (req.user.id !== link.assistant_id) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
     const { error: updateError } = await supabaseAdmin
