@@ -1,7 +1,7 @@
 const express = require('express');
 const { z } = require('zod');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
-const { baileysClient } = require('../lib/baileys');
+const sessionManager = require('../lib/sessionManager');
 const supabase = require('../config/database').supabaseAdmin;
 const logger = require('../lib/logger');
 const whatsappQuery = require('../lib/whatsappQuery');
@@ -26,25 +26,32 @@ const MARKETING_MSG_AR = process.env.WHATSAPP_MARKETING_MSG_AR || `مرحباً 
 const MARKETING_MSG_EN = process.env.WHATSAPP_MARKETING_MSG_EN || `Hello! 👋\n\nWelcome to *Nabeeh* - Your AI-Powered Educational Assistant! 🤖✨\n\nYour number is not registered in our system yet, but we'd love to welcome you to the Nabeeh family! 🎓\n\n🌟 *What we offer:*\n📊 Real-time student grade tracking\n📅 Daily attendance reports\n🤖 24/7 AI assistant for your questions\n📈 Detailed performance analytics\n💬 Direct communication with teachers\n\n📞 *To subscribe or inquire:*\nContact us: ${process.env.WHATSAPP_MARKETING_PHONE || '+201098455410'}\nVisit: ${process.env.WHATSAPP_MARKETING_URL || 'www.nabeeh-ai.com'}\n\nWe look forward to serving you and your children! 🌟\n\n*Nabeeh Educational Team* 🎓`;
 
 // ============================================================
-// Incoming message handler (Baileys event)
+// Message handler setup (called per-session)
 // ============================================================
-baileysClient.on('message', async (msg) => {
-  try {
-    const from = msg.key.remoteJid;
-    const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
-    if (!from || !body) return;
-    if (from.endsWith('@g.us') || from.endsWith('@broadcast') || from === 'status@broadcast') return;
+function setupSessionMessageHandler(teacherId, client) {
+  client.on('message', async (msg) => {
+    try {
+      const from = msg.key.remoteJid;
+      const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
+      if (!from || !body) return;
+      if (from.endsWith('@g.us') || from.endsWith('@broadcast') || from === 'status@broadcast') return;
 
-    logger.info('Incoming WhatsApp message', { from, bodyLength: body.length });
-    const phone = from.split('@')[0];
+      logger.info('Incoming WhatsApp message', { from, bodyLength: body.length, teacherId });
+      const phone = from.split('@')[0];
 
-    await processIncomingMessage(phone, body, from, msg.key.id);
-  } catch (error) {
-    logger.error('Error handling incoming message', { error: error.message });
-  }
+      await processIncomingMessage(teacherId, phone, body, from, msg.key.id);
+    } catch (error) {
+      logger.error('Error handling incoming message', { teacherId, error: error.message });
+    }
+  });
+}
+
+// Listen for new session creation to setup message handler
+sessionManager.on('sessionCreated', ({ teacherId, client }) => {
+  setupSessionMessageHandler(teacherId, client);
 });
 
-async function processIncomingMessage(phone, messageContent, remoteJid, messageId) {
+async function processIncomingMessage(teacherId, phone, messageContent, remoteJid, messageId) {
   const isEgyptian = phone.startsWith('20');
   const parent = await whatsappQuery.getParentByPhone(`+${phone}`);
 
@@ -54,7 +61,10 @@ async function processIncomingMessage(phone, messageContent, remoteJid, messageI
     marketingResponseCache.set(phone, Date.now());
 
     const marketingMsg = isEgyptian ? MARKETING_MSG_AR : MARKETING_MSG_EN;
-    await baileysClient.sendMessage(remoteJid, marketingMsg);
+    const client = sessionManager.getSession(teacherId);
+    if (client) {
+      await client.sendMessage(remoteJid, marketingMsg);
+    }
     return;
   }
 
@@ -111,12 +121,15 @@ async function processIncomingMessage(phone, messageContent, remoteJid, messageI
   }
 
   if (response) {
-    await baileysClient.sendMessage(remoteJid, response.text);
-    await whatsappQuery.saveMessage(conversation.id, 'outgoing', response.text, {
-      is_automated: true,
-      intent: response.intent,
-      confidence: response.confidence
-    });
+    const client = sessionManager.getSession(teacherId);
+    if (client) {
+      await client.sendMessage(remoteJid, response.text);
+      await whatsappQuery.saveMessage(conversation.id, 'outgoing', response.text, {
+        is_automated: true,
+        intent: response.intent,
+        confidence: response.confidence
+      });
+    }
   }
 }
 
@@ -173,15 +186,24 @@ async function handleBotMessage(message, parent, student, teacher, language) {
 // ============================================================
 router.use(authenticateToken);
 
-function getStatusPayload() {
-  const { status, qr, phone } = baileysClient.getStatus();
+function getStatusPayload(teacherId) {
+  const status = sessionManager.getTeacherStatus(teacherId);
   const messages = {
     connected: 'WhatsApp session connected',
     qr_ready: 'Scan the QR code to finish pairing',
     connecting: 'Connecting to WhatsApp...',
     disconnected: 'WhatsApp session disconnected'
   };
-  return { success: true, data: { status: status || 'disconnected', qr: qr || null, phone }, message: messages[status] || messages.disconnected };
+  const currentStatus = status?.status || 'disconnected';
+  return {
+    success: true,
+    data: {
+      status: currentStatus,
+      qr: status?.qr || null,
+      phone: status?.phone || null
+    },
+    message: messages[currentStatus] || messages.disconnected
+  };
 }
 
 /**
@@ -190,7 +212,7 @@ function getStatusPayload() {
  *   get:
  *     tags: [WhatsApp]
  *     summary: Get WhatsApp connection status
- *     description: Retrieve the current WhatsApp session status (connected, qr_ready, connecting, disconnected) and QR code if available.
+ *     description: Retrieve the current WhatsApp session status for the authenticated teacher.
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -234,7 +256,7 @@ router.get('/status', (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.set('Pragma', 'no-cache');
   res.set('Expires', '0');
-  res.json(getStatusPayload());
+  res.json(getStatusPayload(req.user.id));
 });
 
 /**
@@ -243,7 +265,7 @@ router.get('/status', (req, res) => {
  *   post:
  *     tags: [WhatsApp]
  *     summary: Start pairing
- *     description: Initiate a new WhatsApp pairing session. This starts the QR code generation process for linking a phone number.
+ *     description: Initiate a new WhatsApp pairing session for the authenticated teacher.
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -284,13 +306,15 @@ router.get('/status', (req, res) => {
  */
 router.post('/pair', async (req, res) => {
   try {
-    await baileysClient.startPairing();
+    const teacherId = req.user.id;
+    const client = await sessionManager.getOrCreateSession(teacherId, { autoConnect: false });
+    await client.startPairing();
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
-    res.json(getStatusPayload());
+    res.json(getStatusPayload(teacherId));
   } catch (error) {
-    logger.error('Failed to start WhatsApp pairing', { error: error.message });
+    logger.error('Failed to start WhatsApp pairing', { teacherId: req.user.id, error: error.message });
     res.status(500).json({ success: false, message: 'Failed to start WhatsApp pairing session' });
   }
 });
@@ -299,13 +323,17 @@ const pairCodeSchema = z.object({
   phone: z.string().regex(/^\+?[1-9]\d{6,14}$/, 'Invalid phone number format')
 });
 
+const sessionParamsSchema = z.object({
+  teacherId: z.string().uuid('Invalid teacher ID format')
+});
+
 /**
  * @openapi
  * /api/whatsapp/pair-code:
  *   post:
  *     tags: [WhatsApp]
  *     summary: Request pairing code
- *     description: Request a pairing code for a specific phone number. The phone must have WhatsApp installed.
+ *     description: Request a pairing code for the authenticated teacher's phone number.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -364,29 +392,32 @@ router.post('/pair-code', async (req, res) => {
       return res.status(400).json({ success: false, message: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' });
     }
 
+    const teacherId = req.user.id;
     const { phone } = parsed.data;
     const cleaned = normalizePhoneNumber(phone);
 
+    const client = await sessionManager.getOrCreateSession(teacherId, { autoConnect: false });
+
     // Set pairing mode BEFORE connect so QR expiry timer doesn't fire
-    baileysClient.pairingCodeMode = true;
-    baileysClient.clearQrExpiryTimer();
+    client.pairingCodeMode = true;
+    client.clearQrExpiryTimer();
 
     // Fresh start: logout then connect
-    await baileysClient.logout();
-    await baileysClient.connect();
+    await client.logout();
+    await client.connect();
 
-    // Wait for the QR event — this means the WebSocket is connected and ready
-    await baileysClient.waitForReady(20000);
+    // Wait for the QR event
+    await client.waitForReady(20000);
 
     // Now safe to request pairing code
-    const code = await baileysClient.requestPairingCode(cleaned);
+    const code = await client.requestPairingCode(cleaned);
 
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
     res.json({ success: true, data: { code, phone: cleaned } });
   } catch (error) {
-    logger.error('Failed to request pairing code', { error: error.message });
+    logger.error('Failed to request pairing code', { teacherId: req.user.id, error: error.message });
     res.status(500).json({ success: false, message: 'Failed to generate pairing code' });
   }
 });
@@ -397,7 +428,7 @@ router.post('/pair-code', async (req, res) => {
  *   get:
  *     tags: [WhatsApp]
  *     summary: Get QR code
- *     description: Retrieve the current QR code for WhatsApp pairing. Returns null if no QR code is available.
+ *     description: Retrieve the current QR code for WhatsApp pairing.
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -431,8 +462,8 @@ router.post('/pair-code', async (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.get('/qr', (req, res) => {
-  const { qr } = baileysClient.getStatus();
-  res.json({ success: true, data: { qr: qr || null } });
+  const status = sessionManager.getTeacherStatus(req.user.id);
+  res.json({ success: true, data: { qr: status?.qr || null } });
 });
 
 /**
@@ -441,7 +472,7 @@ router.get('/qr', (req, res) => {
  *   post:
  *     tags: [WhatsApp]
  *     summary: Logout WhatsApp
- *     description: Log out the current WhatsApp session. This will disconnect from WhatsApp and require re-pairing.
+ *     description: Log out the current WhatsApp session for the authenticated teacher.
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -470,8 +501,8 @@ router.get('/qr', (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/logout', async (req, res) => {
-  const success = await baileysClient.logout();
-  res.json({ success, message: success ? 'Logged out successfully' : 'Logout failed' });
+  const success = await sessionManager.destroySession(req.user.id, { deleteCredentials: true });
+  res.json({ success: true, message: success ? 'Logged out successfully' : 'No active session to logout' });
 });
 
 function normalizePhoneNumber(phone = '') {
@@ -503,7 +534,7 @@ function normalizePhoneNumber(phone = '') {
  *   post:
  *     tags: [WhatsApp]
  *     summary: Send message
- *     description: Send a WhatsApp message to a specific phone number. Requires the send_whatsapp permission. Automatically pauses the bot for the target conversation for 4 hours.
+ *     description: Send a WhatsApp message to a specific phone number using the teacher's session.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -568,24 +599,32 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), async (req, r
       return res.status(400).json({ success: false, message: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' });
     }
 
+    const teacherId = req.user.id;
     const { phone, message } = parsed.data;
-    const { status } = baileysClient.getStatus();
-    if (status !== 'connected') {
+
+    const client = sessionManager.getSession(teacherId);
+    if (!client) {
+      return res.status(503).json({ success: false, message: 'No WhatsApp session found. Please pair your phone first.' });
+    }
+
+    const status = client.getStatus();
+    if (status.status !== 'connected') {
       return res.status(503).json({ success: false, message: 'WhatsApp session is not connected. Please scan the QR code again.' });
     }
+
     const cleaned = normalizePhoneNumber(phone);
-    await baileysClient.sendMessage(cleaned, message);
+    await client.sendMessage(cleaned, message);
 
     // Auto-pause bot for this conversation when teacher/assistant sends manual message
     try {
       const { data: parent } = await supabase.from('parents').select('id').eq('phone', `+${cleaned}`).maybeSingle();
       if (parent) {
         const { data: conversation } = await supabase.from('conversations')
-          .select('id').eq('parent_id', parent.id).eq('teacher_id', req.user.id).maybeSingle();
+          .select('id').eq('parent_id', parent.id).eq('teacher_id', teacherId).maybeSingle();
         if (conversation) {
           const pauseHours = 4;
           await supabase.from('conversations').update({
-            last_responder_id: req.user.id,
+            last_responder_id: teacherId,
             last_responder_type: req.user.role,
             bot_paused_until: new Date(Date.now() + pauseHours * 3600000).toISOString()
           }).eq('id', conversation.id);
@@ -599,9 +638,9 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), async (req, r
     try {
       const { logAudit } = require('../lib/auditLog');
       await logAudit({
-        actorId: req.user.id,
+        actorId: teacherId,
         actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
-        teacherId: req.user.teacherId || req.user.id,
+        teacherId: req.user.teacherId || teacherId,
         action: 'whatsapp_sent',
         entityType: 'conversation',
         metadata: { phone: cleaned, message_length: message.length },
@@ -625,7 +664,7 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), async (req, r
  *   post:
  *     tags: [WhatsApp]
  *     summary: Resume bot
- *     description: Resume the automated bot for a specific conversation. Clears the bot_paused_until flag so the bot can respond to incoming messages again.
+ *     description: Resume the automated bot for a specific conversation.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -639,7 +678,6 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), async (req, r
  *               conversation_id:
  *                 type: string
  *                 format: uuid
- *                 description: The conversation to resume the bot for
  *     responses:
  *       200:
  *         description: Bot resumed
@@ -717,7 +755,7 @@ router.post('/bot/resume', async (req, res) => {
  *   get:
  *     tags: [WhatsApp]
  *     summary: List conversations
- *     description: Retrieve paginated WhatsApp conversations for the authenticated teacher, ordered by most recent message.
+ *     description: Retrieve paginated WhatsApp conversations for the authenticated teacher.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -726,14 +764,12 @@ router.post('/bot/resume', async (req, res) => {
  *         schema:
  *           type: integer
  *           default: 1
- *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 20
  *           maximum: 100
- *         description: Items per page
  *     responses:
  *       200:
  *         description: Conversations retrieved
@@ -802,6 +838,64 @@ router.get('/conversations', async (req, res) => {
   } catch (error) {
     logger.error('Get conversations error', { error: error.message });
     res.status(500).json({ success: false, message: 'Server error fetching conversations' });
+  }
+});
+
+/**
+ * @openapi
+ * /api/whatsapp/sessions:
+ *   get:
+ *     tags: [WhatsApp]
+ *     summary: List all WhatsApp sessions
+ *     description: Get status of all WhatsApp sessions (admin only).
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Sessions list
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/sessions', requirePermission('manage_settings'), (req, res) => {
+  const status = sessionManager.getStatus();
+  res.json({ success: true, data: status });
+});
+
+/**
+ * @openapi
+ * /api/whatsapp/sessions/{teacherId}:
+ *   delete:
+ *     tags: [WhatsApp]
+ *     summary: Disconnect teacher's WhatsApp session
+ *     description: Force disconnect a specific teacher's WhatsApp session (admin only).
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: teacherId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Session disconnected
+ *       401:
+ *         description: Unauthorized
+ */
+router.delete('/sessions/:teacherId', requirePermission('manage_settings'), async (req, res) => {
+  try {
+    const parsed = sessionParamsSchema.safeParse(req.params);
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, message: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' });
+    }
+
+    const forceLogout = req.query.force === 'true';
+    await sessionManager.destroySession(parsed.data.teacherId, { deleteCredentials: forceLogout });
+    res.json({ success: true, message: forceLogout ? 'Session logged out' : 'Session disconnected' });
+  } catch (error) {
+    logger.error('Failed to disconnect session', { teacherId: req.params.teacherId, error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to disconnect session' });
   }
 });
 
