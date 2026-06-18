@@ -101,6 +101,8 @@ class BaileysClient extends EventEmitter {
       this._cancelPendingSave = cancelPendingSave;
       const { version } = await fetchLatestBaileysVersion();
 
+      const wsUrl = process.env.WHATSAPP_WS_URL || undefined;
+
       this.sock = makeWASocket({
         version,
         auth: {
@@ -109,7 +111,8 @@ class BaileysClient extends EventEmitter {
         },
         printQRInTerminal: false,
         browser: ['Ubuntu', 'Chrome', '20.0.04'],
-        getMessage: async () => undefined
+        getMessage: async () => undefined,
+        ...(wsUrl ? { waWebSocketUrl: wsUrl } : {})
       });
 
       this.sock.ev.on('creds.update', saveCreds);
