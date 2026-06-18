@@ -80,7 +80,6 @@ async function processIncomingMessage(teacherId, phone, messageContent, remoteJi
     return;
   }
 
-  // Support multiple students per parent
   const students = Array.isArray(parent.students) ? parent.students : [parent.students];
 
   if (students.length === 0) {
@@ -88,15 +87,29 @@ async function processIncomingMessage(teacherId, phone, messageContent, remoteJi
     return;
   }
 
-  // Use first student's teacher for conversation context
-  const firstStudent = students[0];
-  const teacher = firstStudent.enrollments?.[0]?.group?.offering?.teacher;
+  const { data: teacher } = await supabaseAdmin
+    .from('teachers')
+    .select('id, name, business_name')
+    .eq('id', teacherId)
+    .single();
+
   if (!teacher) {
-    logger.warn('No teacher found for parent students', { parentId: parent.id });
+    logger.warn('Teacher not found for session', { teacherId });
     return;
   }
 
-  const conversation = await whatsappQuery.findOrCreateConversation(parent.id, teacher.id, remoteJid);
+  const studentsForThisTeacher = students.filter(s => {
+    const enrollments = s.enrollments || [];
+    return enrollments.some(e => e?.group?.offering?.teacher_id === teacherId);
+  });
+
+  if (studentsForThisTeacher.length === 0) {
+    logger.info('Parent has no students under this teacher, routing to first student teacher', { parentId: parent.id, sessionTeacherId: teacherId });
+  }
+
+  const studentsToProcess = studentsForThisTeacher.length > 0 ? studentsForThisTeacher : students;
+
+  const conversation = await whatsappQuery.findOrCreateConversation(parent.id, teacherId, remoteJid);
   if (!conversation) return;
 
   if (conversation.bot_paused_until && new Date(conversation.bot_paused_until) > new Date()) {
@@ -110,9 +123,9 @@ async function processIncomingMessage(teacherId, phone, messageContent, remoteJi
   try {
     const { logAudit } = require('../lib/auditLog');
     await logAudit({
-      actorId: teacher.id,
+      actorId: teacherId,
       actorType: 'system',
-      teacherId: teacher.id,
+      teacherId: teacherId,
       action: 'whatsapp_received',
       entityType: 'conversation',
       entityId: conversation.id,
@@ -125,9 +138,8 @@ async function processIncomingMessage(teacherId, phone, messageContent, remoteJi
 
   const language = parent.preferred_language || 'ar';
 
-  // Try each student until we get a match (e.g. "Ahmed's grades" matches a student name)
   let response = null;
-  for (const student of students) {
+  for (const student of studentsToProcess) {
     response = await handleBotMessage(messageContent, parent, student, teacher, language);
     if (response) break;
   }

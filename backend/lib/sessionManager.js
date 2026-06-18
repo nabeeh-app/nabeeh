@@ -147,9 +147,11 @@ class WhatsAppSessionManager extends EventEmitter {
             last_active: new Date().toISOString(),
             ...(update.status === 'connected' ? { connected_at: new Date().toISOString() } : {}),
             ...(update.status === 'disconnected' ? { disconnected_at: new Date().toISOString() } : {})
-          }).eq('teacher_id', teacherId).catch(err =>
-            logger.error('Failed to update session status', { teacherId, error: err.message })
-          );
+          }).eq('teacher_id', teacherId)
+            .then(() => {})
+            .catch(err =>
+              logger.error('Failed to update session status', { teacherId, error: err.message })
+            );
         }
       });
 
@@ -202,12 +204,13 @@ class WhatsAppSessionManager extends EventEmitter {
     this.sessions.delete(teacherId);
 
     // Update database
-    await supabaseAdmin.from('whatsapp_sessions').update({
+    const { error: dbErr } = await supabaseAdmin.from('whatsapp_sessions').update({
       status: 'disconnected',
       disconnected_at: new Date().toISOString()
-    }).eq('teacher_id', teacherId).catch(err =>
-      logger.error('Failed to update session status on destroy', { teacherId, error: err.message })
-    );
+    }).eq('teacher_id', teacherId);
+    if (dbErr) {
+      logger.error('Failed to update session status on destroy', { teacherId, error: dbErr.message });
+    }
 
     logger.info('Session destroyed', { teacherId, deleteCredentials, totalSessions: this.sessions.size });
   }
