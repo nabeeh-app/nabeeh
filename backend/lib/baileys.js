@@ -26,8 +26,7 @@ class BaileysClient extends EventEmitter {
     this.qrExpiryTimer = null;
     this.QR_EXPIRY_MS = 18000;
     this.pairingCodeMode = false;
-    this._readyResolve = null;
-    this._readyReject = null;
+    this._readyWaiters = [];
     this._flushPendingSave = null;
   }
 
@@ -45,23 +44,22 @@ class BaileysClient extends EventEmitter {
       if (this.status === 'qr_ready' || this.status === 'connected') {
         return resolve();
       }
-      this._readyResolve = resolve;
-      this._readyReject = reject;
-      this._readyTimer = setTimeout(() => {
-        this._readyResolve = null;
-        this._readyReject = null;
+      const waiter = { resolve, reject };
+      this._readyWaiters.push(waiter);
+      const timer = setTimeout(() => {
+        this._readyWaiters = this._readyWaiters.filter(w => w !== waiter);
         reject(new Error('Timeout waiting for WhatsApp socket to be ready'));
       }, timeoutMs);
+      waiter.timer = timer;
     });
   }
 
   _signalReady() {
-    if (this._readyResolve) {
-      clearTimeout(this._readyTimer);
-      this._readyResolve();
-      this._readyResolve = null;
-      this._readyReject = null;
+    for (const waiter of this._readyWaiters) {
+      clearTimeout(waiter.timer);
+      waiter.resolve();
     }
+    this._readyWaiters = [];
   }
 
   async connect() {
