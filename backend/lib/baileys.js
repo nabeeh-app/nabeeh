@@ -151,7 +151,7 @@ class BaileysClient extends EventEmitter {
       // Only set QR expiry timer if NOT in pairing code mode
       if (!this.pairingCodeMode) {
         this.qrExpiryTimer = setTimeout(() => {
-          if (this.status === 'qr_ready') {
+          if (this.status === 'qr_ready' && !this.pairingCodeMode) {
             logger.info('QR expired, requesting new one', { teacherId: this.teacherId });
             this.qrCode = null;
             this.status = 'connecting';
@@ -316,6 +316,7 @@ class BaileysClient extends EventEmitter {
     }
 
     this.pairingCodeMode = true;
+    this.clearQrExpiryTimer();
     try {
       const code = await this.sock.requestPairingCode(phoneNumber);
       logger.info('Pairing code requested', { phoneNumber: redactPhone(phoneNumber), codeLength: code.length, teacherId: this.teacherId });
