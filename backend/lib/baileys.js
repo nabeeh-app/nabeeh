@@ -6,8 +6,13 @@ const { useSupabaseAuthState } = require('./baileysAuthState');
 const { supabaseAdmin } = require('../config/database');
 
 class BaileysClient extends EventEmitter {
-  constructor() {
+  /**
+   * @param {string} [teacherId='default'] - Teacher ID for multi-session isolation.
+   *                                          Each teacher gets isolated auth state.
+   */
+  constructor(teacherId = 'default') {
     super();
+    this.teacherId = teacherId;
     this.sock = null;
     this.status = 'disconnected';
     this.qrCode = null;
@@ -29,6 +34,7 @@ class BaileysClient extends EventEmitter {
     this.emit('connection.update', {
       status: this.status,
       qr: this.qrCode,
+      teacherId: this.teacherId,
       ...extra
     });
   }
@@ -69,7 +75,7 @@ class BaileysClient extends EventEmitter {
         this.sock.removeAllListeners();
       }
 
-      const { state, saveCreds } = await useSupabaseAuthState();
+      const { state, saveCreds } = await useSupabaseAuthState(this.teacherId);
       const { version } = await fetchLatestBaileysVersion();
 
       this.sock = makeWASocket({
@@ -87,7 +93,7 @@ class BaileysClient extends EventEmitter {
       this.sock.ev.on('connection.update', (update) => this.handleConnectionUpdate(update));
       this.sock.ev.on('messages.upsert', (update) => this.handleIncomingMessages(update));
     } catch (error) {
-      logger.error('Baileys connect error', { error: error.message });
+      logger.error('Baileys connect error', { teacherId: this.teacherId, error: error.message });
       this.status = 'error';
       this.emitStatus({ error: error.message });
       throw error;
@@ -104,7 +110,7 @@ class BaileysClient extends EventEmitter {
       try {
         this.qrCode = await qrcode.toDataURL(qr);
       } catch (err) {
-        logger.error('QR encoding failed', { error: err.message });
+        logger.error('QR encoding failed', { teacherId: this.teacherId, error: err.message });
         this.qrCode = null;
       }
       this.status = 'qr_ready';
@@ -115,7 +121,7 @@ class BaileysClient extends EventEmitter {
       if (!this.pairingCodeMode) {
         this.qrExpiryTimer = setTimeout(() => {
           if (this.status === 'qr_ready') {
-            logger.info('QR expired, requesting new one');
+            logger.info('QR expired, requesting new one', { teacherId: this.teacherId });
             this.qrCode = null;
             this.status = 'connecting';
             this.emitStatus();
@@ -133,7 +139,7 @@ class BaileysClient extends EventEmitter {
       this.reconnectAttempts = 0;
       this.lastMessageTime = Date.now();
       this.connectedPhone = this.sock?.user?.id?.split(':')[0]?.split('@')[0] || null;
-      logger.info('Connected', { userId: this.sock?.user?.id, phone: this.connectedPhone, name: this.sock?.user?.name });
+      logger.info('Connected', { teacherId: this.teacherId, userId: this.sock?.user?.id, phone: this.connectedPhone, name: this.sock?.user?.name });
       this.startWatchdog();
       this.emitStatus();
       return;
@@ -152,8 +158,8 @@ class BaileysClient extends EventEmitter {
       if (loggedOut) {
         await this.clearSession();
       } else if (restartRequired) {
-        logger.info('Restart required after pairing, reconnecting');
-        this.connect().catch((error) => logger.error('Reconnection error', { error: error.message }));
+        logger.info('Restart required after pairing, reconnecting', { teacherId: this.teacherId });
+        this.connect().catch((error) => logger.error('Reconnection error', { teacherId: this.teacherId, error: error.message }));
       } else {
         this.scheduleReconnect();
       }
@@ -178,11 +184,11 @@ class BaileysClient extends EventEmitter {
     const delay = Math.min(2000 * Math.pow(2, this.reconnectAttempts), this.maxReconnectDelay);
     this.reconnectAttempts++;
 
-    logger.info('Scheduling reconnect', { delay, attempt: this.reconnectAttempts });
+    logger.info('Scheduling reconnect', { delay, attempt: this.reconnectAttempts, teacherId: this.teacherId });
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      this.connect().catch((error) => logger.error('Reconnection error', { error: error.message }));
+      this.connect().catch((error) => logger.error('Reconnection error', { teacherId: this.teacherId, error: error.message }));
     }, delay);
   }
 
@@ -191,7 +197,7 @@ class BaileysClient extends EventEmitter {
     this.watchdogInterval = setInterval(() => {
       if (this.status !== 'connected') return;
       if (this.lastMessageTime && Date.now() - this.lastMessageTime > this.SILENCE_THRESHOLD) {
-        logger.warn('Deaf session detected, forcing reconnect');
+        logger.warn('Deaf session detected, forcing reconnect', { teacherId: this.teacherId });
         this.sock?.end();
       }
     }, 60 * 1000);
@@ -211,12 +217,22 @@ class BaileysClient extends EventEmitter {
     }
   }
 
+  /**
+   * Clear auth state for this teacher from the database
+   */
   async clearSession() {
     try {
-      await supabaseAdmin.from('whatsapp_auth_keys').delete().neq('type', '__none__');
-      await supabaseAdmin.from('whatsapp_auth_creds').delete().eq('id', 'default');
+      if (this.teacherId && this.teacherId !== 'default') {
+        // Teacher-specific: delete by teacher_id
+        await supabaseAdmin.from('whatsapp_auth_keys').delete().eq('teacher_id', this.teacherId);
+        await supabaseAdmin.from('whatsapp_auth_creds').delete().eq('teacher_id', this.teacherId);
+      } else {
+        // Legacy: delete default
+        await supabaseAdmin.from('whatsapp_auth_keys').delete().neq('type', '__none__');
+        await supabaseAdmin.from('whatsapp_auth_creds').delete().eq('id', 'default');
+      }
     } catch (err) {
-      logger.warn('Error clearing auth state', { error: err.message });
+      logger.warn('Error clearing auth state', { teacherId: this.teacherId, error: err.message });
     }
     this.qrCode = null;
   }
@@ -235,11 +251,11 @@ class BaileysClient extends EventEmitter {
     this.pairingCodeMode = true;
     try {
       const code = await this.sock.requestPairingCode(phoneNumber);
-      logger.info('Pairing code requested', { phoneNumber, code });
+      logger.info('Pairing code requested', { phoneNumber, codeLength: code.length, teacherId: this.teacherId });
       return code;
     } catch (error) {
       this.pairingCodeMode = false;
-      logger.error('requestPairingCode failed', { error: error.message });
+      logger.error('requestPairingCode failed', { teacherId: this.teacherId, error: error.message });
       throw error;
     }
   }
@@ -251,19 +267,58 @@ class BaileysClient extends EventEmitter {
 
     const cleaned = to.replace('+', '').replace(/[^0-9]/g, '');
     const jid = `${cleaned}@s.whatsapp.net`;
-    logger.info('Sending message', { to: cleaned, jid });
+    logger.info('Sending message', { to: cleaned, jid, teacherId: this.teacherId });
     await this.sock.sendMessage(jid, { text: content });
-    logger.info('Message sent OK', { jid });
+    logger.info('Message sent OK', { jid, teacherId: this.teacherId });
   }
 
   getStatus() {
     return {
       status: this.status,
       qr: this.qrCode,
-      phone: this.connectedPhone ? `+${this.connectedPhone}` : null
+      phone: this.connectedPhone ? `+${this.connectedPhone}` : null,
+      teacherId: this.teacherId
     };
   }
 
+  /**
+   * Disconnect without deleting credentials.
+   * Used for timeout/inactivity - session can auto-reconnect later.
+   */
+  async disconnect() {
+    try {
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+
+      this.clearQrExpiryTimer();
+      this.stopWatchdog();
+
+      if (this.sock) {
+        if (typeof this.sock.removeAllListeners === 'function') {
+          this.sock.removeAllListeners();
+        }
+        if (typeof this.sock.end === 'function') {
+          this.sock.end();
+        }
+        this.sock = null;
+      }
+
+      this.status = 'disconnected';
+      this.reconnectAttempts = 0;
+      this.emitStatus();
+      return true;
+    } catch (error) {
+      logger.error('Disconnect error', { teacherId: this.teacherId, error: error.message });
+      return false;
+    }
+  }
+
+  /**
+   * Full logout - disconnect AND delete credentials.
+   * Used for explicit logout or when teacher wants to re-pair.
+   */
   async logout() {
     try {
       if (this.reconnectTimer) {
@@ -278,7 +333,7 @@ class BaileysClient extends EventEmitter {
         try {
           await this.sock.logout();
         } catch (error) {
-          logger.warn('Baileys logout warning', { error: error.message });
+          logger.warn('Baileys logout warning', { teacherId: this.teacherId, error: error.message });
         }
 
         if (typeof this.sock.end === 'function') {
@@ -293,12 +348,10 @@ class BaileysClient extends EventEmitter {
       this.emitStatus();
       return true;
     } catch (error) {
-      logger.error('Logout error', { error: error.message });
+      logger.error('Logout error', { teacherId: this.teacherId, error: error.message });
       return false;
     }
   }
 }
 
-const baileysClient = new BaileysClient();
-
-module.exports = { baileysClient };
+module.exports = { BaileysClient };
