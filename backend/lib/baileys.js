@@ -96,7 +96,7 @@ class BaileysClient extends EventEmitter {
       logger.error('Baileys connect error', { teacherId: this.teacherId, error: error.message });
       this.status = 'error';
       this.emitStatus({ error: error.message });
-      throw error;
+      this.scheduleReconnect();
     } finally {
       this.isInitializing = false;
     }
