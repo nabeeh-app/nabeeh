@@ -1,185 +1,157 @@
 /**
  * Real WhatsApp pairing test — multi-session.
- * Tests: pair via code, connect, send test message, disconnect, verify DB state.
  *
  * Usage: node test-real-pairing.js <phone> [teacherId]
- * Example: node test-real-pairing.js 201211310357
  */
 
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
-
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-const PHONE = process.argv[2] || '201211310357';
+const PHONE = process.argv[2] || '201098455410';
 const TEACHER_ID = process.argv[3] || '0b8d8f5e-8053-4229-9435-261ef9f12ade';
-
 const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-// Dynamic import for ESM Baileys
-async function loadBaileys() {
-  const baileys = await import('@whiskeysockets/baileys');
-  return baileys;
-}
 
 async function cleanupDB() {
   console.log('\n🧹 Cleaning DB for teacher:', TEACHER_ID);
   await supabaseAdmin.from('whatsapp_auth_keys').delete().eq('teacher_id', TEACHER_ID);
-  await supabaseAdmin.from('whatsapp_auth_creds').delete().eq('teacher_id', TEACHER_ID);
+  await supabaseAdmin.from('whatsapp_auth_creds').delete().eq('id', TEACHER_ID);
   await supabaseAdmin.from('whatsapp_sessions').delete().eq('teacher_id', TEACHER_ID);
   console.log('✅ DB cleaned');
 }
 
-async function checkDBState(label) {
-  console.log(`\n📊 DB State [${label}]:`);
-
-  const { data: sessions } = await supabaseAdmin.from('whatsapp_sessions')
-    .select('*').eq('teacher_id', TEACHER_ID);
-  console.log('  sessions:', JSON.stringify(sessions, null, 2));
-
-  const { data: keys } = await supabaseAdmin.from('whatsapp_auth_keys')
-    .select('type, id').eq('teacher_id', TEACHER_ID);
-  console.log('  auth_keys:', keys?.length || 0, 'rows');
-
-  const { data: creds } = await supabaseAdmin.from('whatsapp_auth_creds')
-    .select('id, teacher_id').eq('teacher_id', TEACHER_ID);
-  console.log('  auth_creds:', creds?.length || 0, 'rows');
+async function checkDB(label) {
+  const s = await supabaseAdmin.from('whatsapp_sessions').select('teacher_id,status,phone_number').eq('teacher_id', TEACHER_ID);
+  const k = await supabaseAdmin.from('whatsapp_auth_keys').select('type,id').eq('teacher_id', TEACHER_ID);
+  const c = await supabaseAdmin.from('whatsapp_auth_creds').select('id,teacher_id').eq('id', TEACHER_ID);
+  console.log(`\n📊 DB [${label}]: sessions=${JSON.stringify(s.data)} keys=${k.data?.length||0} creds=${c.data?.length||0}`);
 }
 
 async function main() {
-  console.log('╔══════════════════════════════════════════════╗');
-  console.log('║  Real WhatsApp Multi-Session Pairing Test    ║');
-  console.log('╠══════════════════════════════════════════════╣');
-  console.log(`║  Phone:     +${PHONE}`);
-  console.log(`║  Teacher:   ${TEACHER_ID}`);
-  console.log('╚══════════════════════════════════════════════╝');
-
-  // Step 1: Cleanup
-  await cleanupDB();
-  await checkDBState('after cleanup');
-
-  // Step 2: Load Baileys
-  console.log('\n⏳ Loading Baileys...');
-  const {
-    makeWASocket,
-    DisconnectReason,
-    fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore,
-    initAuthCreds
-  } = await loadBaileys();
-  console.log('✅ Baileys loaded');
-
-  // Step 3: Use Supabase-backed auth state (simulates real use)
+  const baileys = await import('@whiskeysockets/baileys');
+  const { makeWASocket, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = baileys;
   const { useSupabaseAuthState } = require('./lib/baileysAuthState');
-  const { state, saveCreds, flushPendingSave, cancelPendingSave } = await useSupabaseAuthState(TEACHER_ID);
+  const pino = require('pino');
+  const logger = pino({ level: 'silent' });
 
-  // Step 4: Connect
-  console.log('\n⏳ Connecting to WhatsApp...');
+  console.log('╔══════════════════════════════════════════╗');
+  console.log(`║  Pairing: +${PHONE}  Teacher: ${TEACHER_ID.slice(0,8)}...`);
+  console.log('╚══════════════════════════════════════════╝');
+
+  await cleanupDB();
+  await checkDB('cleaned');
+
   const { version } = await fetchLatestBaileysVersion();
-  console.log('  WA version:', version);
+  console.log('WA version:', version);
 
-  const sock = makeWASocket({
-    version,
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.creds ? state : { creds: initAuthCreds(), keys: {} }, console)
-    },
-    printQRInTerminal: false,
-    browser: ['Nabeeh', 'Chrome', '20.0.04'],
-    logger: { level: 'silent' },
-    getMessage: async () => undefined
-  });
+  let attempt = 0;
+  const MAX_ATTEMPTS = 5;
 
-  let codeSent = false;
-  let connected = false;
+  async function startSocket() {
+    attempt++;
+    console.log(`\n🔌 Socket attempt #${attempt}`);
 
-  sock.ev.on('creds.update', saveCreds);
+    const authState = await useSupabaseAuthState(TEACHER_ID);
+    const { state, saveCreds, flushPendingSave } = authState;
 
-  sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect, qr } = update;
-    console.log('\n[connection.update]', { connection, hasQr: !!qr, statusCode: lastDisconnect?.error?.output?.statusCode });
+    const sock = makeWASocket({
+      version,
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, logger)
+      },
+      printQRInTerminal: false,
+      browser: ['Windows', 'Chrome', '114.0.5735.198'],
+      logger,
+      getMessage: async () => undefined
+    });
 
-    if (connection === 'open') {
-      connected = true;
-      const phone = sock.user?.id?.split(':')[0]?.split('@')[0];
-      console.log('\n✅ CONNECTED! Phone:', phone);
+    let pairingRequested = false;
 
-      // Write session to DB
-      await supabaseAdmin.from('whatsapp_sessions').upsert({
-        teacher_id: TEACHER_ID,
-        status: 'connected',
-        phone: `+${phone}`,
-        last_active: new Date().toISOString(),
-        connected_at: new Date().toISOString()
-      }, { onConflict: 'teacher_id' });
+    sock.ev.on('creds.update', async () => {
+      console.log('  🔑 creds.update');
+      await saveCreds();
+    });
 
-      await flushPendingSave();
-      await checkDBState('after connect');
+    sock.ev.on('connection.update', async (update) => {
+      const { connection, lastDisconnect, qr } = update;
+      const code = lastDisconnect?.error?.output?.statusCode;
+      console.log(`  [conn] ${connection || 'event'} qr=${!!qr} code=${code} json=${JSON.stringify(Object.keys(update))}`);
 
-      // Send test message
-      console.log('\n⏳ Sending test message...');
-      try {
-        const jid = `${PHONE}@s.whatsapp.net`;
-        await sock.sendMessage(jid, { text: '✅ Multi-session test message from Nabeeh!' });
-        console.log('✅ Message sent to', PHONE);
-      } catch (err) {
-        console.error('❌ Send failed:', err.message);
+      if (lastDisconnect) {
+        console.log('  [disconnect] error:', lastDisconnect.error?.message, 'output:', JSON.stringify(lastDisconnect.error?.output));
       }
 
-      // Wait a moment then disconnect
-      console.log('\n⏳ Waiting 3s then disconnecting...');
-      await new Promise(r => setTimeout(r, 3000));
-
-      console.log('\n⏳ Disconnecting...');
-      await sock.end();
-      connected = false;
-
-      await checkDBState('after disconnect');
-      console.log('\n🎉 TEST COMPLETE');
-      process.exit(0);
-    }
-
-    if (connection === 'close') {
-      const statusCode = lastDisconnect?.error?.output?.statusCode;
-      console.log('[close] statusCode:', statusCode);
-
-      if (statusCode === DisconnectReason.loggedOut) {
-        console.log('⚠️  Logged out — phone was unlinked');
-        await cleanupDB();
-        process.exit(1);
+      // Pairing code: request on first QR
+      if (qr && !pairingRequested) {
+        pairingRequested = true;
+        console.log('\n⏳ Requesting pairing code...');
+        try {
+          const pairCode = await sock.requestPairingCode(PHONE);
+          console.log(`\n🔑 YOUR PAIRING CODE: ${pairCode}`);
+          console.log('📱 Settings → Linked Devices → Link with Phone Number\n');
+        } catch (err) {
+          console.error('❌ requestPairingCode failed:', err.message);
+        }
       }
 
-      if (statusCode === DisconnectReason.restartRequired) {
-        console.log('🔄 Restart required after pairing — reconnecting...');
-        // Reconnect automatically
-        return;
-      }
-    }
+      // Connected successfully
+      if (connection === 'open') {
+        console.log('\n✅ CONNECTED!');
+        const phone = sock.user?.id?.split(':')[0]?.split('@')[0];
+        console.log('  Phone:', phone);
 
-    if (qr && !codeSent) {
-      codeSent = true;
-      console.log('\n⏳ QR received, requesting pairing code...');
-      try {
-        const code = await sock.requestPairingCode(PHONE);
-        console.log(`\n🔑 YOUR PAIRING CODE: ${code}`);
-        console.log('📱 Enter this on your phone: Settings → Linked Devices → Link with Phone Number\n');
-      } catch (err) {
-        console.error('❌ requestPairingCode failed:', err.message);
-        process.exit(1);
-      }
-    }
-  });
+        await flushPendingSave();
+        await supabaseAdmin.from('whatsapp_sessions').upsert({
+          teacher_id: TEACHER_ID, status: 'connected',
+          phone: `+${phone}`,
+          last_active: new Date().toISOString(),
+          connected_at: new Date().toISOString()
+        }, { onConflict: 'teacher_id' });
+        await checkDB('connected');
 
-  // Timeout
-  setTimeout(async () => {
-    console.log('\n⏰ Timeout (120s) — test incomplete');
-    if (connected) await sock.end();
-    await checkDBState('after timeout');
+        // Send test
+        console.log('\n📤 Sending test message...');
+        try {
+          await sock.sendMessage(`${PHONE}@s.whatsapp.net`, { text: '✅ Nabeeh multi-session test!' });
+          console.log('  ✅ Sent!');
+        } catch (e) { console.error('  ❌', e.message); }
+
+        await new Promise(r => setTimeout(r, 2000));
+        await sock.end();
+        await checkDB('done');
+        console.log('\n🎉 TEST COMPLETE');
+        process.exit(0);
+      }
+
+      // Connection closed
+      if (connection === 'close') {
+        if (code === DisconnectReason.loggedOut) {
+          console.log('⚠️  Logged out');
+          await cleanupDB();
+          process.exit(1);
+        }
+        if (code === DisconnectReason.restartRequired) {
+          console.log('🔄 515 restart — flushing and reconnecting in 3s...');
+          await flushPendingSave();
+          await new Promise(r => setTimeout(r, 3000));
+          if (attempt < MAX_ATTEMPTS) {
+            startSocket();
+          } else {
+            console.log('❌ Max attempts reached');
+            process.exit(1);
+          }
+        }
+      }
+    });
+  }
+
+  startSocket();
+
+  setTimeout(() => {
+    console.log('\n⏰ Timeout (180s)');
     process.exit(1);
-  }, 120000);
+  }, 180000);
 }
 
-main().catch(err => {
-  console.error('Fatal:', err.message);
-  process.exit(1);
-});
+main().catch(e => { console.error('Fatal:', e.message); process.exit(1); });

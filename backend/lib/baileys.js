@@ -44,6 +44,7 @@ class BaileysClient extends EventEmitter {
       status: this.status,
       qr: this.qrCode,
       teacherId: this.teacherId,
+      phone: this.connectedPhone ? `+${this.connectedPhone}` : null,
       ...extra
     });
   }
@@ -110,7 +111,7 @@ class BaileysClient extends EventEmitter {
           keys: makeCacheableSignalKeyStore(state.keys, logger)
         },
         printQRInTerminal: false,
-        browser: ['Ubuntu', 'Chrome', '20.0.04'],
+        browser: ['Windows', 'Chrome', '114.0.5735.198'],
         getMessage: async () => undefined,
         ...(wsUrl ? { waWebSocketUrl: wsUrl } : {})
       });
@@ -188,6 +189,9 @@ class BaileysClient extends EventEmitter {
         this._cleanupSocket();
       } else if (restartRequired) {
         logger.info('Restart required after pairing, reconnecting', { teacherId: this.teacherId });
+        if (this._flushPendingSave) {
+          await this._flushPendingSave();
+        }
         this.connect().catch((error) => logger.error('Reconnection error', { teacherId: this.teacherId, error: error.message }));
       } else {
         this.scheduleReconnect();
@@ -284,7 +288,7 @@ class BaileysClient extends EventEmitter {
       this._cancelPendingSave?.();
       await Promise.all([
         supabaseAdmin.from('whatsapp_auth_keys').delete().eq('teacher_id', this.teacherId),
-        supabaseAdmin.from('whatsapp_auth_creds').delete().eq('teacher_id', this.teacherId)
+        supabaseAdmin.from('whatsapp_auth_creds').delete().eq('id', this.teacherId)
       ]);
     } catch (err) {
       logger.warn('Error clearing auth state', { teacherId: this.teacherId, error: err.message });
@@ -332,7 +336,8 @@ class BaileysClient extends EventEmitter {
       status: this.status,
       qr: this.qrCode,
       phone: this.connectedPhone ? `+${this.connectedPhone}` : null,
-      teacherId: this.teacherId
+      teacherId: this.teacherId,
+      pairingCodeMode: this.pairingCodeMode
     };
   }
 

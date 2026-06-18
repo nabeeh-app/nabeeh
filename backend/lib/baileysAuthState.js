@@ -15,11 +15,11 @@ async function useSupabaseAuthState(teacherId) {
   let credsRow = null;
 
   if (teacherId) {
-    // Try teacher-specific creds first
+    // Try teacher-specific creds first (id = teacherId)
     const { data, error } = await supabaseAdmin
       .from('whatsapp_auth_creds')
       .select('creds')
-      .eq('teacher_id', teacherId)
+      .eq('id', teacherId)
       .single();
 
     if (!error && data) {
@@ -55,10 +55,11 @@ async function useSupabaseAuthState(teacherId) {
         const { error } = await supabaseAdmin
           .from('whatsapp_auth_creds')
           .upsert({
+            id: teacherId,
             teacher_id: teacherId,
             creds: serialized,
             updated_at: new Date().toISOString()
-          }, { onConflict: 'teacher_id' });
+          }, { onConflict: 'id' });
 
         if (error) {
           logger.error('saveCreds FAILED (teacher)', { teacherId, error: error.message, code: error.code });

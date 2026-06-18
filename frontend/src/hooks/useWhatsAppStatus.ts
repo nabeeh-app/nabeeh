@@ -8,6 +8,7 @@ export interface WhatsAppStatus {
   isLoading: boolean;
   qr?: string | null;
   phone?: string | null;
+  pairingCodeMode?: boolean;
 }
 
 export const useWhatsAppStatus = (phone?: string, autoCheck = true) => {
@@ -33,7 +34,8 @@ export const useWhatsAppStatus = (phone?: string, autoCheck = true) => {
         sessionExists: result.status === 'connected',
         isLoading: false,
         qr: result.qr,
-        phone: result.phone
+        phone: result.phone,
+        pairingCodeMode: result.pairingCodeMode
       });
     } catch {
       setWhatsappStatus({
@@ -59,8 +61,8 @@ export const useWhatsAppStatus = (phone?: string, autoCheck = true) => {
       return;
     }
 
-    // Adaptive polling: faster when QR is ready (3s), slower otherwise (30s)
-    const pollInterval = whatsappStatus.status === 'qr_ready' ? 3000 : 30000;
+    // Adaptive polling: faster when QR/pairing (3s), slower otherwise (30s)
+    const pollInterval = (whatsappStatus.status === 'qr_ready' || whatsappStatus.pairingCodeMode) ? 3000 : 30000;
 
     const interval = setInterval(async () => {
       const result = await checkWhatsAppStatus(phone);
@@ -72,7 +74,8 @@ export const useWhatsAppStatus = (phone?: string, autoCheck = true) => {
           sessionExists: true,
           isLoading: false,
           qr: result.qr,
-          phone: result.phone
+          phone: result.phone,
+          pairingCodeMode: result.pairingCodeMode
         });
       } else {
         setWhatsappStatus(prev => ({
@@ -82,7 +85,8 @@ export const useWhatsAppStatus = (phone?: string, autoCheck = true) => {
           sessionExists: result.status === 'connected',
           isLoading: false,
           qr: result.qr,
-          phone: result.phone
+          phone: result.phone,
+          pairingCodeMode: result.pairingCodeMode
         }));
       }
     }, pollInterval);

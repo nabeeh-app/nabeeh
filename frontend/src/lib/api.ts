@@ -372,7 +372,7 @@ class ApiClient {
     return response.data.data;
   }
 
-  async getWhatsAppStatus(): Promise<{ status: string; qr: string | null; phone: string | null }> {
+  async getWhatsAppStatus(): Promise<{ status: string; qr: string | null; phone: string | null; pairingCodeMode: boolean }> {
     const response = await this.api.get('/whatsapp/status');
     return response.data.data;
   }

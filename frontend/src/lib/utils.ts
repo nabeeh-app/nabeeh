@@ -84,7 +84,8 @@ export const checkWhatsAppStatus = async (_phone?: string) => {
           ? 'Scan QR Code'
           : 'Disconnected',
       qr: data.qr || null,
-      phone: data.phone || null
+      phone: data.phone || null,
+      pairingCodeMode: data.pairingCodeMode || false
     };
   } catch (error) {
     logger.error('Check Status Error:', error);
@@ -93,7 +94,8 @@ export const checkWhatsAppStatus = async (_phone?: string) => {
       status: 'disconnected' as const,
       message: 'Error checking WhatsApp status',
       qr: null,
-      phone: null
+      phone: null,
+      pairingCodeMode: false
     };
   }
 };

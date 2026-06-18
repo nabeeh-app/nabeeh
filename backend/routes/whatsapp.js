@@ -212,7 +212,8 @@ function getStatusPayload(teacherId) {
     data: {
       status: currentStatus,
       qr: status?.qr || null,
-      phone: status?.phone || null
+      phone: status?.phone || null,
+      pairingCodeMode: status?.pairingCodeMode || false
     },
     message: messages[currentStatus] || messages.disconnected
   };

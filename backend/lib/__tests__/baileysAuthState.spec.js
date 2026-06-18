@@ -60,7 +60,7 @@ describe('baileysAuthState', () => {
 
       expect(state.creds).toEqual(mockCreds);
       expect(supabaseAdmin.from).toHaveBeenCalledWith('whatsapp_auth_creds');
-      expect(chain.eq).toHaveBeenCalledWith('teacher_id', 'teacher-1');
+      expect(chain.eq).toHaveBeenCalledWith('id', 'teacher-1');
     });
 
     it('should fallback to default creds when teacher not found', async () => {
@@ -305,11 +305,12 @@ describe('baileysAuthState', () => {
 
       expect(chain.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
+          id: 'teacher-1',
           teacher_id: 'teacher-1',
           creds: expect.any(Object),
           updated_at: expect.any(String)
         }),
-        { onConflict: 'teacher_id' }
+        { onConflict: 'id' }
       );
       jest.useRealTimers();
     });

@@ -137,7 +137,9 @@ class WhatsAppSessionManager extends EventEmitter {
           supabaseAdmin.from('whatsapp_sessions').update({
             status: update.status,
             phone: update.phone || null,
-            last_active: new Date().toISOString()
+            last_active: new Date().toISOString(),
+            ...(update.status === 'connected' ? { connected_at: new Date().toISOString() } : {}),
+            ...(update.status === 'disconnected' ? { disconnected_at: new Date().toISOString() } : {})
           }).eq('teacher_id', teacherId).catch(err =>
             logger.error('Failed to update session status', { teacherId, error: err.message })
           );
