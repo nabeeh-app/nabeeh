@@ -246,10 +246,8 @@ process.on('uncaughtException', (error) => {
   gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
-// Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  winstonLogger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  gracefulShutdown('UNHANDLED_REJECTION');
+  winstonLogger.error('Unhandled Rejection (not crashing)', { reason: String(reason), stack: reason?.stack });
 });
 
 module.exports = app;

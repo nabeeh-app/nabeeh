@@ -23,6 +23,9 @@ class WhatsAppSessionManager extends EventEmitter {
     this.maxSessions = parseInt(process.env.WHATSAPP_MAX_SESSIONS || '50', 10);
     this._started = false;
     this.pending = new Set();
+    this._healthCheckInterval = null;
+    this.HEALTH_CHECK_INTERVAL = 5 * 60 * 1000;
+    this.STALE_SESSION_THRESHOLD = 15 * 60 * 1000;
   }
 
   /**
@@ -34,6 +37,9 @@ class WhatsAppSessionManager extends EventEmitter {
 
     // Connect all sessions from database
     await this.connectAll();
+
+    // Start periodic health check
+    this._startHealthCheck();
 
     logger.info('Session manager started', {
       maxSessions: this.maxSessions,
@@ -66,6 +72,7 @@ class WhatsAppSessionManager extends EventEmitter {
     await Promise.allSettled(flushPromises);
     await Promise.allSettled(disconnectPromises);
     this.sessions.clear();
+    this._stopHealthCheck();
     this._started = false;
     logger.info('Session manager stopped');
   }
@@ -341,8 +348,54 @@ class WhatsAppSessionManager extends EventEmitter {
     });
   }
 
+  _startHealthCheck() {
+    this._stopHealthCheck();
+    this._healthCheckInterval = setInterval(() => this._runHealthCheck(), this.HEALTH_CHECK_INTERVAL);
+    this._healthCheckInterval.unref();
+  }
+
+  _stopHealthCheck() {
+    if (this._healthCheckInterval) {
+      clearInterval(this._healthCheckInterval);
+      this._healthCheckInterval = null;
+    }
+  }
+
+  async _runHealthCheck() {
+    const now = Date.now();
+    const staleSessions = [];
+
+    for (const [teacherId, session] of this.sessions) {
+      const clientStatus = session.client.getStatus();
+      const inMemoryStatus = clientStatus.status;
+
+      if (inMemoryStatus === 'connected' && now - session.lastActive > this.STALE_SESSION_THRESHOLD) {
+        logger.warn('Stale session detected by health check', { teacherId, lastActive: session.lastActive, staleMs: now - session.lastActive });
+        staleSessions.push(teacherId);
+      }
+
+      if (inMemoryStatus === 'failed') {
+        logger.warn('Failed session detected by health check, removing', { teacherId });
+        staleSessions.push(teacherId);
+      }
+    }
+
+    for (const teacherId of staleSessions) {
+      try {
+        await this.destroySession(teacherId);
+        logger.info('Health check evicted stale session', { teacherId });
+      } catch (err) {
+        logger.error('Health check failed to evict session', { teacherId, error: err.message });
+      }
+    }
+
+    if (this.sessions.size > 0) {
+      const connected = Array.from(this.sessions.values()).filter(s => s.client.getStatus().status === 'connected').length;
+      logger.info('Health check complete', { total: this.sessions.size, connected, evicted: staleSessions.length });
+    }
+  }
+
   /**
-   * Evict the least recently active session if limit reached
    * @returns {boolean} true if a session was evicted
    */
   async _evictInactiveSession() {

@@ -37,6 +37,9 @@ class BaileysClient extends EventEmitter {
     this._readyWaiters = [];
     this._flushPendingSave = null;
     this._cancelPendingSave = null;
+    this._messageTimestamps = [];
+    this.MESSAGE_RATE_LIMIT = 30;
+    this.MESSAGE_RATE_WINDOW = 60 * 1000;
   }
 
   emitStatus(extra = {}) {
@@ -188,11 +191,16 @@ class BaileysClient extends EventEmitter {
         await this.clearSession();
         this._cleanupSocket();
       } else if (restartRequired) {
-        logger.info('Restart required after pairing, reconnecting', { teacherId: this.teacherId });
+        const backoff = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000) + Math.floor(Math.random() * 2000);
+        this.reconnectAttempts++;
+        logger.info('Restart required, reconnecting with backoff', { teacherId: this.teacherId, backoff, attempt: this.reconnectAttempts });
         if (this._flushPendingSave) {
           await this._flushPendingSave();
         }
-        this.connect().catch((error) => logger.error('Reconnection error', { teacherId: this.teacherId, error: error.message }));
+        this.reconnectTimer = setTimeout(() => {
+          this.reconnectTimer = null;
+          this.connect().catch((error) => logger.error('Reconnection error', { teacherId: this.teacherId, error: error.message }));
+        }, backoff);
       } else {
         this.scheduleReconnect();
       }
@@ -324,10 +332,17 @@ class BaileysClient extends EventEmitter {
       throw new Error('WhatsApp socket not initialized');
     }
 
+    const now = Date.now();
+    this._messageTimestamps = this._messageTimestamps.filter(ts => now - ts < this.MESSAGE_RATE_WINDOW);
+    if (this._messageTimestamps.length >= this.MESSAGE_RATE_LIMIT) {
+      throw new Error(`Rate limit exceeded: max ${this.MESSAGE_RATE_LIMIT} messages per minute`);
+    }
+
     const cleaned = normalizePhoneNumber(to);
     const jid = `${cleaned}@s.whatsapp.net`;
     logger.info('Sending message', { to: redactPhone(cleaned), teacherId: this.teacherId });
     await this.sock.sendMessage(jid, { text: content });
+    this._messageTimestamps.push(Date.now());
     logger.info('Message sent OK', { to: redactPhone(cleaned), teacherId: this.teacherId });
   }
 

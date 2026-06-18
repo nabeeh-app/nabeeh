@@ -727,19 +727,26 @@ describe('Integration: Full multi-session lifecycle', () => {
   });
 
   describe('restartRequired reconnect', () => {
-    test('restartRequired triggers immediate reconnect', async () => {
+    test('restartRequired triggers reconnect with backoff', async () => {
+      jest.useFakeTimers();
       const client = await sessionManager.getOrCreateSession('teacher-1');
       mockSocket.ev.emit('connection.update', { connection: 'open' });
-      await new Promise(r => setTimeout(r, 10));
+      await jest.advanceTimersByTimeAsync(10);
 
       const spy = jest.spyOn(client, 'connect');
       mockSocket.ev.emit('connection.update', {
         connection: 'close',
         lastDisconnect: { error: { output: { statusCode: 515 } } }
       });
-      await new Promise(r => setTimeout(r, 10));
+      await jest.advanceTimersByTimeAsync(10);
+
+      expect(client.reconnectTimer).not.toBeNull();
+      expect(spy).not.toHaveBeenCalled();
+
+      await jest.advanceTimersByTimeAsync(5000);
       expect(spy).toHaveBeenCalled();
       spy.mockRestore();
+      jest.useRealTimers();
     });
   });
 
