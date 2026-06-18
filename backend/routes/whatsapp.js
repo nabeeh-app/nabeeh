@@ -337,6 +337,10 @@ const sessionParamsSchema = z.object({
   teacherId: z.string().uuid('Invalid teacher ID format')
 });
 
+const resumeSchema = z.object({
+  conversation_id: z.string().uuid()
+});
+
 /**
  * @openapi
  * /api/whatsapp/pair-code:
@@ -728,10 +732,11 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), async (req, r
  */
 router.post('/bot/resume', async (req, res) => {
   try {
-    const { conversation_id } = req.body;
-    if (!conversation_id) {
-      return res.status(400).json({ success: false, message: 'conversation_id is required' });
+    const parsed = resumeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, message: parsed.error.issues[0].message });
     }
+    const { conversation_id } = parsed.data;
 
     const { data: conversation, error: fetchError } = await supabase
       .from('conversations')

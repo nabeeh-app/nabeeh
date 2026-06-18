@@ -318,7 +318,7 @@ describe('WhatsApp Routes', () => {
 
       const res = await request(app)
         .post('/api/whatsapp/bot/resume')
-        .send({ conversation_id: 'conv-1' });
+        .send({ conversation_id: '12345678-1234-1234-8234-567812345678' });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -348,7 +348,7 @@ describe('WhatsApp Routes', () => {
 
       const res = await request(app)
         .post('/api/whatsapp/bot/resume')
-        .send({ conversation_id: 'nonexistent' });
+        .send({ conversation_id: 'aaaaaaaa-bbbb-1ccc-9ddd-eeeeeeeeeeee' });
 
       expect(res.status).toBe(404);
       expect(res.body.success).toBe(false);
@@ -368,7 +368,7 @@ describe('WhatsApp Routes', () => {
 
       const res = await request(app)
         .post('/api/whatsapp/bot/resume')
-        .send({ conversation_id: 'conv-other' });
+        .send({ conversation_id: 'fedcba98-7654-3210-8654-3210fedcba98' });
 
       expect(res.status).toBe(404);
       expect(res.body.success).toBe(false);
