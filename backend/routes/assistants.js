@@ -98,8 +98,27 @@ const inviteAssistant = async (req, res) => {
     const teacherId = req.user.id;
     const { email, phone, deliveryMethod = 'email', permissions } = req.body;
 
-    // Check tier limit
-    const tier = await getTeacherTier(teacherId);
+    // Run independent checks in parallel
+    const [tier, pendingCount, existingInvite, existingUser] = await Promise.all([
+      getTeacherTier(teacherId),
+      countPendingInvites(teacherId),
+      email ? supabaseAdmin
+        .from('assistant_invites')
+        .select('id')
+        .eq('teacher_id', teacherId)
+        .eq('email', email.toLowerCase())
+        .eq('status', 'pending')
+        .maybeSingle()
+        .then(r => r.data) : null,
+      email ? supabaseAdmin
+        .from('teachers')
+        .select('id')
+        .eq('email', email.toLowerCase())
+        .maybeSingle()
+        .then(r => r.data) : null,
+    ]);
+
+    // Tier-dependent checks (must wait for tier)
     const limit = INVITE_LIMITS[tier] || 0;
     if (limit === 0) {
       return res.status(403).json({
@@ -109,7 +128,6 @@ const inviteAssistant = async (req, res) => {
       });
     }
 
-    const pendingCount = await countPendingInvites(teacherId);
     if (pendingCount >= limit) {
       return res.status(403).json({
         success: false,
@@ -118,38 +136,23 @@ const inviteAssistant = async (req, res) => {
       });
     }
 
-    // Check duplicate by email
-    if (email) {
-      const { data: existingInvite } = await supabaseAdmin
-        .from('assistant_invites')
+    // Check duplicate invite
+    if (existingInvite) {
+      return res.status(409).json({ success: false, message: 'A pending invite already exists for this email.', code: 'INVITE_EXISTS' });
+    }
+
+    // Check existing user → already assistant?
+    if (existingUser) {
+      const { data: existingLink } = await supabaseAdmin
+        .from('teacher_assistants')
         .select('id')
         .eq('teacher_id', teacherId)
-        .eq('email', email.toLowerCase())
-        .eq('status', 'pending')
+        .eq('assistant_id', existingUser.id)
+        .eq('status', 'active')
         .maybeSingle();
 
-      if (existingInvite) {
-        return res.status(409).json({ success: false, message: 'A pending invite already exists for this email.', code: 'INVITE_EXISTS' });
-      }
-
-      const { data: existingUser } = await supabaseAdmin
-        .from('teachers')
-        .select('id')
-        .eq('email', email.toLowerCase())
-        .maybeSingle();
-
-      if (existingUser) {
-        const { data: existingLink } = await supabaseAdmin
-          .from('teacher_assistants')
-          .select('id')
-          .eq('teacher_id', teacherId)
-          .eq('assistant_id', existingUser.id)
-          .eq('status', 'active')
-          .maybeSingle();
-
-        if (existingLink) {
-          return res.status(409).json({ success: false, message: 'This user is already your assistant.', code: 'ALREADY_ASSISTANT' });
-        }
+      if (existingLink) {
+        return res.status(409).json({ success: false, message: 'This user is already your assistant.', code: 'ALREADY_ASSISTANT' });
       }
     }
 
