@@ -212,17 +212,19 @@ class WhatsAppSessionManager extends EventEmitter {
 
     logger.info('Restoring sessions from database', { count: dbSessions.length });
 
-    // Stagger connections to avoid rate limiting (500ms between each)
-    for (let i = 0; i < dbSessions.length; i++) {
-      const { teacher_id } = dbSessions[i];
-      try {
-        await this.getOrCreateSession(teacher_id, { autoConnect: true });
-      } catch (err) {
-        logger.error('Failed to restore session', { teacherId: teacher_id, error: err.message });
-      }
-
-      // Stagger connections
-      if (i < dbSessions.length - 1) {
+    // Stagger connections: connect in batches of 5 with 500ms between batches
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < dbSessions.length; i += BATCH_SIZE) {
+      const batch = dbSessions.slice(i, i + BATCH_SIZE);
+      await Promise.allSettled(
+        batch.map(({ teacher_id }) =>
+          this.getOrCreateSession(teacher_id, { autoConnect: true }).catch(err => {
+            logger.error('Failed to restore session', { teacherId: teacher_id, error: err.message });
+          })
+        )
+      );
+      // Wait between batches (not after the last batch)
+      if (i + BATCH_SIZE < dbSessions.length) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
