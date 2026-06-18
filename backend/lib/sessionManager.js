@@ -335,12 +335,15 @@ class WhatsAppSessionManager extends EventEmitter {
    * @returns {Array<{teacherId: string, status: string, phone: string|null, lastActive: string|null}>}
    */
   getSessionsSnapshot() {
-    return Array.from(this.sessions.entries()).map(([teacherId, session]) => ({
-      teacherId,
-      status: session.client.getStatus().status || 'disconnected',
-      phone: session.client.getStatus().phone || null,
-      lastActive: session.lastActive ? new Date(session.lastActive).toISOString() : null
-    }));
+    return Array.from(this.sessions.entries()).map(([teacherId, session]) => {
+      const s = session.client.getStatus();
+      return {
+        teacherId,
+        status: s.status || 'disconnected',
+        phone: s.phone || null,
+        lastActive: session.lastActive ? new Date(session.lastActive).toISOString() : null
+      };
+    });
   }
 
   /**
