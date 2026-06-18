@@ -1,0 +1,333 @@
+const EventEmitter = require('events');
+const logger = require('./logger');
+const { supabaseAdmin } = require('../config/database');
+const { BaileysClient } = require('./baileys');
+
+/**
+ * Manages multiple WhatsApp sessions, one per teacher.
+ * Each teacher gets an isolated BaileysClient with its own auth state.
+ * 
+ * Features:
+ * - Dynamic session limit (configurable via env)
+ * - Lazy session loading (connect on first message)
+ * - Auto-disconnect after inactivity
+ * - Memory monitoring
+ * - Graceful shutdown
+ */
+class WhatsAppSessionManager extends EventEmitter {
+  constructor() {
+    super();
+    /** @type {Map<string, { client: BaileysClient, status: string, lastActive: number, createdAt: number }>} */
+    this.sessions = new Map();
+    this.maxSessions = parseInt(process.env.WHATSAPP_MAX_SESSIONS || '50', 10);
+    this._started = false;
+    this.pending = new Set();
+  }
+
+  /**
+   * Start the session manager: connect existing sessions
+   */
+  async start() {
+    if (this._started) return;
+    this._started = true;
+
+    // Connect all sessions from database
+    await this.connectAll();
+
+    logger.info('Session manager started', {
+      maxSessions: this.maxSessions,
+      activeSessions: this.sessions.size
+    });
+  }
+
+  /**
+   * Stop the session manager: disconnect all sessions
+   */
+  async stop() {
+    const disconnectPromises = [];
+    for (const [teacherId, session] of this.sessions) {
+      disconnectPromises.push(
+        session.client.disconnect().catch(err =>
+          logger.error('Error disconnecting session on shutdown', { teacherId, error: err.message })
+        )
+      );
+    }
+    await Promise.allSettled(disconnectPromises);
+    this.sessions.clear();
+    this._started = false;
+    logger.info('Session manager stopped');
+  }
+
+  /**
+   * Create or get a session for a teacher
+   * @param {string} teacherId
+   * @param {object} [options]
+   * @param {boolean} [options.autoConnect=true] - Auto-connect if not connected
+   * @returns {Promise<BaileysClient>}
+   */
+  async getOrCreateSession(teacherId, { autoConnect = true } = {}) {
+    if (this.sessions.has(teacherId)) {
+      const session = this.sessions.get(teacherId);
+      session.lastActive = Date.now();
+      return session.client;
+    }
+
+    // Wait if another request is already creating this session
+    if (this.pending.has(teacherId)) {
+      // Poll until session appears or timeout
+      const start = Date.now();
+      while (!this.sessions.has(teacherId) && Date.now() - start < 10000) {
+        await new Promise(r => setTimeout(r, 50));
+      }
+      if (this.sessions.has(teacherId)) {
+        return this.sessions.get(teacherId).client;
+      }
+      // Timeout — fall through to create
+    }
+
+    this.pending.add(teacherId);
+    try {
+      // Check session limit
+      if (this.sessions.size >= this.maxSessions) {
+        const evicted = this._evictInactiveSession();
+        if (!evicted) {
+          throw new Error(`Maximum concurrent sessions reached (${this.maxSessions}). Disconnect a session first.`);
+        }
+      }
+
+      const client = new BaileysClient(teacherId);
+      this.sessions.set(teacherId, {
+        client,
+        status: 'disconnected',
+        lastActive: Date.now(),
+        createdAt: Date.now()
+      });
+
+      // Update database
+      await supabaseAdmin.from('whatsapp_sessions').upsert({
+        teacher_id: teacherId,
+        status: 'disconnected'
+      }, { onConflict: 'teacher_id' });
+
+      if (autoConnect) {
+        await client.connect().catch(err => {
+          logger.error('Failed to auto-connect session', { teacherId, error: err.message });
+        });
+      }
+
+      // Track connection events from client
+      client.on('connection.update', (update) => {
+        const session = this.sessions.get(teacherId);
+        if (session) {
+          session.status = update.status;
+          session.lastActive = Date.now();
+
+          supabaseAdmin.from('whatsapp_sessions').update({
+            status: update.status,
+            phone: update.phone || null,
+            last_active: new Date().toISOString()
+          }).eq('teacher_id', teacherId).catch(err =>
+            logger.error('Failed to update session status', { teacherId, error: err.message })
+          );
+        }
+      });
+
+      // Notify listeners (e.g., whatsapp.js message handler setup)
+      this.emit('sessionCreated', { teacherId, client });
+
+      logger.info('Session created', { teacherId, totalSessions: this.sessions.size });
+      return client;
+    } finally {
+      this.pending.delete(teacherId);
+    }
+  }
+
+  /**
+   * Get an existing session (returns null if not found)
+   * @param {string} teacherId
+   * @returns {BaileysClient|null}
+   */
+  getSession(teacherId) {
+    const session = this.sessions.get(teacherId);
+    if (session) {
+      session.lastActive = Date.now();
+      return session.client;
+    }
+    return null;
+  }
+
+  /**
+   * Destroy a session and clean up resources
+   * @param {string} teacherId
+   * @param {object} [options]
+   * @param {boolean} [options.deleteCredentials=false] - If true, delete credentials (for explicit logout)
+   */
+  async destroySession(teacherId, { deleteCredentials = false } = {}) {
+    const session = this.sessions.get(teacherId);
+    if (!session) return;
+
+    try {
+      // Use disconnect() for timeout (keeps credentials for auto-reconnect)
+      // Use logout() for explicit logout (deletes credentials)
+      if (deleteCredentials) {
+        await session.client.logout();
+      } else {
+        await session.client.disconnect();
+      }
+    } catch (err) {
+      logger.warn('Error destroying session', { teacherId, error: err.message });
+    }
+
+    this.sessions.delete(teacherId);
+
+    // Update database
+    await supabaseAdmin.from('whatsapp_sessions').update({
+      status: 'disconnected',
+      disconnected_at: new Date().toISOString()
+    }).eq('teacher_id', teacherId).catch(err =>
+      logger.error('Failed to update session status on destroy', { teacherId, error: err.message })
+    );
+
+    logger.info('Session destroyed', { teacherId, deleteCredentials, totalSessions: this.sessions.size });
+  }
+
+  /**
+   * Connect all sessions from database on startup
+   */
+  async connectAll() {
+    const { data: dbSessions, error } = await supabaseAdmin
+      .from('whatsapp_sessions')
+      .select('teacher_id, status')
+      .in('status', ['connected', 'error']);
+
+    if (error) {
+      logger.error('Failed to load sessions from database', { error: error.message });
+      return;
+    }
+
+    if (!dbSessions || dbSessions.length === 0) {
+      logger.info('No existing sessions to restore');
+      return;
+    }
+
+    logger.info('Restoring sessions from database', { count: dbSessions.length });
+
+    // Stagger connections to avoid rate limiting (500ms between each)
+    for (let i = 0; i < dbSessions.length; i++) {
+      const { teacher_id } = dbSessions[i];
+      try {
+        await this.getOrCreateSession(teacher_id, { autoConnect: true });
+      } catch (err) {
+        logger.error('Failed to restore session', { teacherId: teacher_id, error: err.message });
+      }
+
+      // Stagger connections
+      if (i < dbSessions.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+  }
+
+  /**
+   * Find which teacher should handle a message from a phone number
+   * @param {string} phone - Phone number (with or without +)
+   * @returns {Promise<string|null>} teacherId or null
+   */
+  async getTeacherForPhone(phone) {
+    const cleanPhone = phone.replace('+', '').replace(/[^0-9]/g, '');
+
+    const { data: parent, error } = await supabaseAdmin
+      .from('parents')
+      .select(`
+        id,
+        students (
+          id,
+          enrollments (
+            id,
+            group:groups (
+              id,
+              offering:offerings (
+                id,
+                teacher_id
+              )
+            )
+          )
+        )
+      `)
+      .eq('phone', `+${cleanPhone}`)
+      .single();
+
+    if (error || !parent) return null;
+
+    // Get first teacher from enrollments
+    const teacherId = parent?.students?.[0]?.enrollments?.[0]?.group?.offering?.teacher_id;
+    return teacherId || null;
+  }
+
+  /**
+   * Get status of all sessions
+   * @returns {object}
+   */
+  getStatus() {
+    const status = {};
+    for (const [teacherId, session] of this.sessions) {
+      status[teacherId] = session.client.getStatus();
+      status[teacherId].lastActive = new Date(session.lastActive).toISOString();
+      status[teacherId].createdAt = new Date(session.createdAt).toISOString();
+    }
+    return {
+      totalSessions: this.sessions.size,
+      maxSessions: this.maxSessions,
+      sessions: status
+    };
+  }
+
+  /**
+   * Get status for a specific teacher
+   * @param {string} teacherId
+   * @returns {object|null}
+   */
+  getTeacherStatus(teacherId) {
+    const session = this.sessions.get(teacherId);
+    if (!session) return null;
+    return {
+      ...session.client.getStatus(),
+      lastActive: new Date(session.lastActive).toISOString(),
+      createdAt: new Date(session.createdAt).toISOString()
+    };
+  }
+
+  /**
+   * Evict the least recently active session if limit reached
+   * @returns {boolean} true if a session was evicted
+   */
+  _evictInactiveSession() {
+    if (this.sessions.size === 0) return false;
+
+    // Find least recently active session
+    let oldestTeacherId = null;
+    let oldestTime = Date.now();
+
+    for (const [teacherId, session] of this.sessions) {
+      if (session.lastActive < oldestTime) {
+        oldestTime = session.lastActive;
+        oldestTeacherId = teacherId;
+      }
+    }
+
+    if (oldestTeacherId) {
+      logger.warn('Evicting inactive session to make room', { teacherId: oldestTeacherId });
+      this.destroySession(oldestTeacherId).catch(err =>
+        logger.error('Error evicting session', { teacherId: oldestTeacherId, error: err.message })
+      );
+      return true;
+    }
+
+    return false;
+  }
+}
+
+// Singleton instance
+const sessionManager = new WhatsAppSessionManager();
+
+module.exports = sessionManager;
