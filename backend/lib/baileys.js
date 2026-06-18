@@ -168,6 +168,7 @@ class BaileysClient extends EventEmitter {
       this.connectedPhone = this.sock?.user?.id?.split(':')[0]?.split('@')[0] || null;
       logger.info('Connected', { teacherId: this.teacherId, phone: redactPhone(this.connectedPhone) });
       this.startWatchdog();
+      this._signalReady();
       this.emitStatus();
       return;
     }
