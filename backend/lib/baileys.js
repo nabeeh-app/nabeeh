@@ -257,8 +257,10 @@ class BaileysClient extends EventEmitter {
         return;
       }
       this._cancelPendingSave?.();
-      await supabaseAdmin.from('whatsapp_auth_keys').delete().eq('teacher_id', this.teacherId);
-      await supabaseAdmin.from('whatsapp_auth_creds').delete().eq('teacher_id', this.teacherId);
+      await Promise.all([
+        supabaseAdmin.from('whatsapp_auth_keys').delete().eq('teacher_id', this.teacherId),
+        supabaseAdmin.from('whatsapp_auth_creds').delete().eq('teacher_id', this.teacherId)
+      ]);
     } catch (err) {
       logger.warn('Error clearing auth state', { teacherId: this.teacherId, error: err.message });
     }
