@@ -102,28 +102,45 @@ and update your row when done.
 | 058 | Consolidate duplicate phone normalization | P2 | S | — | DONE |
 | 059 | Add unit tests for BaileysClient class | P2 | M | — | DONE |
 
-### WhatsApp post-execution audit fixes #2 (2026-06-18)
+### WhatsApp post-execution audit fixes #2 (2026-06-18) — DONE
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 060 | Fix clearSession legacy wipe of all auth keys | P1 | S | — | TODO |
-| 061 | Flush saveCreds debounce timer on shutdown | P1 | S | — | TODO |
-| 062 | Fix waitForReady overwriting _readyResolve | P1 | S | — | TODO |
-| 063 | Schedule reconnect when connect() throws | P1 | S | — | TODO |
-| 064 | Clear pending reconnect timer before reconnecting | P1 | S | — | TODO |
-| 065 | Await _evictInactiveSession before creating new session | P1 | S | — | TODO |
-| 066 | Cancel pending saveCreds before clearSession deletes rows | P2 | S | 061 | TODO |
-| 067 | Add Zod validation to POST /bot/resume | P2 | S | — | TODO |
-| 068 | Validate teacher_id in leaveTeacher route | P2 | S | — | TODO |
-| 069 | Redact PII (phone numbers, JIDs) from info-level logs | P2 | S | — | TODO |
-| 070 | Expose getSessionsSnapshot instead of raw .sessions Map | P2 | S | — | TODO |
-| 071 | Rename misleading supabase variable to supabaseAdmin | P2 | S | — | TODO |
-| 072 | Remove dead whatsappRouter wrapper in server.js | P2 | S | — | TODO |
-| 073 | Extract shared _cleanupSocket helper from disconnect/logout | P2 | S | — | TODO |
-| 074 | Parallelize clearSession DB deletes | P2 | S | 060 | TODO |
-| 075 | Fix duplicate getStatus() call in admin health endpoint | P3 | S | — | TODO |
-| 076 | Parallelize inviteAssistant DB queries | P3 | S | — | TODO |
-| 077 | Consolidate phone normalization into shared lib/phone.js | P2 | S | — | TODO |
+| 060 | Fix clearSession legacy wipe of all auth keys | P1 | S | — | DONE |
+| 061 | Flush saveCreds debounce timer on shutdown | P1 | S | — | DONE |
+| 062 | Fix waitForReady overwriting _readyResolve | P1 | S | — | DONE |
+| 063 | Schedule reconnect when connect() throws | P1 | S | — | DONE |
+| 064 | Clear pending reconnect timer before reconnecting | P1 | S | — | DONE |
+| 065 | Await _evictInactiveSession before creating new session | P1 | S | — | DONE |
+| 066 | Cancel pending saveCreds before clearSession deletes rows | P2 | S | 061 | DONE |
+| 067 | Add Zod validation to POST /bot/resume | P2 | S | — | DONE |
+| 068 | Validate teacher_id in leaveTeacher route | P2 | S | — | DONE |
+| 069 | Redact PII (phone numbers, JIDs) from info-level logs | P2 | S | — | DONE |
+| 070 | Expose getSessionsSnapshot instead of raw .sessions Map | P2 | S | — | DONE |
+| 071 | Rename misleading supabase variable to supabaseAdmin | P2 | S | — | DONE |
+| 072 | Remove dead whatsappRouter wrapper in server.js | P2 | S | — | DONE |
+| 073 | Extract shared _cleanupSocket helper from disconnect/logout | P2 | S | — | DONE |
+| 074 | Parallelize clearSession DB deletes | P2 | S | 060 | DONE |
+| 075 | Fix duplicate getStatus() call in admin health endpoint | P3 | S | — | DONE |
+| 076 | Parallelize inviteAssistant DB queries | P3 | S | — | DONE |
+| 077 | Consolidate phone normalization into shared lib/phone.js | P2 | S | — | DONE |
+
+### WhatsApp post-execution audit fixes #3 (2026-06-18)
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 078 | Fix supabaseAdminAdmin typo in send-to-number | P1 | S | — | TODO |
+| 079 | Add _cleanupSocket to loggedOut disconnect path | P1 | S | — | TODO |
+| 080 | Ensure disconnect() cleanup runs even if flush throws | P1 | S | — | TODO |
+| 081 | Fix _evictInactiveSession returning true on failure | P1 | S | — | TODO |
+| 082 | Add maxReconnectAttempts to prevent infinite reconnect loop | P2 | S | — | TODO |
+| 083 | Signal waitForReady waiters on connect() error | P2 | S | — | TODO |
+| 084 | Reject pending waitForReady waiters in _cleanupSocket | P2 | S | — | TODO |
+| 085 | Redact Supabase error details from auth upsert logs | P2 | S | — | TODO |
+| 086 | Add logger.error to server.js health endpoint catch block | P3 | S | — | TODO |
+| 087 | Add unit tests for baileysAuthState module | P2 | M | — | TODO |
+| 088 | Add dedicated unit tests for lib/phone.js | P2 | S | — | TODO |
+| 089 | Deduplicate sessionManager require in server.js | P3 | S | — | TODO |
 
 ## Recommended execution order
 
@@ -152,10 +169,15 @@ Then **053**, **054**, **055**, **057**, **058** — P2, independent.
 Then **050**, **056** — P3, independent.
 Then **059** — P2 tests.
 
-### Phase 7: WhatsApp post-execution fixes #2 (P1, sequential recommended)
-Plans **060**, **061**, **062**, **063**, **064**, **065** — P1, S-effort, independent. Can be done in parallel.
+### Phase 7: WhatsApp post-execution fixes #2 (P1, sequential) — DONE
+Plans **060**, **061**, **062**, **063**, **064**, **065** — P1, S-effort, independent.
 Then **066** (depends on 061), **067**, **068**, **069**, **070**, **071**, **072**, **073**, **077** — P2, independent.
 Then **074** (depends on 060), **075**, **076** — P2-P3, independent.
+
+### Phase 8: WhatsApp post-execution fixes #3 (P1, sequential recommended)
+Plans **078**, **079**, **080**, **081** — P1, S-effort, independent. Can be done in parallel.
+Then **082**, **083**, **084**, **085** — P2, independent.
+Then **086**, **087**, **088**, **089** — P2-P3, independent.
 
 ## Dependency notes
 
@@ -168,6 +190,7 @@ Then **074** (depends on 060), **075**, **076** — P2-P3, independent.
 - **045** depends on **041**: sessionCreated emit must exist for handler tests
 - **066** depends on **061**: flush method must exist before cancel method
 - **074** depends on **060**: clearSession must be refactored before parallelizing
+- **083** and **084** both add `_rejectWaiters` — if executing sequentially, 083 creates the method and 084 calls it
 
 ## Findings considered and rejected
 
