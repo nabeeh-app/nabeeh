@@ -265,6 +265,7 @@ class BaileysClient extends EventEmitter {
       }
       this.sock = null;
     }
+    this._rejectWaiters(new Error('Session disconnected'));
   }
 
   /**

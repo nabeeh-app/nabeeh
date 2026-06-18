@@ -135,7 +135,7 @@ and update your row when done.
 | 081 | Fix _evictInactiveSession returning true on failure | P1 | S | — | TODO |
 | 082 | Add maxReconnectAttempts to prevent infinite reconnect loop | P2 | S | — | DONE |
 | 083 | Signal waitForReady waiters on connect() error | P2 | S | — | DONE |
-| 084 | Reject pending waitForReady waiters in _cleanupSocket | P2 | S | — | TODO |
+| 084 | Reject pending waitForReady waiters in _cleanupSocket | P2 | S | — | DONE |
 | 085 | Redact Supabase error details from auth upsert logs | P2 | S | — | TODO |
 | 086 | Add logger.error to server.js health endpoint catch block | P3 | S | — | TODO |
 | 087 | Add unit tests for baileysAuthState module | P2 | M | — | TODO |
