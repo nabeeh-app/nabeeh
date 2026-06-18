@@ -610,13 +610,13 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), async (req, r
 
     // Auto-pause bot for this conversation when teacher/assistant sends manual message
     try {
-      const { data: parent } = await supabaseAdminAdmin.from('parents').select('id').eq('phone', `+${cleaned}`).maybeSingle();
+      const { data: parent } = await supabaseAdmin.from('parents').select('id').eq('phone', `+${cleaned}`).maybeSingle();
       if (parent) {
-        const { data: conversation } = await supabaseAdminAdmin.from('conversations')
+        const { data: conversation } = await supabaseAdmin.from('conversations')
           .select('id').eq('parent_id', parent.id).eq('teacher_id', teacherId).maybeSingle();
         if (conversation) {
           const pauseHours = 4;
-          await supabaseAdminAdmin.from('conversations').update({
+          await supabaseAdmin.from('conversations').update({
             last_responder_id: teacherId,
             last_responder_type: req.user.role,
             bot_paused_until: new Date(Date.now() + pauseHours * 3600000).toISOString()
