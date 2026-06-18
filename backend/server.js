@@ -120,6 +120,7 @@ app.get('/api/admin/whatsapp-health', authenticateToken, requireRole('admin'), (
       }
     });
   } catch (error) {
+    winstonLogger.error('WhatsApp health endpoint error', { error: error.message });
     res.json({
       success: true,
       data: {

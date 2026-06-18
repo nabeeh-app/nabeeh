@@ -137,7 +137,7 @@ and update your row when done.
 | 083 | Signal waitForReady waiters on connect() error | P2 | S | — | DONE |
 | 084 | Reject pending waitForReady waiters in _cleanupSocket | P2 | S | — | DONE |
 | 085 | Redact Supabase error details from auth upsert logs | P2 | S | — | DONE |
-| 086 | Add logger.error to server.js health endpoint catch block | P3 | S | — | TODO |
+| 086 | Add logger.error to server.js health endpoint catch block | P3 | S | — | DONE |
 | 087 | Add unit tests for baileysAuthState module | P2 | M | — | TODO |
 | 088 | Add dedicated unit tests for lib/phone.js | P2 | S | — | TODO |
 | 089 | Deduplicate sessionManager require in server.js | P3 | S | — | TODO |
