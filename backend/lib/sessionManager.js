@@ -236,7 +236,21 @@ class WhatsAppSessionManager extends EventEmitter {
    * @returns {Promise<string[]|null>} array of teacherIds or null
    */
   async getTeacherForPhone(phone) {
-    const cleanPhone = phone.replace('+', '').replace(/[^0-9]/g, '');
+    // Normalize phone: strip +, spaces, dashes, parentheses
+    let cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
+
+    // Handle Egyptian numbers: 0020 → 20, 0 → 20 (local to international)
+    if (cleanPhone.startsWith('0020')) {
+      cleanPhone = '20' + cleanPhone.slice(4);
+    } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
+      cleanPhone = '20' + cleanPhone.slice(1);
+    }
+
+    // Ensure it starts with country code (no leading zeros after country code)
+    if (!cleanPhone.match(/^[1-9]\d+$/)) {
+      // Invalid phone format
+      return null;
+    }
 
     const { data: parent, error } = await supabaseAdmin
       .from('parents')
