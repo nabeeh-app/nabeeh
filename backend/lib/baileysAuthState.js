@@ -8,7 +8,7 @@ const logger = require('./logger');
  *
  * @param {string} [teacherId] - Teacher ID for multi-session support.
  *                                If not provided, falls back to 'default' for backward compatibility.
- * @returns {Promise<{state: {creds: object, keys: {get: Function, set: Function}}, saveCreds: Function}>}
+ * @returns {Promise<{state: {creds: object, keys: {get: Function, set: Function}}, saveCreds: Function, flushPendingSave: Function}>}
  */
 async function useSupabaseAuthState(teacherId) {
   // Build query: prefer teacher-specific creds, fallback to 'default' for migration
@@ -46,6 +46,44 @@ async function useSupabaseAuthState(teacherId) {
     : initAuthCreds();
 
   let saveCredsTimer = null;
+
+  async function _persistCreds() {
+    try {
+      const serialized = JSON.parse(JSON.stringify(creds, BufferJSON.replacer));
+
+      if (teacherId) {
+        const { error } = await supabaseAdmin
+          .from('whatsapp_auth_creds')
+          .upsert({
+            teacher_id: teacherId,
+            creds: serialized,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'teacher_id' });
+
+        if (error) {
+          logger.error('saveCreds FAILED (teacher)', { teacherId, error: error.message, code: error.code });
+        } else {
+          logger.info('saveCreds OK', { teacherId });
+        }
+      } else {
+        const { error } = await supabaseAdmin
+          .from('whatsapp_auth_creds')
+          .upsert({
+            id: 'default',
+            creds: serialized,
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) {
+          logger.error('saveCreds FAILED (default)', { error: error.message, code: error.code });
+        } else {
+          logger.info('saveCreds OK (default)');
+        }
+      }
+    } catch (err) {
+      logger.error('saveCreds ERROR', { teacherId, error: err.message });
+    }
+  }
 
   // Build a filter clause for teacher-scoped queries
   const buildFilter = (type, ids) => {
@@ -150,42 +188,16 @@ async function useSupabaseAuthState(teacherId) {
       // Debounce: coalesce rapid updates, only persist the last one within 3s
       if (saveCredsTimer) clearTimeout(saveCredsTimer);
       saveCredsTimer = setTimeout(async () => {
-        try {
-          const serialized = JSON.parse(JSON.stringify(creds, BufferJSON.replacer));
-
-          if (teacherId) {
-            const { error } = await supabaseAdmin
-              .from('whatsapp_auth_creds')
-              .upsert({
-                teacher_id: teacherId,
-                creds: serialized,
-                updated_at: new Date().toISOString()
-              }, { onConflict: 'teacher_id' });
-
-            if (error) {
-              logger.error('saveCreds FAILED (teacher)', { teacherId, error: error.message, code: error.code });
-            } else {
-              logger.info('saveCreds OK', { teacherId });
-            }
-          } else {
-            const { error } = await supabaseAdmin
-              .from('whatsapp_auth_creds')
-              .upsert({
-                id: 'default',
-                creds: serialized,
-                updated_at: new Date().toISOString()
-              });
-
-            if (error) {
-              logger.error('saveCreds FAILED (default)', { error: error.message, code: error.code });
-            } else {
-              logger.info('saveCreds OK (default)');
-            }
-          }
-        } catch (err) {
-          logger.error('saveCreds ERROR', { teacherId, error: err.message });
-        }
+        saveCredsTimer = null;
+        await _persistCreds();
       }, 3000);
+    },
+    flushPendingSave: async () => {
+      if (saveCredsTimer) {
+        clearTimeout(saveCredsTimer);
+        saveCredsTimer = null;
+        await _persistCreds();
+      }
     }
   };
 }

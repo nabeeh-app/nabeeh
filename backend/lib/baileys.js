@@ -28,6 +28,7 @@ class BaileysClient extends EventEmitter {
     this.pairingCodeMode = false;
     this._readyResolve = null;
     this._readyReject = null;
+    this._flushPendingSave = null;
   }
 
   emitStatus(extra = {}) {
@@ -75,7 +76,8 @@ class BaileysClient extends EventEmitter {
         this.sock.removeAllListeners();
       }
 
-      const { state, saveCreds } = await useSupabaseAuthState(this.teacherId);
+      const { state, saveCreds, flushPendingSave } = await useSupabaseAuthState(this.teacherId);
+      this._flushPendingSave = flushPendingSave;
       const { version } = await fetchLatestBaileysVersion();
 
       this.sock = makeWASocket({
@@ -292,6 +294,10 @@ class BaileysClient extends EventEmitter {
       this.clearQrExpiryTimer();
       this.stopWatchdog();
 
+      if (this._flushPendingSave) {
+        await this._flushPendingSave();
+      }
+
       if (this.sock) {
         if (typeof this.sock.removeAllListeners === 'function') {
           this.sock.removeAllListeners();
@@ -325,6 +331,10 @@ class BaileysClient extends EventEmitter {
 
       this.clearQrExpiryTimer();
       this.stopWatchdog();
+
+      if (this._flushPendingSave) {
+        await this._flushPendingSave();
+      }
 
       if (this.sock) {
         try {

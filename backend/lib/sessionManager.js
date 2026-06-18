@@ -44,14 +44,25 @@ class WhatsAppSessionManager extends EventEmitter {
    * Stop the session manager: disconnect all sessions
    */
   async stop() {
+    const flushPromises = [];
     const disconnectPromises = [];
+
     for (const [teacherId, session] of this.sessions) {
+      if (session.client._flushPendingSave) {
+        flushPromises.push(
+          session.client._flushPendingSave().catch(err =>
+            logger.error('Error flushing creds on shutdown', { teacherId, error: err.message })
+          )
+        );
+      }
       disconnectPromises.push(
         session.client.disconnect().catch(err =>
           logger.error('Error disconnecting session on shutdown', { teacherId, error: err.message })
         )
       );
     }
+
+    await Promise.allSettled(flushPromises);
     await Promise.allSettled(disconnectPromises);
     this.sessions.clear();
     this._started = false;
