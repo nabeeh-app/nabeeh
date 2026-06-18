@@ -2,7 +2,7 @@ const express = require('express');
 const { z } = require('zod');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const sessionManager = require('../lib/sessionManager');
-const supabase = require('../config/database').supabaseAdmin;
+const { supabaseAdmin } = require('../config/database');
 const logger = require('../lib/logger');
 const whatsappQuery = require('../lib/whatsappQuery');
 const messageParser = require('../lib/messageParser');
@@ -632,13 +632,13 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), async (req, r
 
     // Auto-pause bot for this conversation when teacher/assistant sends manual message
     try {
-      const { data: parent } = await supabase.from('parents').select('id').eq('phone', `+${cleaned}`).maybeSingle();
+      const { data: parent } = await supabaseAdminAdmin.from('parents').select('id').eq('phone', `+${cleaned}`).maybeSingle();
       if (parent) {
-        const { data: conversation } = await supabase.from('conversations')
+        const { data: conversation } = await supabaseAdminAdmin.from('conversations')
           .select('id').eq('parent_id', parent.id).eq('teacher_id', teacherId).maybeSingle();
         if (conversation) {
           const pauseHours = 4;
-          await supabase.from('conversations').update({
+          await supabaseAdminAdmin.from('conversations').update({
             last_responder_id: teacherId,
             last_responder_type: req.user.role,
             bot_paused_until: new Date(Date.now() + pauseHours * 3600000).toISOString()
@@ -739,7 +739,7 @@ router.post('/bot/resume', async (req, res) => {
     }
     const { conversation_id } = parsed.data;
 
-    const { data: conversation, error: fetchError } = await supabase
+    const { data: conversation, error: fetchError } = await supabaseAdmin
       .from('conversations')
       .select('id, teacher_id')
       .eq('id', conversation_id)
@@ -750,7 +750,7 @@ router.post('/bot/resume', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Conversation not found' });
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('conversations')
       .update({ bot_paused_until: null })
       .eq('id', conversation_id);
@@ -829,12 +829,12 @@ router.get('/conversations', async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const offset = (page - 1) * limit;
 
-    const { count } = await supabase
+    const { count } = await supabaseAdmin
       .from('conversations')
       .select('*', { count: 'exact', head: true })
       .eq('teacher_id', req.user.id);
 
-    const { data: conversations, error } = await supabase
+    const { data: conversations, error } = await supabaseAdmin
       .from('conversations')
       .select(`
         *,
