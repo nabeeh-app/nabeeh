@@ -46,7 +46,8 @@ function setupSessionMessageHandler(teacherId, client) {
       if (!from || !body) return;
       if (from.endsWith('@g.us') || from.endsWith('@broadcast') || from === 'status@broadcast') return;
 
-      logger.info('Incoming WhatsApp message', { from, bodyLength: body.length, teacherId });
+      logger.info('Incoming WhatsApp message', { bodyLength: body.length, teacherId });
+      logger.debug('Incoming WhatsApp message detail', { from, bodyLength: body.length, teacherId });
       const phone = from.split('@')[0];
 
       await processIncomingMessage(teacherId, phone, body, from, msg.key.id);

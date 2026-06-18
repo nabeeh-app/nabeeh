@@ -5,6 +5,11 @@ const logger = require('./logger');
 const { useSupabaseAuthState } = require('./baileysAuthState');
 const { supabaseAdmin } = require('../config/database');
 
+function redactPhone(phone) {
+  if (!phone || phone.length < 4) return '****';
+  return '*'.repeat(phone.length - 4) + phone.slice(-4);
+}
+
 class BaileysClient extends EventEmitter {
   /**
    * @param {string} [teacherId='default'] - Teacher ID for multi-session isolation.
@@ -146,7 +151,7 @@ class BaileysClient extends EventEmitter {
       this.reconnectAttempts = 0;
       this.lastMessageTime = Date.now();
       this.connectedPhone = this.sock?.user?.id?.split(':')[0]?.split('@')[0] || null;
-      logger.info('Connected', { teacherId: this.teacherId, userId: this.sock?.user?.id, phone: this.connectedPhone, name: this.sock?.user?.name });
+      logger.info('Connected', { teacherId: this.teacherId, phone: redactPhone(this.connectedPhone) });
       this.startWatchdog();
       this.emitStatus();
       return;
@@ -256,7 +261,7 @@ class BaileysClient extends EventEmitter {
     this.pairingCodeMode = true;
     try {
       const code = await this.sock.requestPairingCode(phoneNumber);
-      logger.info('Pairing code requested', { phoneNumber, codeLength: code.length, teacherId: this.teacherId });
+      logger.info('Pairing code requested', { phoneNumber: redactPhone(phoneNumber), codeLength: code.length, teacherId: this.teacherId });
       return code;
     } catch (error) {
       this.pairingCodeMode = false;
@@ -272,9 +277,9 @@ class BaileysClient extends EventEmitter {
 
     const cleaned = to.replace('+', '').replace(/[^0-9]/g, '');
     const jid = `${cleaned}@s.whatsapp.net`;
-    logger.info('Sending message', { to: cleaned, jid, teacherId: this.teacherId });
+    logger.info('Sending message', { to: redactPhone(cleaned), teacherId: this.teacherId });
     await this.sock.sendMessage(jid, { text: content });
-    logger.info('Message sent OK', { jid, teacherId: this.teacherId });
+    logger.info('Message sent OK', { to: redactPhone(cleaned), teacherId: this.teacherId });
   }
 
   getStatus() {
