@@ -170,6 +170,7 @@ class BaileysClient extends EventEmitter {
 
       if (loggedOut) {
         await this.clearSession();
+        this._cleanupSocket();
       } else if (restartRequired) {
         logger.info('Restart required after pairing, reconnecting', { teacherId: this.teacherId });
         this.connect().catch((error) => logger.error('Reconnection error', { teacherId: this.teacherId, error: error.message }));
