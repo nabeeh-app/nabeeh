@@ -158,7 +158,7 @@ async function useSupabaseAuthState(teacherId) {
                 .from('whatsapp_auth_keys')
                 .upsert(toUpsert, { onConflict: 'type,id,teacher_id' });
               if (error) {
-                logger.error('Auth keys batch upsert FAILED', { type, count: toUpsert.length, teacherId, error: error.message, code: error.code, details: error.details });
+                logger.error('Auth keys batch upsert FAILED', { type, count: toUpsert.length, teacherId, error: error.message, code: error.code });
               } else {
                 logger.info('Auth keys batch upsert OK', { type, count: toUpsert.length, teacherId });
               }
