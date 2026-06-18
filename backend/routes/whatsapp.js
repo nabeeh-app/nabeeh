@@ -18,6 +18,16 @@ const sendMessageSchema = z.object({
 const marketingResponseCache = new Map();
 const MARKETING_COOLDOWN = 60 * 60 * 1000;
 
+// Periodic cleanup of expired marketing cache entries (every 10 minutes)
+setInterval(() => {
+  const now = Date.now();
+  for (const [phone, timestamp] of marketingResponseCache) {
+    if (now - timestamp > MARKETING_COOLDOWN) {
+      marketingResponseCache.delete(phone);
+    }
+  }
+}, 10 * 60 * 1000).unref();
+
 // ============================================================
 // Marketing message (configurable via env)
 // ============================================================
