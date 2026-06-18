@@ -8,6 +8,7 @@ const { logAudit } = require('../lib/auditLog');
 const { getAssistantInviteTemplate } = require('../lib/emailTemplates');
 const { sendEmail } = require('../lib/email');
 const logger = require('../lib/logger');
+const sessionManager = require('../lib/sessionManager');
 
 const router = express.Router();
 
@@ -200,9 +201,13 @@ const inviteAssistant = async (req, res) => {
     // Send WhatsApp
     if ((deliveryMethod === 'whatsapp' || deliveryMethod === 'both') && phone) {
       try {
-        const { baileysClient } = require('../lib/baileys');
-        const waMessage = `🎓 *Nabeeh*\n\n${teacherName} has invited you to join their team as a teaching assistant.\n\nAccept here: ${inviteLink}\n\nThis link expires in 48 hours.`;
-        await baileysClient.sendMessage(phone, waMessage);
+        const client = sessionManager.getSession(teacherId);
+        if (client) {
+          const waMessage = `🎓 *Nabeeh*\n\n${teacherName} has invited you to join their team as a teaching assistant.\n\nAccept here: ${inviteLink}\n\nThis link expires in 48 hours.`;
+          await client.sendMessage(phone, waMessage);
+        } else {
+          logger.warn('No WhatsApp session for teacher, skipping invite', { teacherId });
+        }
       } catch (waError) {
         logger.error('Failed to send WhatsApp invite', { phone, error: waError.message });
       }
@@ -381,6 +386,14 @@ const updatePermissions = async (req, res) => {
     const { id } = req.params;
     const { permissions } = req.body;
 
+    // Filter to only valid permission keys
+    const filteredPermissions = {};
+    for (const key of VALID_PERMISSIONS) {
+      if (key in permissions) {
+        filteredPermissions[key] = Boolean(permissions[key]);
+      }
+    }
+
     // Verify ownership
     const { data: link, error: fetchError } = await supabaseAdmin
       .from('teacher_assistants')
@@ -395,7 +408,7 @@ const updatePermissions = async (req, res) => {
 
     const { error: updateError } = await supabaseAdmin
       .from('teacher_assistants')
-      .update({ permissions, updated_at: new Date().toISOString() })
+      .update({ permissions: filteredPermissions, updated_at: new Date().toISOString() })
       .eq('id', id);
 
     if (updateError) throw updateError;
@@ -407,11 +420,11 @@ const updatePermissions = async (req, res) => {
       action: 'assistant_permissions_updated',
       entityType: 'assistant',
       entityId: id,
-      metadata: { permissions },
+      metadata: { permissions: filteredPermissions },
       ipAddress: req.ip
     });
 
-    res.json({ success: true, data: { id, permissions }, message: 'Permissions updated' });
+    res.json({ success: true, data: { id, permissions: filteredPermissions }, message: 'Permissions updated' });
   } catch (error) {
     logger.error('Update permissions error', { error: error.message });
     res.status(500).json({ success: false, message: 'Server error updating permissions' });
