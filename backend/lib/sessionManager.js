@@ -363,6 +363,7 @@ class WhatsAppSessionManager extends EventEmitter {
         await this.destroySession(oldestTeacherId);
       } catch (err) {
         logger.error('Error evicting session', { teacherId: oldestTeacherId, error: err.message });
+        return false;
       }
       return true;
     }
