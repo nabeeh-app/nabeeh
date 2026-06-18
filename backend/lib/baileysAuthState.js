@@ -198,6 +198,12 @@ async function useSupabaseAuthState(teacherId) {
         saveCredsTimer = null;
         await _persistCreds();
       }
+    },
+    cancelPendingSave: () => {
+      if (saveCredsTimer) {
+        clearTimeout(saveCredsTimer);
+        saveCredsTimer = null;
+      }
     }
   };
 }

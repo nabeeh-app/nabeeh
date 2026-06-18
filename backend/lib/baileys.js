@@ -28,6 +28,7 @@ class BaileysClient extends EventEmitter {
     this.pairingCodeMode = false;
     this._readyWaiters = [];
     this._flushPendingSave = null;
+    this._cancelPendingSave = null;
   }
 
   emitStatus(extra = {}) {
@@ -79,8 +80,9 @@ class BaileysClient extends EventEmitter {
         this.sock.removeAllListeners();
       }
 
-      const { state, saveCreds, flushPendingSave } = await useSupabaseAuthState(this.teacherId);
+      const { state, saveCreds, flushPendingSave, cancelPendingSave } = await useSupabaseAuthState(this.teacherId);
       this._flushPendingSave = flushPendingSave;
+      this._cancelPendingSave = cancelPendingSave;
       const { version } = await fetchLatestBaileysVersion();
 
       this.sock = makeWASocket({
@@ -231,6 +233,7 @@ class BaileysClient extends EventEmitter {
         logger.warn('Refusing to clear session without valid teacherId', { teacherId: this.teacherId });
         return;
       }
+      this._cancelPendingSave?.();
       await supabaseAdmin.from('whatsapp_auth_keys').delete().eq('teacher_id', this.teacherId);
       await supabaseAdmin.from('whatsapp_auth_creds').delete().eq('teacher_id', this.teacherId);
     } catch (err) {
