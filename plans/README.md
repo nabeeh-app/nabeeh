@@ -131,7 +131,7 @@ and update your row when done.
 |------|-------|----------|--------|------------|--------|
 | 078 | Fix supabaseAdminAdmin typo in send-to-number | P1 | S | — | TODO |
 | 079 | Add _cleanupSocket to loggedOut disconnect path | P1 | S | — | DONE |
-| 080 | Ensure disconnect() cleanup runs even if flush throws | P1 | S | — | TODO |
+| 080 | Ensure disconnect() cleanup runs even if flush throws | P1 | S | — | DONE |
 | 081 | Fix _evictInactiveSession returning true on failure | P1 | S | — | TODO |
 | 082 | Add maxReconnectAttempts to prevent infinite reconnect loop | P2 | S | — | TODO |
 | 083 | Signal waitForReady waiters on connect() error | P2 | S | — | TODO |

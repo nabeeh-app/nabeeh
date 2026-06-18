@@ -322,16 +322,15 @@ class BaileysClient extends EventEmitter {
       if (this._flushPendingSave) {
         await this._flushPendingSave();
       }
-
+      return true;
+    } catch (error) {
+      logger.error('Disconnect flush error', { teacherId: this.teacherId, error: error.message });
+      return false;
+    } finally {
       this._cleanupSocket();
-
       this.status = 'disconnected';
       this.reconnectAttempts = 0;
       this.emitStatus();
-      return true;
-    } catch (error) {
-      logger.error('Disconnect error', { teacherId: this.teacherId, error: error.message });
-      return false;
     }
   }
 
