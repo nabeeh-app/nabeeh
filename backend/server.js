@@ -111,23 +111,31 @@ app.get('/api/health', (req, res) => {
  */
 app.get('/api/admin/whatsapp-health', authenticateToken, requireRole('admin'), (req, res) => {
   try {
-    const { baileysClient } = require('./lib/baileys');
-    const status = baileysClient.getStatus();
+    const sessionManager = require('./lib/sessionManager');
+    const sessions = Array.from(sessionManager.sessions.entries()).map(([teacherId, session]) => ({
+      teacherId,
+      status: session.client.getStatus().status || 'disconnected',
+      phone: session.client.getStatus().phone || null,
+      lastActive: session.lastActive ? new Date(session.lastActive).toISOString() : null
+    }));
+
     res.json({
       success: true,
       data: {
-        status: status.status || 'disconnected',
-        phone: status.phone || null,
-        lastCheck: new Date().toISOString(),
+        totalSessions: sessions.length,
+        activeSessions: sessions.filter(s => s.status === 'connected').length,
+        sessions,
+        lastCheck: new Date().toISOString()
       }
     });
   } catch (error) {
     res.json({
       success: true,
       data: {
-        status: 'disconnected',
-        phone: null,
-        lastCheck: new Date().toISOString(),
+        totalSessions: 0,
+        activeSessions: 0,
+        sessions: [],
+        lastCheck: new Date().toISOString()
       }
     });
   }
@@ -203,27 +211,22 @@ const server = app.listen(PORT, async () => {
   const { startCronJobs } = require('./lib/cron');
   startCronJobs();
 
-  // Auto-connect WhatsApp if creds exist
-  const { baileysClient } = require('./lib/baileys');
-  const { supabaseAdmin } = require('./config/database');
-  const { data: existingCreds } = await supabaseAdmin
-    .from('whatsapp_auth_creds')
-    .select('id')
-    .eq('id', 'default')
-    .maybeSingle();
-  if (existingCreds) {
-    winstonLogger.info('📱 WhatsApp creds found, auto-connecting...');
-    baileysClient.connect().catch((err) => {
-      winstonLogger.error('WhatsApp auto-connect failed', { error: err.message });
-    });
-  } else {
-    winstonLogger.info('📱 No WhatsApp creds, waiting for pairing...');
-  }
+  // Initialize WhatsApp session manager (connects all teacher sessions)
+  const sessionManager = require('./lib/sessionManager');
+  sessionManager.start().catch((err) => {
+    winstonLogger.error('WhatsApp session manager start failed', { error: err.message });
+  });
 });
 
 // Graceful shutdown handling
-const gracefulShutdown = (signal) => {
+const gracefulShutdown = async (signal) => {
   winstonLogger.info(`${signal} received, shutting down gracefully...`);
+
+  // Stop WhatsApp session manager
+  const sessionManager = require('./lib/sessionManager');
+  await sessionManager.stop().catch((err) => {
+    winstonLogger.error('Error stopping session manager', { error: err.message });
+  });
 
   // Stop accepting new connections
   server.close(() => {
