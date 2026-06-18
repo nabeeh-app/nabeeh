@@ -6,6 +6,8 @@ const { useSupabaseAuthState } = require('./baileysAuthState');
 const { supabaseAdmin } = require('../config/database');
 const { normalizePhoneNumber } = require('./phone');
 
+const MAX_RECONNECT_ATTEMPTS = 50;
+
 function redactPhone(phone) {
   if (!phone || phone.length < 4) return '****';
   return '*'.repeat(phone.length - 4) + phone.slice(-4);
@@ -191,6 +193,13 @@ class BaileysClient extends EventEmitter {
   }
 
   scheduleReconnect() {
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      logger.error('Max reconnect attempts reached, giving up', { teacherId: this.teacherId, attempts: this.reconnectAttempts });
+      this.status = 'failed';
+      this.emitStatus({ error: 'Max reconnect attempts reached' });
+      return;
+    }
+
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
     }
