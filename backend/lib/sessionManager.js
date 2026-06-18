@@ -331,6 +331,19 @@ class WhatsAppSessionManager extends EventEmitter {
   }
 
   /**
+   * Get a snapshot of all sessions (avoids exposing the raw Map)
+   * @returns {Array<{teacherId: string, status: string, phone: string|null, lastActive: string|null}>}
+   */
+  getSessionsSnapshot() {
+    return Array.from(this.sessions.entries()).map(([teacherId, session]) => ({
+      teacherId,
+      status: session.client.getStatus().status || 'disconnected',
+      phone: session.client.getStatus().phone || null,
+      lastActive: session.lastActive ? new Date(session.lastActive).toISOString() : null
+    }));
+  }
+
+  /**
    * Evict the least recently active session if limit reached
    * @returns {boolean} true if a session was evicted
    */

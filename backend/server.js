@@ -112,12 +112,7 @@ app.get('/api/health', (req, res) => {
 app.get('/api/admin/whatsapp-health', authenticateToken, requireRole('admin'), (req, res) => {
   try {
     const sessionManager = require('./lib/sessionManager');
-    const sessions = Array.from(sessionManager.sessions.entries()).map(([teacherId, session]) => ({
-      teacherId,
-      status: session.client.getStatus().status || 'disconnected',
-      phone: session.client.getStatus().phone || null,
-      lastActive: session.lastActive ? new Date(session.lastActive).toISOString() : null
-    }));
+    const sessions = sessionManager.getSessionsSnapshot();
 
     res.json({
       success: true,
