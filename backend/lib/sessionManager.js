@@ -100,7 +100,7 @@ class WhatsAppSessionManager extends EventEmitter {
     try {
       // Check session limit
       if (this.sessions.size >= this.maxSessions) {
-        const evicted = this._evictInactiveSession();
+        const evicted = await this._evictInactiveSession();
         if (!evicted) {
           throw new Error(`Maximum concurrent sessions reached (${this.maxSessions}). Disconnect a session first.`);
         }
@@ -334,7 +334,7 @@ class WhatsAppSessionManager extends EventEmitter {
    * Evict the least recently active session if limit reached
    * @returns {boolean} true if a session was evicted
    */
-  _evictInactiveSession() {
+  async _evictInactiveSession() {
     if (this.sessions.size === 0) return false;
 
     // Find least recently active session
@@ -350,9 +350,11 @@ class WhatsAppSessionManager extends EventEmitter {
 
     if (oldestTeacherId) {
       logger.warn('Evicting inactive session to make room', { teacherId: oldestTeacherId });
-      this.destroySession(oldestTeacherId).catch(err =>
-        logger.error('Error evicting session', { teacherId: oldestTeacherId, error: err.message })
-      );
+      try {
+        await this.destroySession(oldestTeacherId);
+      } catch (err) {
+        logger.error('Error evicting session', { teacherId: oldestTeacherId, error: err.message });
+      }
       return true;
     }
 

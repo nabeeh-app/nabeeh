@@ -95,7 +95,7 @@ describe('sessionManager', () => {
 
       sessionManager.sessions.get('teacher-old').lastActive = Date.now() - 100000;
 
-      const evicted = sessionManager._evictInactiveSession();
+      const evicted = await sessionManager._evictInactiveSession();
       expect(evicted).toBe(true);
     });
   });
