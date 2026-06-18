@@ -63,6 +63,11 @@ class BaileysClient extends EventEmitter {
   }
 
   async connect() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
     if (this.isInitializing) return;
 
     this.isInitializing = true;
