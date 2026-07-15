@@ -112,7 +112,7 @@ const { supabaseAdmin } = require('../../config/database');
 describe('Concurrent Multi-Session', () => {
   beforeEach(() => {
     sessionManager.sessions.clear();
-    sessionManager.pending.clear();
+    sessionManager._pendingResolvers.clear();
     sessionManager._started = false;
     sessionManager._stopHealthCheck();
     jest._mockSocketCounter = 0;

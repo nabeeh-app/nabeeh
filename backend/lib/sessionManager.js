@@ -22,7 +22,7 @@ class WhatsAppSessionManager extends EventEmitter {
     this.sessions = new Map();
     this.maxSessions = parseInt(process.env.WHATSAPP_MAX_SESSIONS || '50', 10);
     this._started = false;
-    this.pending = new Set();
+    this._pendingResolvers = new Map();
     this._healthCheckInterval = null;
     this.HEALTH_CHECK_INTERVAL = 5 * 60 * 1000;
     this.STALE_SESSION_THRESHOLD = 15 * 60 * 1000;
@@ -92,19 +92,13 @@ class WhatsAppSessionManager extends EventEmitter {
     }
 
     // Wait if another request is already creating this session
-    if (this.pending.has(teacherId)) {
-      // Poll until session appears or timeout
-      const start = Date.now();
-      while (!this.sessions.has(teacherId) && Date.now() - start < 10000) {
-        await new Promise(r => setTimeout(r, 50));
-      }
-      if (this.sessions.has(teacherId)) {
-        return this.sessions.get(teacherId).client;
-      }
-      // Timeout — fall through to create
+    if (this._pendingResolvers.has(teacherId)) {
+      return new Promise((resolve, reject) => {
+        this._pendingResolvers.get(teacherId).push({ resolve, reject });
+      });
     }
 
-    this.pending.add(teacherId);
+    this._pendingResolvers.set(teacherId, []);
     try {
       // Check session limit
       if (this.sessions.size >= this.maxSessions) {
@@ -159,9 +153,23 @@ class WhatsAppSessionManager extends EventEmitter {
       this.emit('sessionCreated', { teacherId, client });
 
       logger.info('Session created', { teacherId, totalSessions: this.sessions.size });
+
+      // Resolve all waiters
+      const waiters = this._pendingResolvers.get(teacherId) || [];
+      this._pendingResolvers.delete(teacherId);
+      for (const { resolve } of waiters) {
+        resolve(client);
+      }
+
       return client;
-    } finally {
-      this.pending.delete(teacherId);
+    } catch (error) {
+      // Reject all waiters on failure
+      const waiters = this._pendingResolvers.get(teacherId) || [];
+      this._pendingResolvers.delete(teacherId);
+      for (const { reject } of waiters) {
+        reject(error);
+      }
+      throw error;
     }
   }
 

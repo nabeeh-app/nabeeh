@@ -34,6 +34,45 @@ const whatsappLimiter = isProd
   ? createRateLimit(60 * 1000, 10, 'Too many WhatsApp requests, please try again later.')
   : (req, res, next) => next();
 
+// Per-teacher rate limiting for WhatsApp pairing/sending
+const teacherRateLimits = new Map();
+
+function perTeacherLimiter(maxRequests = 5, windowMs = 60 * 1000) {
+  return (req, res, next) => {
+    if (!isProd) return next();
+    const teacherId = req.user?.id;
+    if (!teacherId) return next();
+
+    const now = Date.now();
+    let bucket = teacherRateLimits.get(teacherId);
+    if (!bucket || now - bucket.start > windowMs) {
+      bucket = { start: now, count: 0 };
+      teacherRateLimits.set(teacherId, bucket);
+    }
+    bucket.count++;
+
+    if (bucket.count > maxRequests) {
+      return res.status(429).json({
+        success: false,
+        message: 'Too many requests from this account, please try again later.'
+      });
+    }
+    next();
+  };
+}
+
+// Periodic cleanup of expired teacher rate limit buckets (every 5 minutes)
+if (isProd) {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [teacherId, bucket] of teacherRateLimits) {
+      if (now - bucket.start > 2 * 60 * 1000) {
+        teacherRateLimits.delete(teacherId);
+      }
+    }
+  }, 5 * 60 * 1000).unref();
+}
+
 // Security headers configuration
 const securityHeaders = helmet({
   contentSecurityPolicy: {
@@ -166,6 +205,7 @@ module.exports = {
   apiLimiter,
   authLimiter,
   whatsappLimiter,
+  perTeacherLimiter,
   securityHeaders,
   sanitizeInput,
   securityLogger,

@@ -1,11 +1,11 @@
-const { supabase } = require('../config/database');
+const { supabaseAdmin } = require('../config/database');
 const logger = require('./logger');
 
 /**
  * Find parent by phone number with student and teacher joins
  */
 async function getParentByPhone(phone) {
-  const { data: parent, error } = await supabase
+  const { data: parent, error } = await supabaseAdmin
     .from('parents')
     .select(`
       *,
@@ -35,7 +35,7 @@ async function getParentByPhone(phone) {
  * Find or create a conversation between parent and teacher
  */
 async function findOrCreateConversation(parentId, teacherId, chatId) {
-  let { data: conversation } = await supabase
+  let { data: conversation } = await supabaseAdmin
     .from('conversations')
     .select('*')
     .eq('parent_id', parentId)
@@ -43,7 +43,7 @@ async function findOrCreateConversation(parentId, teacherId, chatId) {
     .single();
 
   if (!conversation) {
-    const { data: newConversation, error } = await supabase
+    const { data: newConversation, error } = await supabaseAdmin
       .from('conversations')
       .insert([{
         parent_id: parentId,
@@ -67,7 +67,7 @@ async function findOrCreateConversation(parentId, teacherId, chatId) {
  * Save a message to the database and update last_message_at
  */
 async function saveMessage(conversationId, direction, content, meta = {}) {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('messages')
     .insert([{
       conversation_id: conversationId,
@@ -80,7 +80,7 @@ async function saveMessage(conversationId, direction, content, meta = {}) {
     logger.error('Error saving message', { error: error.message });
   }
 
-  await supabase
+  await supabaseAdmin
     .from('conversations')
     .update({ last_message_at: new Date().toISOString() })
     .eq('id', conversationId);
@@ -91,7 +91,7 @@ async function saveMessage(conversationId, direction, content, meta = {}) {
  */
 async function getStudentAttendance(studentId) {
   const today = new Date().toISOString().split('T')[0];
-  const { data: attendance } = await supabase
+  const { data: attendance } = await supabaseAdmin
     .from('attendance')
     .select('*, session:sessions!inner(date)')
     .eq('enrollment.student_id', studentId)
@@ -102,7 +102,7 @@ async function getStudentAttendance(studentId) {
 }
 
 async function getAllStudentAttendance(studentId) {
-  const { data: attendance } = await supabase
+  const { data: attendance } = await supabaseAdmin
     .from('attendance')
     .select('status')
     .eq('enrollment.student_id', studentId);
@@ -145,7 +145,7 @@ function flattenAllGrades(rawGrades) {
  * Get student grades (recent + all for average)
  */
 async function getStudentGrades(studentId, subject) {
-  let query = supabase
+  let query = supabaseAdmin
     .from('grades')
     .select(`
       *,
@@ -162,7 +162,7 @@ async function getStudentGrades(studentId, subject) {
   const { data: recentGradesRaw } = await query.limit(5);
   const recentGrades = flattenGrades(recentGradesRaw);
 
-  let allQuery = supabase
+  let allQuery = supabaseAdmin
     .from('grades')
     .select(`
       score,
@@ -185,7 +185,7 @@ async function getStudentGrades(studentId, subject) {
  * Get teacher FAQs matching a pattern
  */
 async function getMatchingFaq(teacherId, language, messageText) {
-  const { data: faqs } = await supabase
+  const { data: faqs } = await supabaseAdmin
     .from('faqs')
     .select('*')
     .eq('teacher_id', teacherId)
@@ -199,7 +199,7 @@ async function getMatchingFaq(teacherId, language, messageText) {
     const patterns = faq.question_patterns || [];
     for (const pattern of patterns) {
       if (lowerMessage.includes(pattern.toLowerCase())) {
-        await supabase
+        await supabaseAdmin
           .from('faqs')
           .update({ usage_count: (faq.usage_count || 0) + 1 })
           .eq('id', faq.id);
@@ -211,10 +211,30 @@ async function getMatchingFaq(teacherId, language, messageText) {
   return null;
 }
 
+/**
+ * Save a failed message to the dead letter queue
+ */
+async function saveFailedMessage({ teacherId, phone, messageContent, whatsappMessageId, error }) {
+  const { error: dbError } = await supabaseAdmin
+    .from('failed_messages')
+    .insert({
+      teacher_id: teacherId,
+      phone,
+      message_content: messageContent,
+      whatsapp_message_id: whatsappMessageId || null,
+      error_message: error.message,
+      error_stack: error.stack || null
+    });
+  if (dbError) {
+    logger.error('Failed to save failed message to DLQ', { error: dbError.message });
+  }
+}
+
 module.exports = {
   getParentByPhone,
   findOrCreateConversation,
   saveMessage,
+  saveFailedMessage,
   getStudentAttendance,
   getAllStudentAttendance,
   getStudentGrades,

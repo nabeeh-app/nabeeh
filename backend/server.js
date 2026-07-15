@@ -10,6 +10,7 @@ dotenv.config();
 // Import Swagger config
 const swaggerSpec = require('./config/swagger');
 const swaggerUi = require('swagger-ui-express');
+const { register: metricsRegister } = require('./lib/metrics');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -38,6 +39,7 @@ const {
   apiLimiter,
   authLimiter,
   whatsappLimiter,
+  perTeacherLimiter,
   securityHeaders,
   sanitizeInput,
   securityLogger,
@@ -72,11 +74,16 @@ app.use(apiLimiter); // General API rate limiting
 
 // Health check endpoints (both /health and /api/health)
 app.get('/health', (req, res) => {
+  const whatsappSummary = sessionManager.getSessionsSnapshot();
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    version: process.env.npm_package_version || '1.0.0'
+    version: process.env.npm_package_version || '1.0.0',
+    whatsapp: {
+      totalSessions: whatsappSummary.length,
+      connectedSessions: whatsappSummary.filter(s => s.status === 'connected').length
+    }
   });
 });
 
@@ -87,6 +94,26 @@ app.get('/api/health', (req, res) => {
     uptime: process.uptime(),
     version: process.env.npm_package_version || '1.0.0'
   });
+});
+
+// Readiness check — returns 503 if no WhatsApp sessions are connected
+app.get('/ready', (req, res) => {
+  const sessions = sessionManager.getSessionsSnapshot();
+  const connected = sessions.filter(s => s.status === 'connected').length;
+  const isReady = connected > 0 || sessions.length === 0;
+
+  res.status(isReady ? 200 : 503).json({
+    status: isReady ? 'READY' : 'NOT_READY',
+    whatsappSessions: sessions.length,
+    whatsappConnected: connected,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Prometheus metrics endpoint
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', metricsRegister.contentType);
+  res.end(await metricsRegister.metrics());
 });
 
 /**

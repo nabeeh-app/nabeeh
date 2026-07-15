@@ -179,6 +179,11 @@ Plans **078**, **079**, **080**, **081** — P1, S-effort, independent. Can be d
 Then **082**, **083**, **084**, **085** — P2, independent.
 Then **086**, **087**, **088**, **089** — P2-P3, independent.
 
+### Phase 9: Enterprise readiness (P1-P2, parallel where possible) — DONE
+Plans **097** (P1, mutex), **099** (P1, cross-tenant fix), **094** (P1, circuit breaker), **091** (P1, idempotency) — critical fixes.
+Then **092** (P2, PII redaction), **093** (P2, per-teacher rate limiting), **095** (P2, correlation IDs), **096** (P2, DLQ), **098** (P2, Prometheus metrics), **100** (P2, health check).
+Plan **090** was already done (whatsappQuery supabaseAdmin fix).
+
 ## Dependency notes
 
 - **002** depends on **001-RL**: token revocation infrastructure must be in place before cookie auth migration

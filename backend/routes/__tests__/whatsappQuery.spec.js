@@ -1,5 +1,5 @@
 jest.mock('../../config/database', () => ({
-  supabase: {
+  supabaseAdmin: {
     from: jest.fn()
   }
 }));
@@ -11,7 +11,7 @@ jest.mock('../../lib/logger', () => ({
 }));
 
 const whatsappQuery = require('../../lib/whatsappQuery');
-const { supabase } = require('../../config/database');
+const { supabaseAdmin } = require('../../config/database');
 
 describe('whatsappQuery', () => {
   beforeEach(() => {
@@ -47,7 +47,7 @@ describe('whatsappQuery', () => {
         single: jest.fn().mockResolvedValue({ data: mockParent, error: null })
       };
 
-      supabase.from.mockReturnValueOnce(chain);
+      supabaseAdmin.from.mockReturnValueOnce(chain);
 
       const result = await whatsappQuery.getParentByPhone('+201234567890');
 
@@ -62,7 +62,7 @@ describe('whatsappQuery', () => {
         single: jest.fn().mockResolvedValue({ data: null, error: { message: 'Not found' } })
       };
 
-      supabase.from.mockReturnValueOnce(chain);
+      supabaseAdmin.from.mockReturnValueOnce(chain);
 
       const result = await whatsappQuery.getParentByPhone('+999999999999');
 
@@ -80,7 +80,7 @@ describe('whatsappQuery', () => {
         single: jest.fn().mockResolvedValue({ data: mockConversation, error: null })
       };
 
-      supabase.from.mockReturnValueOnce(chain);
+      supabaseAdmin.from.mockReturnValueOnce(chain);
 
       const result = await whatsappQuery.findOrCreateConversation('p1', 'teacher-1', 'chat-1');
 
@@ -106,7 +106,7 @@ describe('whatsappQuery', () => {
         })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(findChain)
         .mockReturnValueOnce(createChain);
 
@@ -130,7 +130,7 @@ describe('whatsappQuery', () => {
         })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(findChain)
         .mockReturnValueOnce(createChain);
 
@@ -155,7 +155,7 @@ describe('whatsappQuery', () => {
         single: jest.fn().mockResolvedValue({ data: mockAttendance, error: null })
       };
 
-      supabase.from.mockReturnValueOnce(chain);
+      supabaseAdmin.from.mockReturnValueOnce(chain);
 
       const result = await whatsappQuery.getStudentAttendance('s1');
 
@@ -170,7 +170,7 @@ describe('whatsappQuery', () => {
         single: jest.fn().mockResolvedValue({ data: null, error: null })
       };
 
-      supabase.from.mockReturnValueOnce(chain);
+      supabaseAdmin.from.mockReturnValueOnce(chain);
 
       const result = await whatsappQuery.getStudentAttendance('s1');
 
@@ -243,7 +243,7 @@ describe('whatsappQuery', () => {
         })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(recentChain)
         .mockReturnValueOnce(allChain);
 
@@ -302,7 +302,7 @@ describe('whatsappQuery', () => {
         })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(recentChain)
         .mockReturnValueOnce(allChain);
 
@@ -348,7 +348,7 @@ describe('whatsappQuery', () => {
         })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(recentChain)
         .mockReturnValueOnce(allChain);
 
@@ -394,7 +394,7 @@ describe('whatsappQuery', () => {
         })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(recentChain)
         .mockReturnValueOnce(allChain);
 
@@ -415,7 +415,7 @@ describe('whatsappQuery', () => {
         eq: jest.fn().mockResolvedValue({ error: null })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(insertChain)
         .mockReturnValueOnce(updateChain);
 
@@ -443,7 +443,7 @@ describe('whatsappQuery', () => {
         eq: jest.fn().mockResolvedValue({ error: null })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(insertChain)
         .mockReturnValueOnce(updateChain);
 
@@ -469,7 +469,7 @@ describe('whatsappQuery', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(chain);
+      supabaseAdmin.from.mockReturnValueOnce(chain);
 
       const result = await whatsappQuery.getAllStudentAttendance('s1');
 
@@ -486,7 +486,7 @@ describe('whatsappQuery', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(chain);
+      supabaseAdmin.from.mockReturnValueOnce(chain);
 
       const result = await whatsappQuery.getAllStudentAttendance('s1');
 
@@ -502,7 +502,7 @@ describe('whatsappQuery', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(chain);
+      supabaseAdmin.from.mockReturnValueOnce(chain);
 
       const result = await whatsappQuery.getAllStudentAttendance('s1');
 
@@ -533,7 +533,7 @@ describe('whatsappQuery', () => {
         })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(recentChain)
         .mockReturnValueOnce(allChain);
 
@@ -580,7 +580,7 @@ describe('whatsappQuery', () => {
         })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(recentChain)
         .mockReturnValueOnce(allChain);
 
@@ -622,7 +622,7 @@ describe('whatsappQuery', () => {
         })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(recentChain)
         .mockReturnValueOnce(allChain);
 
@@ -666,7 +666,7 @@ describe('whatsappQuery', () => {
         eq: jest.fn().mockResolvedValue({ error: null })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(selectChain)
         .mockReturnValueOnce(updateChain);
 
@@ -698,7 +698,7 @@ describe('whatsappQuery', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(selectChain);
+      supabaseAdmin.from.mockReturnValueOnce(selectChain);
 
       const result = await whatsappQuery.getMatchingFaq('teacher-1', 'en', 'random unrelated message');
 
@@ -714,7 +714,7 @@ describe('whatsappQuery', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(selectChain);
+      supabaseAdmin.from.mockReturnValueOnce(selectChain);
 
       const result = await whatsappQuery.getMatchingFaq('teacher-1', 'en', 'What are school hours?');
 
@@ -746,7 +746,7 @@ describe('whatsappQuery', () => {
         eq: jest.fn().mockResolvedValue({ error: null })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(selectChain)
         .mockReturnValueOnce(updateChain);
 

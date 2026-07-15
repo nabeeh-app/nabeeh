@@ -1,6 +1,7 @@
 const express = require('express');
 const { z } = require('zod');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
+const { perTeacherLimiter } = require('../middleware/security');
 const sessionManager = require('../lib/sessionManager');
 const { supabaseAdmin } = require('../config/database');
 const logger = require('../lib/logger');
@@ -8,6 +9,7 @@ const whatsappQuery = require('../lib/whatsappQuery');
 const messageParser = require('../lib/messageParser');
 const aiResponder = require('../lib/aiResponder');
 const { normalizePhoneNumber } = require('../lib/phone');
+const metrics = require('../lib/metrics');
 
 const router = express.Router();
 
@@ -28,6 +30,12 @@ setInterval(() => {
     }
   }
 }, 10 * 60 * 1000).unref();
+
+// Phone redaction helper for audit logs
+function redactPhone(phone) {
+  if (!phone || phone.length < 8) return '***';
+  return phone.slice(0, 4) + '*'.repeat(phone.length - 7) + phone.slice(-3);
+}
 
 // ============================================================
 // Marketing message (configurable via env)
@@ -64,96 +72,138 @@ sessionManager.on('sessionCreated', ({ teacherId, client }) => {
 });
 
 async function processIncomingMessage(teacherId, phone, messageContent, remoteJid, messageId) {
+  const logContext = { teacherId, phone: redactPhone(phone), messageId };
   const isEgyptian = phone.startsWith('20');
-  const parent = await whatsappQuery.getParentByPhone(`+${phone}`);
 
-  if (!parent) {
-    const lastResponse = marketingResponseCache.get(phone);
-    if (lastResponse && Date.now() - lastResponse < MARKETING_COOLDOWN) return;
-    marketingResponseCache.set(phone, Date.now());
-
-    const marketingMsg = isEgyptian ? MARKETING_MSG_AR : MARKETING_MSG_EN;
-    const client = sessionManager.getSession(teacherId);
-    if (client) {
-      await client.sendMessage(remoteJid, marketingMsg);
+  // Idempotency: skip if we already processed this WhatsApp message
+  if (messageId) {
+    const { data: existing } = await supabaseAdmin
+      .from('messages')
+      .select('id')
+      .eq('whatsapp_message_id', messageId)
+      .maybeSingle();
+    if (existing) {
+      logger.info('Duplicate message skipped', logContext);
+      return;
     }
-    return;
   }
 
-  const students = Array.isArray(parent.students) ? parent.students : [parent.students];
-
-  if (students.length === 0) {
-    logger.warn('Parent has no students', { parentId: parent.id });
-    return;
-  }
-
-  const { data: teacher } = await supabaseAdmin
-    .from('teachers')
-    .select('id, name, business_name')
-    .eq('id', teacherId)
-    .single();
-
-  if (!teacher) {
-    logger.warn('Teacher not found for session', { teacherId });
-    return;
-  }
-
-  const studentsForThisTeacher = students.filter(s => {
-    const enrollments = s.enrollments || [];
-    return enrollments.some(e => e?.group?.offering?.teacher_id === teacherId);
-  });
-
-  if (studentsForThisTeacher.length === 0) {
-    logger.info('Parent has no students under this teacher, routing to first student teacher', { parentId: parent.id, sessionTeacherId: teacherId });
-  }
-
-  const studentsToProcess = studentsForThisTeacher.length > 0 ? studentsForThisTeacher : students;
-
-  const conversation = await whatsappQuery.findOrCreateConversation(parent.id, teacherId, remoteJid);
-  if (!conversation) return;
-
-  if (conversation.bot_paused_until && new Date(conversation.bot_paused_until) > new Date()) {
-    logger.info('Bot paused for conversation', { conversationId: conversation.id });
-    await whatsappQuery.saveMessage(conversation.id, 'incoming', messageContent, { whatsapp_message_id: messageId });
-    return;
-  }
-
-  await whatsappQuery.saveMessage(conversation.id, 'incoming', messageContent, { whatsapp_message_id: messageId });
+  const endTimer = metrics.whatsappProcessingDuration.startTimer({ teacherId });
 
   try {
-    const { logAudit } = require('../lib/auditLog');
-    await logAudit({
-      actorId: teacherId,
-      actorType: 'system',
-      teacherId: teacherId,
-      action: 'whatsapp_received',
-      entityType: 'conversation',
-      entityId: conversation.id,
-      metadata: { phone, message_length: messageContent.length, parent_id: parent.id },
-      ipAddress: null
-    });
-  } catch (auditError) {
-    logger.error('Failed to write audit log', { error: auditError.message });
-  }
+    const parent = await whatsappQuery.getParentByPhone(`+${phone}`);
 
-  const language = parent.preferred_language || 'ar';
+    if (!parent) {
+      const lastResponse = marketingResponseCache.get(phone);
+      if (lastResponse && Date.now() - lastResponse < MARKETING_COOLDOWN) {
+        endTimer();
+        return;
+      }
+      marketingResponseCache.set(phone, Date.now());
 
-  let response = null;
-  for (const student of studentsToProcess) {
-    response = await handleBotMessage(messageContent, parent, student, teacher, language);
-    if (response) break;
-  }
-
-  if (response) {
-    const client = sessionManager.getSession(teacherId);
-    if (client) {
-      await client.sendMessage(remoteJid, response.text);
-      await whatsappQuery.saveMessage(conversation.id, 'outgoing', response.text, {
-        is_automated: true,
-        intent: response.intent,
-        confidence: response.confidence
-      });
+      const marketingMsg = isEgyptian ? MARKETING_MSG_AR : MARKETING_MSG_EN;
+      const client = sessionManager.getSession(teacherId);
+      if (client) {
+        await client.sendMessage(remoteJid, marketingMsg);
+        metrics.whatsappMessagesSent.inc({ teacherId, direction: 'marketing' });
+      }
+      endTimer();
+      return;
     }
+
+    const students = Array.isArray(parent.students) ? parent.students : [parent.students];
+
+    if (students.length === 0) {
+      logger.warn('Parent has no students', { parentId: parent.id });
+      endTimer();
+      return;
+    }
+
+    const { data: teacher } = await supabaseAdmin
+      .from('teachers')
+      .select('id, name, business_name')
+      .eq('id', teacherId)
+      .single();
+
+    if (!teacher) {
+      logger.warn('Teacher not found for session', logContext);
+      endTimer();
+      return;
+    }
+
+    const studentsForThisTeacher = students.filter(s => {
+      const enrollments = s.enrollments || [];
+      return enrollments.some(e => e?.group?.offering?.teacher_id === teacherId);
+    });
+
+    if (studentsForThisTeacher.length === 0) {
+      logger.info('Parent has no students under this teacher, routing to first student teacher', { parentId: parent.id, sessionTeacherId: teacherId });
+    }
+
+    const studentsToProcess = studentsForThisTeacher.length > 0 ? studentsForThisTeacher : students;
+
+    const conversation = await whatsappQuery.findOrCreateConversation(parent.id, teacherId, remoteJid);
+    if (!conversation) {
+      endTimer();
+      return;
+    }
+
+    if (conversation.bot_paused_until && new Date(conversation.bot_paused_until) > new Date()) {
+      logger.info('Bot paused for conversation', { conversationId: conversation.id });
+      await whatsappQuery.saveMessage(conversation.id, 'incoming', messageContent, { whatsapp_message_id: messageId });
+      endTimer();
+      return;
+    }
+
+    await whatsappQuery.saveMessage(conversation.id, 'incoming', messageContent, { whatsapp_message_id: messageId });
+
+    try {
+      const { logAudit } = require('../lib/auditLog');
+      await logAudit({
+        actorId: teacherId,
+        actorType: 'system',
+        teacherId: teacherId,
+        action: 'whatsapp_received',
+        entityType: 'conversation',
+        entityId: conversation.id,
+        metadata: { phone: redactPhone(phone), message_length: messageContent.length, parent_id: parent.id },
+        ipAddress: null
+      });
+    } catch (auditError) {
+      logger.error('Failed to write audit log', { error: auditError.message });
+    }
+
+    const language = parent.preferred_language || 'ar';
+
+    let response = null;
+    for (const student of studentsToProcess) {
+      response = await handleBotMessage(messageContent, parent, student, teacher, language);
+      if (response) break;
+    }
+
+    if (response) {
+      const client = sessionManager.getSession(teacherId);
+      if (client) {
+        await client.sendMessage(remoteJid, response.text);
+        await whatsappQuery.saveMessage(conversation.id, 'outgoing', response.text, {
+          is_automated: true,
+          intent: response.intent,
+          confidence: response.confidence
+        });
+        metrics.whatsappMessagesSent.inc({ teacherId, direction: 'bot' });
+      }
+    }
+
+    metrics.whatsappMessagesReceived.inc({ teacherId, intent: response?.intent || 'unknown' });
+    endTimer();
+  } catch (error) {
+    logger.error('Error handling incoming message', { ...logContext, error: error.message });
+    endTimer();
+    whatsappQuery.saveFailedMessage({
+      teacherId, phone, messageContent,
+      whatsappMessageId: messageId,
+      error
+    }).catch(err => logger.error('DLQ write failed', { error: err.message }));
   }
 }
 
@@ -329,7 +379,7 @@ router.get('/status', (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/pair', async (req, res) => {
+router.post('/pair', perTeacherLimiter(5, 60000), async (req, res) => {
   try {
     const teacherId = req.user.id;
     const client = await sessionManager.getOrCreateSession(teacherId, { autoConnect: false });
@@ -414,7 +464,7 @@ const resumeSchema = z.object({
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/pair-code', async (req, res) => {
+router.post('/pair-code', perTeacherLimiter(5, 60000), async (req, res) => {
   try {
     const parsed = pairCodeSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -598,7 +648,7 @@ router.post('/logout', async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/send-to-number', requirePermission('send_whatsapp'), async (req, res) => {
+router.post('/send-to-number', requirePermission('send_whatsapp'), perTeacherLimiter(30, 60000), async (req, res) => {
   try {
     const parsed = sendMessageSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -623,17 +673,29 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), async (req, r
 
     // Auto-pause bot for this conversation when teacher/assistant sends manual message
     try {
-      const { data: parent } = await supabaseAdmin.from('parents').select('id').eq('phone', `+${cleaned}`).maybeSingle();
+      const { data: parent } = await supabaseAdmin
+        .from('parents')
+        .select('id, students(id, enrollments(id, group:groups(id, offering:offerings(id, teacher_id))))')
+        .eq('phone', `+${cleaned}`)
+        .maybeSingle();
+
       if (parent) {
-        const { data: conversation } = await supabaseAdmin.from('conversations')
-          .select('id').eq('parent_id', parent.id).eq('teacher_id', teacherId).maybeSingle();
-        if (conversation) {
-          const pauseHours = 4;
-          await supabaseAdmin.from('conversations').update({
-            last_responder_id: teacherId,
-            last_responder_type: req.user.role,
-            bot_paused_until: new Date(Date.now() + pauseHours * 3600000).toISOString()
-          }).eq('id', conversation.id);
+        const belongsToTeacher = (parent.students || []).some(s =>
+          (s.enrollments || []).some(e => e?.group?.offering?.teacher_id === teacherId)
+        );
+        if (belongsToTeacher) {
+          const { data: conversation } = await supabaseAdmin.from('conversations')
+            .select('id').eq('parent_id', parent.id).eq('teacher_id', teacherId).maybeSingle();
+          if (conversation) {
+            const pauseHours = 4;
+            await supabaseAdmin.from('conversations').update({
+              last_responder_id: teacherId,
+              last_responder_type: req.user.role,
+              bot_paused_until: new Date(Date.now() + pauseHours * 3600000).toISOString()
+            }).eq('id', conversation.id);
+          }
+        } else {
+          logger.warn('Cross-tenant parent lookup blocked', { teacherId });
         }
       }
     } catch (pauseError) {
@@ -649,7 +711,7 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), async (req, r
         teacherId: req.user.teacherId || teacherId,
         action: 'whatsapp_sent',
         entityType: 'conversation',
-        metadata: { phone: cleaned, message_length: message.length },
+        metadata: { phone: redactPhone(cleaned), message_length: message.length },
         ipAddress: req.ip
       });
     } catch (auditError) {

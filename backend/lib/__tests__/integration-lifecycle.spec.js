@@ -91,7 +91,7 @@ describe('Integration: Full multi-session lifecycle', () => {
   beforeEach(() => {
     sessionManager.sessions.clear();
     sessionManager._started = false;
-    sessionManager.pending.clear();
+    sessionManager._pendingResolvers.clear();
     sessionManager.maxSessions = 50;
     supabaseAdmin.from.mockImplementation(defaultChain);
     // Reset mock socket state
@@ -107,7 +107,7 @@ describe('Integration: Full multi-session lifecycle', () => {
     if (sessionManager._started) await sessionManager.stop();
     sessionManager.sessions.clear();
     sessionManager._started = false;
-    sessionManager.pending.clear();
+    sessionManager._pendingResolvers.clear();
   });
 
   describe('Session creation and connection', () => {
@@ -689,7 +689,7 @@ describe('Integration: Full multi-session lifecycle', () => {
       BaileysClient.prototype.connect = jest.fn().mockRejectedValue(new Error('connect failed'));
       try {
         await sessionManager.getOrCreateSession('teacher-1').catch(() => {});
-        expect(sessionManager.pending.has('teacher-1')).toBe(false);
+        expect(sessionManager._pendingResolvers.has('teacher-1')).toBe(false);
         const c2 = await sessionManager.getOrCreateSession('teacher-1', { autoConnect: false });
         expect(c2).toBeInstanceOf(BaileysClient);
       } finally {

@@ -600,13 +600,31 @@ describe('WhatsApp Routes', () => {
         sendMessage: jest.fn().mockResolvedValue(true)
       });
 
-      // First chain: parent lookup
+      // First chain: parent lookup (now with nested students/enrollments/offering)
       const parentChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'parent-1' }, error: null })
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: {
+            id: 'parent-1',
+            students: [{
+              id: 'student-1',
+              enrollments: [{
+                id: 'enroll-1',
+                group: {
+                  id: 'group-1',
+                  offering: {
+                    id: 'offering-1',
+                    teacher_id: 'teacher-1'
+                  }
+                }
+              }]
+            }]
+          },
+          error: null
+        })
       };
-      // Second chain: conversation lookup
+      // Second chain: conversation lookup (two eq calls: parent_id + teacher_id)
       const convChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
