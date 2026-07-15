@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -209,7 +209,7 @@ export default function SettingsPage() {
 
   const debouncedWhatsappNumber = useDebounce(settings.whatsapp_number, 500);
 
-  const checkWhatsAppStatus = async () => {
+  const checkWhatsAppStatus = useCallback(async () => {
     if (!settings.whatsapp_number) {
       setWhatsappStatus('disconnected');
       return;
@@ -243,13 +243,13 @@ export default function SettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [settings.whatsapp_number, lang.whatsappDisconnected, lang.checkFailed]);
 
   useEffect(() => {
     void (async () => {
       await checkWhatsAppStatus();
     })();
-  }, [debouncedWhatsappNumber]);
+  }, [checkWhatsAppStatus, debouncedWhatsappNumber]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};

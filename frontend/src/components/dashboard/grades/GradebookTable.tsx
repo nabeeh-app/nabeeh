@@ -45,6 +45,7 @@ export default function GradebookTable({
   const t = useTranslations();
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: gradebook.length,
     getScrollElement: () => scrollRef.current,

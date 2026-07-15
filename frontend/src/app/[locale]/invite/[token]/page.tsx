@@ -6,7 +6,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { Shield, CheckCircle, XCircle, Loader2, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/lib/client';
 
 interface InviteData {
@@ -29,7 +28,6 @@ const PERMISSION_LABELS: Record<string, { en: string; ar: string }> = {
 
 export default function InviteAcceptPage() {
   const t = useTranslations('assistants');
-  const tCommon = useTranslations('common');
   const params = useParams();
   const router = useRouter();
   const token = params.token as string;

@@ -40,7 +40,7 @@ export function ComparisonSection() {
             </div>
           </div>
 
-          {features.map(({ key, nabeeh, spreadsheets }) => (
+          {features.map(({ key, spreadsheets }) => (
             <div key={key} className="grid grid-cols-3 border-b border-ink/5 last:border-0">
               <div className="p-4 font-body text-ink">
                 {t(`features.${key}`)}

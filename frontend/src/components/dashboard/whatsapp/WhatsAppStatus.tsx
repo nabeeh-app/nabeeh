@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Unlink, MessageSquare, Loader2 } from 'lucide-react';
+import { CheckCircle, Unlink, MessageSquare } from 'lucide-react';
 
 interface WhatsAppStatusProps {
   isLoading: boolean;

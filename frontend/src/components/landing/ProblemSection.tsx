@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, MessageSquare, Eye } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 const painIcons = [AlertTriangle, MessageSquare, Eye];
 

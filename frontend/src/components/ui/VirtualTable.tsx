@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils';
 
 interface VirtualTableBodyProps<T> {
   items: T[];
-  renderItem: (item: T, index: number) => ReactNode;
   className?: string;
   rowHeight?: number;
   estimateSize?: (index: number) => number;
@@ -15,7 +14,6 @@ interface VirtualTableBodyProps<T> {
 
 export function VirtualTableBody<T>({
   items,
-  renderItem,
   className,
   rowHeight = 48,
   estimateSize,
@@ -23,6 +21,7 @@ export function VirtualTableBody<T>({
 }: VirtualTableBodyProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => parentRef.current,

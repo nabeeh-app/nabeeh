@@ -195,7 +195,6 @@ export function GuidedTour({ forceShow }: GuidedTourProps) {
   const step = TOUR_STEPS[currentStep];
   const Icon = step.icon;
   const isLast = currentStep === TOUR_STEPS.length - 1;
-  const tooltipText = t('tooltip_step', { current: currentStep + 1, total: TOUR_STEPS.length });
 
   const getTooltipPosition = (): React.CSSProperties => {
     if (!spotlight) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };

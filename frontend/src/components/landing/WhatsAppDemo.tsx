@@ -71,30 +71,6 @@ export function WhatsAppDemo() {
     setMessages((prev) => [...prev, { id: msgId.current, sender, text, time: getNow() }]);
   }, []);
 
-  const playScenario = useCallback(
-    async (index: number) => {
-      if (index >= SCENARIO_ORDER.length) {
-        setIsPlaying(false);
-        return;
-      }
-      setIsPlaying(true);
-      const key = SCENARIO_ORDER[index];
-      const parentMsg = tScenarios(`${key}.parentMessage`);
-      const botMsg = tScenarios(`${key}.botResponse`);
-
-      await new Promise((r) => setTimeout(r, 800));
-      addMessage('parent', parentMsg);
-
-      await new Promise((r) => setTimeout(r, 1500));
-      addMessage('bot', botMsg);
-
-      await new Promise((r) => setTimeout(r, 1200));
-      setScenarioIndex(index + 1);
-      setIsPlaying(false);
-    },
-    [addMessage, tScenarios]
-  );
-
   // Auto-play when selected
   useEffect(() => {
     if (!selectedName || messages.length > 0 || isPlaying) return;

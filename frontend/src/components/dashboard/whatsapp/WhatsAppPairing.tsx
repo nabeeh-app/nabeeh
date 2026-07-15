@@ -289,6 +289,7 @@ export default function WhatsAppPairing({
               <div className="flex items-center justify-center">
                 {hasQr && whatsappQr ? (
                   <div className="bg-canvas p-4 rounded-lg border border-ink/10">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={whatsappQr}
                       alt="WhatsApp QR Code"

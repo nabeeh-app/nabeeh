@@ -21,9 +21,7 @@ import { TrendChart } from './TrendChart';
 import type { GroupComparison as GroupComparisonType, AtRiskStudent, GradeDistribution as GradeDistributionType, GradeTrend, GradeOverview } from '@/types';
 
 export function GradeAnalysis() {
-  const t = useTranslations('grades');
   const tAnalysis = useTranslations('grades.analysis');
-  const tCommon = useTranslations('common');
 
   const { data: offerings, isLoading: offeringsLoading } = useOfferings();
   const [selectedOffering, setSelectedOffering] = useState<string>('');
@@ -32,7 +30,6 @@ export function GradeAnalysis() {
   const [atRisk, setAtRisk] = useState<AtRiskStudent[]>([]);
   const [distribution, setDistribution] = useState<GradeDistributionType[]>([]);
   const [trends, setTrends] = useState<GradeTrend[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<string>('');
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
 
   useEffect(() => {
@@ -76,18 +73,11 @@ export function GradeAnalysis() {
   }, [selectedOffering, loadAnalysis]);
 
   useEffect(() => {
-    if (!selectedStudent) {
-      // Reset via async to avoid synchronous setState in effect
-      void Promise.resolve().then(() => {
-        setDistribution([]);
-        setTrends([]);
-      });
-      return;
-    }
-    apiClient.getGradeTrends(selectedStudent).then(res => {
-      if (res.success) setTrends(res.data as GradeTrend[]);
-    }).catch(() => {});
-  }, [selectedStudent]);
+    void Promise.resolve().then(() => {
+      setDistribution([]);
+      setTrends([]);
+    });
+  }, [selectedOffering]);
 
   if (offeringsLoading) {
     return (

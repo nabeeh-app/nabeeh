@@ -3,19 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { ClipboardCheck, Edit3 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiClient } from '@/lib/client';
 import type { ReportDraft } from '@/types';
-
-const STATUS_VARIANT = {
-  pending: 'warning' as const,
-  approved: 'success' as const,
-  edited: 'default' as const,
-  rejected: 'destructive' as const,
-  sent: 'secondary' as const,
-};
 
 interface ApprovalQueueProps {
   onSelectDraft: (draft: ReportDraft) => void;

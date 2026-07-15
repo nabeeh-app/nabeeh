@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -245,10 +246,11 @@ export default function LoginPage() {
       {/* Right Side — Hero Image Panel (hidden on mobile) */}
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
         {/* Hero Image */}
-        <img
+        <Image
           src="/login-hero.jpeg"
           alt={t('loginHeroAlt')}
-          className="absolute inset-0 w-full h-full object-cover object-center"
+          fill
+          className="object-cover object-center"
         />
 
         {/* Gradient Overlay for text readability */}

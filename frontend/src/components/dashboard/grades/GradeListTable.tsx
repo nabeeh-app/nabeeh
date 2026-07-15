@@ -41,6 +41,7 @@ export default function GradeListTable({
   const locale = useLocale();
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: grades.length,
     getScrollElement: () => scrollRef.current,

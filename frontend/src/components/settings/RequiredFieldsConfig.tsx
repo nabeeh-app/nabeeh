@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
 import { Settings, Lock, Save, Loader2 } from 'lucide-react';
 import apiClient from '@/lib/client';
 

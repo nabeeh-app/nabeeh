@@ -124,22 +124,6 @@ export default function MessagesPage() {
     }
   }, []);
 
-  const loadMessages = useCallback(async (conversationId: string) => {
-    try {
-      setIsLoadingMessages(true);
-      setError(null);
-
-      const response = await apiClient.getConversationMessages(conversationId, { page: 1, limit: 50 });
-      setMessages(response.data ?? []);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load messages';
-      setError(message);
-      setMessages([]);
-    } finally {
-      setIsLoadingMessages(false);
-    }
-  }, []);
-
   const handleSendMessage = async (phone: string, message: string) => {
     setSendStatus(null);
     try {

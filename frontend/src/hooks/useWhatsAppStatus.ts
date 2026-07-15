@@ -92,7 +92,7 @@ export const useWhatsAppStatus = (phone?: string, autoCheck = true) => {
     }, pollInterval);
     
     return () => clearInterval(interval);
-  }, [checkStatus, whatsappStatus.status, autoCheck, phone]);
+  }, [checkStatus, whatsappStatus.status, whatsappStatus.pairingCodeMode, autoCheck, phone]);
 
   return {
     whatsappStatus,

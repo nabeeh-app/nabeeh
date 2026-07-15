@@ -54,14 +54,14 @@ export function ScreenshotCarousel() {
   const openLightbox = (index: number) => setLightboxIndex(index);
   const closeLightbox = () => setLightboxIndex(null);
 
-  const navigateLightbox = (direction: 'left' | 'right') => {
+  const navigateLightbox = useCallback((direction: 'left' | 'right') => {
     if (lightboxIndex === null) return;
     if (direction === 'right') {
       setLightboxIndex((lightboxIndex + 1) % screenshots.length);
     } else {
       setLightboxIndex((lightboxIndex - 1 + screenshots.length) % screenshots.length);
     }
-  };
+  }, [lightboxIndex]);
 
   useEffect(() => {
     if (lightboxIndex === null) return;
@@ -76,7 +76,7 @@ export function ScreenshotCarousel() {
       document.removeEventListener('keydown', handleKey);
       document.body.style.overflow = '';
     };
-  }, [lightboxIndex]);
+  }, [lightboxIndex, navigateLightbox]);
 
   return (
     <>
@@ -133,6 +133,7 @@ export function ScreenshotCarousel() {
                   className="snap-center shrink-0 w-[280px] sm:w-[340px] lg:w-[400px] rounded-xl overflow-hidden border border-ink/10 bg-canvas shadow-md hover:shadow-lg transition-shadow cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <div className="aspect-video bg-surface-cool flex items-center justify-center overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={shot.src}
                       alt={shot.alt}
@@ -174,6 +175,7 @@ export function ScreenshotCarousel() {
             <ChevronRight className="w-7 h-7 text-canvas" />
           </button>
 
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={screenshots[lightboxIndex].src}
             alt={screenshots[lightboxIndex].alt}

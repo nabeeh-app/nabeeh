@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useTranslations, useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -184,10 +185,11 @@ export default function ForgotPasswordPage() {
 
       {/* Right Side — Hero (hidden on mobile) */}
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
-        <img
+        <Image
           src="/login-hero.jpeg"
           alt={t('forgotPasswordHeroAlt')}
-          className="absolute inset-0 w-full h-full object-cover object-center"
+          fill
+          className="object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/40 to-ink/10" />
         <div className="relative z-10 flex flex-col justify-end p-12 text-white">

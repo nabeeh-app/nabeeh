@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -34,32 +34,28 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('lastMonth');
 
-  const getDateParams = () => {
-    const now = new Date();
-    const start = new Date();
-    switch (dateRange) {
-      case 'lastWeek':
-        start.setDate(now.getDate() - 7);
-        break;
-      case 'lastMonth':
-        start.setMonth(now.getMonth() - 1);
-        break;
-      case 'lastSemester':
-        start.setMonth(now.getMonth() - 6);
-        break;
-      default:
-        start.setMonth(now.getMonth() - 1);
-    }
-    return {
-      start_date: start.toISOString().split('T')[0],
-      end_date: now.toISOString().split('T')[0],
-    };
-  };
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       setLoading(true);
-      const params = getDateParams();
+      const now = new Date();
+      const start = new Date();
+      switch (dateRange) {
+        case 'lastWeek':
+          start.setDate(now.getDate() - 7);
+          break;
+        case 'lastMonth':
+          start.setMonth(now.getMonth() - 1);
+          break;
+        case 'lastSemester':
+          start.setMonth(now.getMonth() - 6);
+          break;
+        default:
+          start.setMonth(now.getMonth() - 1);
+      }
+      const params = {
+        start_date: start.toISOString().split('T')[0],
+        end_date: now.toISOString().split('T')[0],
+      };
 
       const [grades, attendance, messages] = await Promise.allSettled([
         apiClient.getGradeStats(),
@@ -75,13 +71,13 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
 
   useEffect(() => {
     void (async () => {
       await loadStats();
     })();
-  }, [dateRange]);
+  }, [loadStats]);
 
   if (loading) {
     return <LoadingSpinner message={t('loading')} />;

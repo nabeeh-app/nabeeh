@@ -31,7 +31,7 @@ interface Props {
   params: Promise<{ locale: string }>;
 }
 
-export default function RegisterPage({ params: _params }: Props) {
+export default function RegisterPage(_props: Props) {
   const locale = useLocale();
   const [formData, setFormData] = useState<RegisterFormData>({
     name: '',

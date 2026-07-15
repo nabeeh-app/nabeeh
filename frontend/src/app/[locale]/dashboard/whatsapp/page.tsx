@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations, useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useWhatsAppStatus } from '@/hooks/useWhatsAppStatus';
 import { sendWhatsAppMessage } from '@/lib/utils';
