@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,22 +31,21 @@ const TIMEZONES = [
 
 interface LocationSectionProps {
   settings: TeacherSettings;
-  lang: { city: string; country: string; timezone: string; address: string; addressPlaceholder: string; location: string };
   onInputChange: (field: keyof TeacherSettings, value: string | string[]) => void;
 }
 
 export default function LocationSection({
   settings,
-  lang,
   onInputChange,
 }: LocationSectionProps) {
+  const t = useTranslations('settings');
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-ink font-display">{lang.location}</h2>
+      <h2 className="text-lg font-semibold text-ink font-display">{t('location')}</h2>
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="city">{lang.city}</Label>
+          <Label htmlFor="city">{t('city')}</Label>
           <Input
             id="city"
             value={settings.city}
@@ -53,7 +53,7 @@ export default function LocationSection({
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="country">{lang.country}</Label>
+          <Label htmlFor="country">{t('country')}</Label>
           <Input
             id="country"
             value={settings.country}
@@ -66,7 +66,7 @@ export default function LocationSection({
         <div className="space-y-1.5">
           <Label htmlFor="timezone" className="gap-1.5 inline-flex items-center">
             <Clock className="h-3.5 w-3.5" />
-            {lang.timezone}
+            {t('timezone')}
           </Label>
           <Select
             value={settings.timezone}
@@ -83,12 +83,12 @@ export default function LocationSection({
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="address">{lang.address}</Label>
+          <Label htmlFor="address">{t('address')}</Label>
           <Input
             id="address"
             value={settings.address}
             onChange={(e) => onInputChange('address', e.target.value)}
-            placeholder={lang.addressPlaceholder}
+            placeholder={t('addressPlaceholder')}
           />
         </div>
       </div>

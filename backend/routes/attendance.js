@@ -169,7 +169,7 @@ const markAttendance = async (req, res) => {
         success: false,
         message: error.message,
         messageAr: 'فشل في تحديث سجل الحضور',
-        code: 'INTERNAL_ERROR'
+        code: 'VALIDATION_ERROR'
       });
     }
 

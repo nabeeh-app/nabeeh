@@ -28,8 +28,8 @@ export function GradeAnalysis() {
   const [overview, setOverview] = useState<GradeOverview | null>(null);
   const [groupData, setGroupData] = useState<GroupComparisonType[]>([]);
   const [atRisk, setAtRisk] = useState<AtRiskStudent[]>([]);
-  const [distribution, setDistribution] = useState<GradeDistributionType[]>([]);
-  const [trends, setTrends] = useState<GradeTrend[]>([]);
+  const [distribution] = useState<GradeDistributionType[]>([]);
+  const [trends] = useState<GradeTrend[]>([]);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
 
   useEffect(() => {
@@ -71,13 +71,6 @@ export function GradeAnalysis() {
       })();
     }
   }, [selectedOffering, loadAnalysis]);
-
-  useEffect(() => {
-    void Promise.resolve().then(() => {
-      setDistribution([]);
-      setTrends([]);
-    });
-  }, [selectedOffering]);
 
   if (offeringsLoading) {
     return (

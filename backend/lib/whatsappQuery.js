@@ -222,8 +222,7 @@ async function saveFailedMessage({ teacherId, phone, messageContent, whatsappMes
       phone,
       message_content: messageContent,
       whatsapp_message_id: whatsappMessageId || null,
-      error_message: error.message,
-      error_stack: error.stack || null
+      error_message: error.message
     });
   if (dbError) {
     logger.error('Failed to save failed message to DLQ', { error: dbError.message });

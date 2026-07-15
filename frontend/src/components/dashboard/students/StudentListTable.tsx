@@ -12,11 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Edit, Trash2, Eye, GraduationCap, Phone } from 'lucide-react';
+import { Edit, Trash2, Eye, GraduationCap, Phone, Users } from 'lucide-react';
 import { Student, Parent } from '@/types';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Users } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 interface StudentWithParents extends Student {

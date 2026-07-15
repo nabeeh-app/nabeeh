@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 interface NotificationPref {
   key: string;
   label: string;
@@ -9,19 +11,18 @@ interface NotificationPref {
 interface NotificationPrefsProps {
   notifications: NotificationPref[];
   isRTL: boolean;
-  lang: { notifications: string };
   onToggle: (key: string) => void;
 }
 
 export default function NotificationPrefs({
   notifications,
   isRTL,
-  lang,
   onToggle,
 }: NotificationPrefsProps) {
+  const t = useTranslations('settings');
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-ink font-display">{lang.notifications}</h2>
+      <h2 className="text-lg font-semibold text-ink font-display">{t('notifications')}</h2>
 
       <div className="divide-y divide-ink/10">
         {notifications.map((item) => (

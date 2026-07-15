@@ -107,8 +107,11 @@ async function generateResponse(message, { parentName, studentName, teacherName,
         recordSuccess();
         return { text: result.text, intent: 'general', confidence: 0.8, toolsUsed: result.toolsUsed };
       }
-      // aiService returned null (e.g. budget exceeded) — fall through to basic path
+      // aiService returned null (e.g. budget exceeded) — record failure for circuit breaker
+      // before falling through to basic HTTP path
+      recordFailure();
     } catch (err) {
+      recordFailure();
       logger.error('aiService delegation failed, falling back to basic path', { error: err.message, tier });
     }
   }

@@ -17,9 +17,9 @@ export function timeAgo(dateStr: string, locale: string = 'ar', t?: (key: string
 
   if (t) {
     if (mins < 1) return t('timeAgo.justNow');
-    if (mins < 60) return t('timeAgo.minutesAgo', { n: mins });
-    if (hours < 24) return t('timeAgo.hoursAgo', { n: hours });
-    return t('timeAgo.daysAgo', { n: days });
+    if (mins < 60) return t('timeAgo.minutes', { n: mins });
+    if (hours < 24) return t('timeAgo.hours', { n: hours });
+    return t('timeAgo.days', { n: days });
   }
 
   if (locale === 'ar') {

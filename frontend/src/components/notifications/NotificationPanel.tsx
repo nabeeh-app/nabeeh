@@ -83,11 +83,11 @@ export function NotificationPanel({ onClose, onReadAll }: NotificationPanelProps
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     if (diffMins < 1) return t('timeAgo.justNow');
-    if (diffMins < 60) return t('timeAgo.minutes', { count: diffMins });
+    if (diffMins < 60) return t('timeAgo.minutes', { n: diffMins });
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return t('timeAgo.hours', { count: diffHours });
+    if (diffHours < 24) return t('timeAgo.hours', { n: diffHours });
     const diffDays = Math.floor(diffHours / 24);
-    return t('timeAgo.days', { count: diffDays });
+    return t('timeAgo.days', { n: diffDays });
   };
 
   return (

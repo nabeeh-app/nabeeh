@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -36,125 +37,12 @@ interface NotificationPref {
   enabled: boolean;
 }
 
-const t = {
-  en: {
-    settings: 'Settings',
-    description: 'Manage account settings and preferences',
-    save: 'Save',
-    profile: 'Profile',
-    uploadPhoto: 'Upload Photo',
-    photoHint: 'JPG or PNG up to 2MB',
-    fullName: 'Full Name',
-    email: 'Email',
-    institution: 'Institution Name',
-    subjects: 'Subjects You Teach',
-    subjectsPlaceholder: 'Mathematics, Physics',
-    bio: 'Bio',
-    bioPlaceholder: 'Write a short bio about yourself...',
-    contact: 'Contact',
-    phone: 'Phone Number',
-    whatsapp: 'WhatsApp Number',
-    whatsappHint: 'Leave empty to use same as phone number',
-    whatsappStatus: 'WhatsApp Status',
-    connected: 'Connected',
-    disconnected: 'Disconnected',
-    partiallyConnected: 'WhatsApp partially connected. Complete setup for full stability.',
-    whatsappDisconnected: 'WhatsApp not connected. Open the dashboard to scan QR code.',
-    invalidNumber: 'Phone number is not registered on WhatsApp.',
-    checkFailed: 'Failed to check WhatsApp status',
-    telegram: 'Telegram Username',
-    location: 'Location',
-    city: 'City',
-    country: 'Country',
-    timezone: 'Timezone',
-    address: 'Address',
-    addressPlaceholder: 'Full address',
-    notifications: 'Notifications',
-    preferences: 'Preferences',
-    language: 'Interface Language',
-    theme: 'Theme',
-    light: 'Light',
-    dark: 'Dark',
-    system: 'System',
-    savedSuccess: 'Settings saved successfully',
-    saveError: 'Network error. Please try again.',
-    nameRequired: 'Name is required',
-    emailRequired: 'Email is required',
-    emailInvalid: 'Invalid email format',
-    phoneRequired: 'Phone number is required',
-    phoneInvalid: 'Invalid phone number format',
-    whatsappInvalid: 'Invalid WhatsApp number format',
-    notifAttendance: 'Attendance notifications',
-    notifGrades: 'Grade notifications',
-    notifParentMessages: 'Parent messages',
-    notifAssignments: 'Assignment reminders',
-    notifSystem: 'System notifications',
-    mockModeTitle: 'Mock Mode Active',
-    mockModeDescription: 'WhatsApp is unavailable in mock mode. Set NEXT_PUBLIC_USE_MOCK=false in .env.local and restart the dev server.',
-  },
-  ar: {
-    settings: 'الإعدادات',
-    description: 'إدارة إعدادات الحساب والتفضيلات',
-    save: 'حفظ',
-    profile: 'الملف الشخصي',
-    uploadPhoto: 'تحديث الصورة',
-    photoHint: 'JPG أو PNG حتى 2MB',
-    fullName: 'الاسم الكامل',
-    email: 'البريد الإلكتروني',
-    institution: 'اسم المؤسسة التعليمية',
-    subjects: 'المواد التي تدرسها',
-    subjectsPlaceholder: 'الرياضيات، الفيزياء',
-    bio: 'نبذة تعريفية',
-    bioPlaceholder: 'اكتب نبذة مختصرة عنك...',
-    contact: 'التواصل',
-    phone: 'رقم الهاتف',
-    whatsapp: 'رقم الواتساب',
-    whatsappHint: 'اتركه فارغاً لاستخدام نفس رقم الهاتف',
-    whatsappStatus: 'حالة الواتساب',
-    connected: 'متصل',
-    disconnected: 'غير متصل',
-    partiallyConnected: 'الواتساب متصل جزئياً. يُفضل إكمال الإعداد.',
-    whatsappDisconnected: 'الواتساب غير متصل. افتح لوحة التحكم لمسح رمز QR.',
-    invalidNumber: 'رقم الهاتف غير مسجل في الواتساب.',
-    checkFailed: 'فشل في التحقق من حالة الواتساب',
-    telegram: 'تليجرام',
-    location: 'الموقع',
-    city: 'المدينة',
-    country: 'الدولة',
-    timezone: 'المنطقة الزمنية',
-    address: 'العنوان',
-    addressPlaceholder: 'العنوان الكامل',
-    notifications: 'الإشعارات',
-    preferences: 'التفضيلات',
-    language: 'لغة الواجهة',
-    theme: 'المظهر',
-    light: 'فاتح',
-    dark: 'داكن',
-    system: 'حسب النظام',
-    savedSuccess: 'تم حفظ الإعدادات بنجاح',
-    saveError: 'خطأ في الاتصال بالخادم',
-    nameRequired: 'الاسم مطلوب',
-    emailRequired: 'البريد الإلكتروني مطلوب',
-    emailInvalid: 'البريد الإلكتروني غير صحيح',
-    phoneRequired: 'رقم الهاتف مطلوب',
-    phoneInvalid: 'رقم الهاتف غير صحيح',
-    whatsappInvalid: 'رقم الواتساب غير صحيح',
-    notifAttendance: 'إشعارات الحضور',
-    notifGrades: 'إشعارات الدرجات',
-    notifParentMessages: 'رسائل أولياء الأمور',
-    notifAssignments: 'تذكيرات الواجبات',
-    notifSystem: 'إشعارات النظام',
-    mockModeTitle: 'وضع العرض التجريبي',
-    mockModeDescription: 'الواتساب غير متاح في وضع العرض التجريبي. عيّن NEXT_PUBLIC_USE_MOCK=false في .local.env وأعد تشغيل الخادم.',
-  },
-} as const;
-
 export default function SettingsPage() {
   const params = useParams();
   const locale = params.locale as string;
   const { teacher, updateProfile } = useAuth();
   const isRTL = locale === 'ar';
-  const lang = isRTL ? t.ar : t.en;
+  const t = useTranslations('settings');
 
   const [settings, setSettings] = useState<TeacherSettings>({
     name: '',
@@ -179,11 +67,11 @@ export default function SettingsPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [notifications, setNotifications] = useState<NotificationPref[]>([
-    { key: 'attendance', label: lang.notifAttendance, enabled: true },
-    { key: 'grades', label: lang.notifGrades, enabled: true },
-    { key: 'parent_messages', label: lang.notifParentMessages, enabled: true },
-    { key: 'assignments', label: lang.notifAssignments, enabled: false },
-    { key: 'system', label: lang.notifSystem, enabled: true },
+    { key: 'attendance', label: t('notifAttendance'), enabled: true },
+    { key: 'grades', label: t('notifGrades'), enabled: true },
+    { key: 'parent_messages', label: t('notifParentMessages'), enabled: true },
+    { key: 'assignments', label: t('notifAssignments'), enabled: false },
+    { key: 'system', label: t('notifSystem'), enabled: true },
   ]);
 
   useEffect(() => {
@@ -227,23 +115,23 @@ export default function SettingsPage() {
         if (status === 'connected') {
           setStatusMessage('');
         } else if (status === 'disconnected') {
-          setStatusMessage(lang.whatsappDisconnected);
+          setStatusMessage(t('whatsappDisconnected'));
         }
       } else {
         setWhatsappStatus('disconnected');
-        setStatusMessage(lang.checkFailed);
+        setStatusMessage(t('checkFailed'));
       }
     } catch (error: unknown) {
       const err = error as { response?: { status?: number } };
       logger.error('WhatsApp status check failed:', error);
       if (err.response?.status !== 401) {
         setWhatsappStatus('disconnected');
-        setStatusMessage(lang.checkFailed);
+        setStatusMessage(t('checkFailed'));
       }
     } finally {
       setIsLoading(false);
     }
-  }, [settings.whatsapp_number, lang.whatsappDisconnected, lang.checkFailed]);
+  }, [settings.whatsapp_number, t]);
 
   useEffect(() => {
     void (async () => {
@@ -255,23 +143,23 @@ export default function SettingsPage() {
     const newErrors: Record<string, string> = {};
 
     if (!settings.name.trim()) {
-      newErrors.name = lang.nameRequired;
+      newErrors.name = t('nameRequired');
     }
 
     if (!settings.email.trim()) {
-      newErrors.email = lang.emailRequired;
+      newErrors.email = t('emailRequired');
     } else if (!validateEmail(settings.email)) {
-      newErrors.email = lang.emailInvalid;
+      newErrors.email = t('emailInvalid');
     }
 
     if (!settings.phone.trim()) {
-      newErrors.phone = lang.phoneRequired;
+      newErrors.phone = t('phoneRequired');
     } else if (!/^\+\d{10,15}$/.test(settings.phone)) {
-      newErrors.phone = lang.phoneInvalid;
+      newErrors.phone = t('phoneInvalid');
     }
 
     if (settings.whatsapp_number && !/^\+\d{10,15}$/.test(settings.whatsapp_number)) {
-      newErrors.whatsapp_number = lang.whatsappInvalid;
+      newErrors.whatsapp_number = t('whatsappInvalid');
     }
 
     setErrors(newErrors);
@@ -313,14 +201,14 @@ export default function SettingsPage() {
 
       await updateProfile(updateData);
 
-      setMessage({ type: 'success', text: lang.savedSuccess });
+      setMessage({ type: 'success', text: t('savedSuccess') });
       checkWhatsAppStatus();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
       logger.error('Save settings error:', error);
       setMessage({
         type: 'error',
-        text: err?.response?.data?.message || lang.saveError
+        text: err?.response?.data?.message || t('saveError')
       });
     } finally {
       setIsSaving(false);
@@ -337,10 +225,10 @@ export default function SettingsPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Sticky header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 -mx-6 px-6 py-4 -mt-6">
-        <PageHeader title={lang.settings} description={lang.description}>
+        <PageHeader title={t('title')} description={t('description')}>
           <Button onClick={handleSave} disabled={isSaving} className="gap-2">
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {lang.save}
+            {t('save')}
           </Button>
         </PageHeader>
       </div>
@@ -361,25 +249,7 @@ export default function SettingsPage() {
       <ProfileForm
         settings={settings}
         errors={errors}
-        lang={{
-          fullName: lang.fullName,
-          email: lang.email,
-          institution: lang.institution,
-          subjects: lang.subjects,
-          subjectsPlaceholder: lang.subjectsPlaceholder,
-          bio: lang.bio,
-          bioPlaceholder: lang.bioPlaceholder,
-          uploadPhoto: lang.uploadPhoto,
-          photoHint: lang.photoHint,
-          phone: lang.phone,
-          whatsapp: lang.whatsapp,
-          whatsappHint: lang.whatsappHint,
-          whatsappStatus: lang.whatsappStatus,
-          connected: lang.connected,
-          disconnected: lang.disconnected,
-          statusMessage: statusMessage,
-          telegram: lang.telegram,
-        }}
+        locale={locale}
         isLoading={isLoading}
         whatsappStatus={whatsappStatus}
         statusMessage={statusMessage}
@@ -391,14 +261,6 @@ export default function SettingsPage() {
 
       <LocationSection
         settings={settings}
-        lang={{
-          city: lang.city,
-          country: lang.country,
-          timezone: lang.timezone,
-          address: lang.address,
-          addressPlaceholder: lang.addressPlaceholder,
-          location: lang.location,
-        }}
         onInputChange={handleInputChange}
       />
 
@@ -407,7 +269,6 @@ export default function SettingsPage() {
       <NotificationPrefs
         notifications={notifications}
         isRTL={isRTL}
-        lang={{ notifications: lang.notifications }}
         onToggle={toggleNotification}
       />
 
@@ -415,14 +276,6 @@ export default function SettingsPage() {
 
       <PreferencesSection
         locale={locale}
-        lang={{
-          language: lang.language,
-          theme: lang.theme,
-          light: lang.light,
-          dark: lang.dark,
-          system: lang.system,
-          preferences: lang.preferences,
-        }}
       />
     </div>
   );

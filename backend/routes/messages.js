@@ -29,7 +29,7 @@ const getConversations = async (req, res) => {
         success: false,
         message: error.message,
         messageAr: 'خطأ في استعلام قاعدة البيانات',
-        code: 'INTERNAL_ERROR'
+        code: 'VALIDATION_ERROR'
       });
     }
 
@@ -85,7 +85,7 @@ const getConversationMessages = async (req, res) => {
         success: false,
         message: error.message,
         messageAr: 'خطأ في جلب الرسائل',
-        code: 'INTERNAL_ERROR'
+        code: 'VALIDATION_ERROR'
       });
     }
 

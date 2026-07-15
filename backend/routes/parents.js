@@ -172,7 +172,7 @@ const createParent = async (req, res) => {
         success: false,
         message: error.message,
         messageAr: 'فشل في إنشاء ولي الأمر',
-        code: 'INTERNAL_ERROR'
+        code: 'VALIDATION_ERROR'
       });
     }
 
@@ -246,7 +246,7 @@ const updateParent = async (req, res) => {
         success: false,
         message: error.message,
         messageAr: 'فشل في تحديث ولي الأمر',
-        code: 'INTERNAL_ERROR'
+        code: 'VALIDATION_ERROR'
       });
     }
 
@@ -313,7 +313,7 @@ const deleteParent = async (req, res) => {
         success: false,
         message: error.message,
         messageAr: 'فشل في حذف ولي الأمر',
-        code: 'INTERNAL_ERROR'
+        code: 'VALIDATION_ERROR'
       });
     }
 
