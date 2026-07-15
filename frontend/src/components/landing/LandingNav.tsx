@@ -12,7 +12,6 @@ export function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const locale = useLocale();
-  const isRTL = locale === 'ar';
   const t = useTranslations('landing.nav');
 
   useEffect(() => {
@@ -60,7 +59,7 @@ export function LandingNav() {
               <circle cx="126" cy="108" r="4" fill="white" />
               <path d="M86 142Q100 154 114 142" stroke="#083d44" strokeWidth="3.5" strokeLinecap="round" fill="none" />
             </svg>
-            <span className="text-lg font-bold text-ink font-display">{isRTL ? 'نظام نبيه' : 'Nabeeh'}</span>
+            <span className="text-lg font-bold text-ink font-display">{t('brandName')}</span>
           </Link>
 
           {/* Desktop nav */}

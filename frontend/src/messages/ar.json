@@ -749,6 +749,22 @@
     "stepGoToLinkedDevices": "افتح القائمة واختار \"الأجهزة المرتبطة\" (Linked Devices)",
     "stepScanQR": "اضغط \"ربط جهاز\" وامسح الرمز",
     "qrWillAppearHere": "سيظهر رمز QR هنا بعد الإنشاء",
+    "mockModeTitle": "وضع العرض التجريبي",
+    "mockModeDescription": "الواتساب غير متاح في وضع العرض التجريبي. عيّن NEXT_PUBLIC_USE_MOCK=false وأعد تشغيل الخادم.",
+    "phoneRequiredTitle": "رقم الهاتف مطلوب",
+    "phoneRequiredDescription": "أدخل رقم الهاتف أولاً",
+    "pairingCodeFailed": "فشل في توليد كود الإقران",
+    "qrCodeLabel": "رمز QR",
+    "pairingCodeLabel": "كود الإقران",
+    "generateCode": "توليد الكود",
+    "phoneHint": "أدخل رقم هاتفك المسجل في واتساب",
+    "enterCodeInWhatsApp": "أدخل هذا الكود في واتساب:",
+    "useQrInstead": "إقران بـ QR بدلاً من ذلك",
+    "pairingCodeSteps": "خطوات الإقران بالكود",
+    "step1Code": "افتح واتساب على هاتفك",
+    "step2Code": "اذهب إلى الأجهزة المرتبطة",
+    "step3Code": "اختر \"الإقران برقم الهاتف\"",
+    "step4Code": "أدخل الكود أعلاه",
     "alerts": {
       "sessionRestarted": "تم إعادة تشغيل الجلسة بنجاح!",
       "sessionRestartFailed": "فشل في إعادة تشغيل الجلسة",
@@ -936,7 +952,14 @@
     "currentPassword": "كلمة المرور الحالية",
     "newPassword": "كلمة المرور الجديدة",
     "confirmNewPassword": "تأكيد كلمة المرور الجديدة",
-    "saveSuccess": "تم حفظ الإعدادات بنجاح"
+    "saveSuccess": "تم حفظ الإعدادات بنجاح",
+    "notifAttendance": "إشعارات الحضور",
+    "notifGrades": "إشعارات الدرجات",
+    "notifParentMessages": "رسائل أولياء الأمور",
+    "notifAssignments": "تذكيرات الواجبات",
+    "notifSystem": "إشعارات النظام",
+    "mockModeTitle": "وضع العرض التجريبي",
+    "mockModeDescription": "الواتساب غير متاح في وضع العرض التجريبي. عيّن NEXT_PUBLIC_USE_MOCK=false في .local.env وأعد تشغيل الخادم."
   },
   "errors": {
     "generic": "حصل خطأ. حاول تاني.",
@@ -971,7 +994,8 @@
       "pricing": "الأسعار",
       "faq": "الأسئلة الشائعة",
       "login": "تسجيل الدخول",
-      "startFree": "ابدأ ببلاش"
+      "startFree": "ابدأ ببلاش",
+      "brandName": "نظام نبيه"
     },
     "hero": {
       "title": "نبيه — مساعدك الذكي في التدريس",
@@ -1150,6 +1174,9 @@
       "ahmed": "أحمد",
       "omar": "عمر",
       "salma": "سلمى",
+      "online": "متصل",
+      "typing": "يكتب...",
+      "welcomeMessage": "أهلاً! جرّب تسأل عن الحضور أو الدرجات أو الجدول.",
       "scenarios": {
         "attendance": {
           "parentMessage": "مرحباً، حضور أحمد إزاي الأسبوع ده؟",

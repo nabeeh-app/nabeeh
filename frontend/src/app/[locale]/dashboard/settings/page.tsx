@@ -84,6 +84,13 @@ const t = {
     phoneRequired: 'Phone number is required',
     phoneInvalid: 'Invalid phone number format',
     whatsappInvalid: 'Invalid WhatsApp number format',
+    notifAttendance: 'Attendance notifications',
+    notifGrades: 'Grade notifications',
+    notifParentMessages: 'Parent messages',
+    notifAssignments: 'Assignment reminders',
+    notifSystem: 'System notifications',
+    mockModeTitle: 'Mock Mode Active',
+    mockModeDescription: 'WhatsApp is unavailable in mock mode. Set NEXT_PUBLIC_USE_MOCK=false in .env.local and restart the dev server.',
   },
   ar: {
     settings: 'الإعدادات',
@@ -132,6 +139,13 @@ const t = {
     phoneRequired: 'رقم الهاتف مطلوب',
     phoneInvalid: 'رقم الهاتف غير صحيح',
     whatsappInvalid: 'رقم الواتساب غير صحيح',
+    notifAttendance: 'إشعارات الحضور',
+    notifGrades: 'إشعارات الدرجات',
+    notifParentMessages: 'رسائل أولياء الأمور',
+    notifAssignments: 'تذكيرات الواجبات',
+    notifSystem: 'إشعارات النظام',
+    mockModeTitle: 'وضع العرض التجريبي',
+    mockModeDescription: 'الواتساب غير متاح في وضع العرض التجريبي. عيّن NEXT_PUBLIC_USE_MOCK=false في .local.env وأعد تشغيل الخادم.',
   },
 } as const;
 
@@ -165,11 +179,11 @@ export default function SettingsPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [notifications, setNotifications] = useState<NotificationPref[]>([
-    { key: 'attendance', label: isRTL ? 'إشعارات الحضور' : 'Attendance notifications', enabled: true },
-    { key: 'grades', label: isRTL ? 'إشعارات الدرجات' : 'Grade notifications', enabled: true },
-    { key: 'parent_messages', label: isRTL ? 'رسائل أولياء الأمور' : 'Parent messages', enabled: true },
-    { key: 'assignments', label: isRTL ? 'تذكيرات الواجبات' : 'Assignment reminders', enabled: false },
-    { key: 'system', label: isRTL ? 'إشعارات النظام' : 'System notifications', enabled: true },
+    { key: 'attendance', label: lang.notifAttendance, enabled: true },
+    { key: 'grades', label: lang.notifGrades, enabled: true },
+    { key: 'parent_messages', label: lang.notifParentMessages, enabled: true },
+    { key: 'assignments', label: lang.notifAssignments, enabled: false },
+    { key: 'system', label: lang.notifSystem, enabled: true },
   ]);
 
   useEffect(() => {

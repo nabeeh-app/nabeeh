@@ -16,8 +16,7 @@ const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
 export default function WhatsAppDashboardPage() {
   const t = useTranslations('whatsapp');
   const tc = useTranslations('common');
-  const locale = useLocale();
-  const isRTL = locale === 'ar';
+  const tSettings = useTranslations('settings');
   const { whatsappStatus, refreshStatus } = useWhatsAppStatus();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -115,8 +114,8 @@ export default function WhatsAppDashboardPage() {
         <div className="flex items-start gap-3 p-4 bg-[#e5ff97]/30 border border-[#e5ff97]/50 rounded-lg">
           <AlertCircle className="h-4 w-4 text-ink/60 mt-0.5 shrink-0" />
           <div className="text-sm text-ink/70 font-body">
-            <p className="font-medium text-ink">{isRTL ? 'وضع العرض التجريبي' : 'Mock Mode Active'}</p>
-            <p className="mt-1">{isRTL ? 'الواتساب غير متاح في وضع العرض التجريبي. عيّن NEXT_PUBLIC_USE_MOCK=false في .local.env وأعد تشغيل الخادم.' : 'WhatsApp is unavailable in mock mode. Set NEXT_PUBLIC_USE_MOCK=false in .env.local and restart the dev server.'}</p>
+            <p className="font-medium text-ink">{tSettings('mockModeTitle')}</p>
+            <p className="mt-1">{tSettings('mockModeDescription')}</p>
           </div>
         </div>
       )}

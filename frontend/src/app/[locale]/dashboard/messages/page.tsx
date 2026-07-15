@@ -25,7 +25,7 @@ const formatDateTime = (value: string, locale: string) => {
     return value;
   }
 
-  return date.toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-US', {
+  return date.toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US', {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',

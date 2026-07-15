@@ -130,6 +130,36 @@ export const sendWhatsAppMessage = async (phone: string, message: string) => {
   }
 };
 
+// Date/time formatting utilities (locale-aware)
+export function formatDate(date: Date | string, locale: string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US');
+}
+
+export function formatDateLong(date: Date | string, locale: string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
+}
+
+export function formatMonthYear(date: Date | string, locale: string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
+    year: 'numeric', month: 'long',
+  });
+}
+
+export function formatDateTime(date: Date | string, locale: string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US');
+}
+
+export function formatTime(date: Date | string, locale: string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-US');
+}
+
 // Phone number formatting utility
 export const formatPhoneNumber = (phone: string): string => {
   // Remove all non-digit characters

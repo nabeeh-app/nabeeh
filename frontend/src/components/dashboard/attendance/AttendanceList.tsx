@@ -16,6 +16,7 @@ import {
 import { Calendar } from 'lucide-react';
 import { Attendance } from '@/types';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { formatDate, formatDateTime } from '@/lib/utils';
 
 interface AttendanceListProps {
   records: Attendance[];
@@ -93,7 +94,7 @@ export default function AttendanceList({
                   </div>
                 </TableCell>
                 <TableCell>
-                  {new Date(record.date).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}
+                  {formatDate(record.date, locale)}
                 </TableCell>
                 <TableCell>
                   <Badge variant={status.variant} className={status.color}>{status.label}</Badge>
@@ -103,7 +104,7 @@ export default function AttendanceList({
                 </TableCell>
                 <TableCell>
                   <span className="text-sm text-ink/60">
-                    {new Date(record.created_at).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}
+                    {formatDateTime(record.created_at, locale)}
                   </span>
                 </TableCell>
               </TableRow>

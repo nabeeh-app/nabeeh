@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { GraduationCap, Phone, Calendar, MapPin } from 'lucide-react';
 import { Student, Parent } from '@/types';
+import { formatDate } from '@/lib/utils';
 
 interface StudentWithParents extends Student {
   parents: Parent[];
@@ -85,9 +86,7 @@ export default function StudentDetailSidebar({
                   <div className="flex items-center gap-2.5">
                     <Calendar className="h-4 w-4 text-ink/40 shrink-0" />
                     <span>
-                      {new Date(student.date_of_birth).toLocaleDateString(
-                        locale === 'ar' ? 'ar-SA' : 'en-US'
-                      )}
+                      {formatDate(student.date_of_birth, locale)}
                     </span>
                   </div>
                 )}
@@ -129,9 +128,7 @@ export default function StudentDetailSidebar({
                   <Calendar className="h-4 w-4 text-ink/40 shrink-0" />
                   <span>
                     <span className="text-ink/60">{t('students.enrollmentDateLabel')}:</span>{' '}
-                    {new Date(student.enrollment_date).toLocaleDateString(
-                      locale === 'ar' ? 'ar-SA' : 'en-US'
-                    )}
+                    {formatDate(student.enrollment_date, locale)}
                   </span>
                 </div>
               </div>

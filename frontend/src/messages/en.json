@@ -750,6 +750,22 @@
     "stepGoToLinkedDevices": "Go to Settings \u2192 Linked Devices",
     "stepScanQR": "Tap \"Link a Device\" and scan the code",
     "qrWillAppearHere": "QR code will appear here once generated",
+    "mockModeTitle": "Mock Mode",
+    "mockModeDescription": "WhatsApp is unavailable in mock mode. Set NEXT_PUBLIC_USE_MOCK=false and restart the dev server.",
+    "phoneRequiredTitle": "Phone number required",
+    "phoneRequiredDescription": "Please enter your phone number first",
+    "pairingCodeFailed": "Failed to generate pairing code",
+    "qrCodeLabel": "QR Code",
+    "pairingCodeLabel": "Pairing Code",
+    "generateCode": "Generate Code",
+    "phoneHint": "Enter your WhatsApp-registered phone number",
+    "enterCodeInWhatsApp": "Enter this code in WhatsApp:",
+    "useQrInstead": "Use QR Code Instead",
+    "pairingCodeSteps": "Pairing Code Steps",
+    "step1Code": "Open WhatsApp on your phone",
+    "step2Code": "Go to Linked Devices",
+    "step3Code": "Choose \"Link with Phone Number\"",
+    "step4Code": "Enter the code shown above",
     "alerts": {
       "sessionRestarted": "Session restarted successfully!",
       "sessionRestartFailed": "Failed to restart session",
@@ -937,7 +953,14 @@
     "currentPassword": "Current Password",
     "newPassword": "New Password",
     "confirmNewPassword": "Confirm New Password",
-    "saveSuccess": "Settings saved successfully"
+    "saveSuccess": "Settings saved successfully",
+    "notifAttendance": "Attendance notifications",
+    "notifGrades": "Grade notifications",
+    "notifParentMessages": "Parent messages",
+    "notifAssignments": "Assignment reminders",
+    "notifSystem": "System notifications",
+    "mockModeTitle": "Mock Mode Active",
+    "mockModeDescription": "WhatsApp is unavailable in mock mode. Set NEXT_PUBLIC_USE_MOCK=false in .env.local and restart the dev server."
   },
   "errors": {
     "generic": "An error occurred. Please try again.",
@@ -972,7 +995,8 @@
       "pricing": "Pricing",
       "faq": "FAQ",
       "login": "Sign In",
-      "startFree": "Start Free"
+      "startFree": "Start Free",
+      "brandName": "Nabeeh"
     },
     "hero": {
       "title": "Nabeeh: Smart Teaching Assistant for Tutors",
@@ -1151,6 +1175,9 @@
       "ahmed": "Ahmed",
       "omar": "Omar",
       "salma": "Salma",
+      "online": "Online",
+      "typing": "typing...",
+      "welcomeMessage": "Hello! Try asking about attendance, grades, or schedule.",
       "scenarios": {
         "attendance": {
           "parentMessage": "Hi, what was Ahmed's attendance this week?",

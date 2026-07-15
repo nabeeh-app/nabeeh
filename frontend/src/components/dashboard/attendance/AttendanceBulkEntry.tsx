@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { CheckCircle, XCircle, Clock, AlertCircle, UserCheck } from 'lucide-react';
 import { Student } from '@/types';
+import { formatDateLong } from '@/lib/utils';
 
 interface DailyAttendance {
   date: string;
@@ -51,9 +52,7 @@ export default function AttendanceBulkEntry({
           <div>
             <CardTitle>{t('attendance.bulkAttendanceEntry')}</CardTitle>
             <p className="text-sm text-ink/60 mt-1">
-              {new Date(selectedDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
-                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-              })}
+              {formatDateLong(selectedDate, locale)}
             </p>
           </div>
           <div className="flex items-center space-x-2">

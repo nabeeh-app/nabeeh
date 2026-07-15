@@ -16,6 +16,7 @@ import {
 import { Edit, Trash2 } from 'lucide-react';
 import { Student, Grade } from '@/types';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { formatDate } from '@/lib/utils';
 
 interface GradeWithStudent extends Grade {
   student: Student;
@@ -125,7 +126,7 @@ export default function GradeListTable({
                   </TableCell>
                   <TableCell>
                     <span className="text-sm">
-                      {new Date(grade.date).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}
+                      {formatDate(grade.date, locale)}
                     </span>
                   </TableCell>
                   <TableCell>

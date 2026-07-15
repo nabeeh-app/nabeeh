@@ -17,6 +17,7 @@ import { Student, Parent } from '@/types';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Users } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
 
 interface StudentWithParents extends Student {
   parents: Parent[];
@@ -132,9 +133,7 @@ export default function StudentListTable({
                 </TableCell>
                 <TableCell>
                   <div className="text-sm">
-                    {new Date(student.enrollment_date).toLocaleDateString(
-                      locale === 'ar' ? 'ar-SA' : 'en-US'
-                    )}
+                    {formatDate(student.enrollment_date, locale)}
                   </div>
                 </TableCell>
                 <TableCell>

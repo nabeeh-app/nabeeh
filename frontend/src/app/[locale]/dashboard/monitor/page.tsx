@@ -23,6 +23,7 @@ import { apiClient } from '@/lib/client';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useWhatsAppStatus } from '@/hooks/useWhatsAppStatus';
+import { formatTime } from '@/lib/utils';
 
 interface SystemInfo {
   apiHealthy: boolean;
@@ -116,8 +117,8 @@ export default function SystemMonitorPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString(locale === 'ar' ? 'ar-SA' : 'en-US');
+  const formatTimeDisplay = (date: Date) => {
+    return formatTime(date, locale);
   };
 
   const overallStatus: ServiceStatus = systemInfo?.apiHealthy && systemInfo?.dbHealthy
@@ -214,7 +215,7 @@ export default function SystemMonitorPage() {
             {systemInfo?.lastChecked && (
               <div className="text-right">
                 <p className="text-xs text-ink/40 font-mono uppercase tracking-wider">{t('lastChecked')}</p>
-                <p className="text-sm font-mono text-ink/60">{formatTime(systemInfo.lastChecked)}</p>
+                <p className="text-sm font-mono text-ink/60">{formatTimeDisplay(systemInfo.lastChecked)}</p>
               </div>
             )}
           </div>

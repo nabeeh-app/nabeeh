@@ -157,7 +157,7 @@ export function WhatsAppDemo() {
       }, 1000);
     } else {
       setTimeout(() => {
-        addMessage('bot', isRTL ? 'أهلاً! جرّب تسأل عن الحضور أو الدرجات أو الجدول.' : 'Hello! Try asking about attendance, grades, or schedule.');
+        addMessage('bot', t('welcomeMessage'));
       }, 1000);
     }
   };
@@ -192,7 +192,7 @@ export function WhatsAppDemo() {
           </div>
           <div>
             <p className="text-white font-medium text-sm font-body">{t('botName')}</p>
-            <p className="text-white/70 text-xs font-body">{isRTL ? 'متصل' : 'Online'}</p>
+            <p className="text-white/70 text-xs font-body">{t('online')}</p>
           </div>
         </div>
 
@@ -236,7 +236,7 @@ export function WhatsAppDemo() {
         <div className="flex-1">
           <p className="text-white font-medium text-sm font-body">{t('botName')}</p>
           <p className="text-white/70 text-xs font-body">
-            {isPlaying ? (isRTL ? 'يكتب...' : 'typing...') : (isRTL ? 'متصل' : 'Online')}
+            {isPlaying ? t('typing') : t('online')}
           </p>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { Attendance } from '@/types';
+import { formatDate, formatDateLong, formatMonthYear } from '@/lib/utils';
 
 interface DailyAttendance {
   date: string;
@@ -74,9 +75,7 @@ export default function AttendanceCalendar({
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>
-                {currentMonth.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
-                  year: 'numeric', month: 'long'
-                })}
+                {formatMonthYear(currentMonth, locale)}
               </CardTitle>
               <div className="flex items-center space-x-2">
                 <Button variant="outline" size="sm" onClick={() => onMonthNavigate('prev')} aria-label={t('common.previous')}>
@@ -101,7 +100,7 @@ export default function AttendanceCalendar({
                 <button
                   key={index}
                   onClick={() => onDateSelect(day.dateStr)}
-                  aria-label={day.date.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  aria-label={formatDateLong(day.date, locale)}
                   className={`
                     p-2 min-h-[44px] text-sm rounded-lg border transition-colors
                     ${day.isCurrentMonth ? 'text-ink' : 'text-ink/40'}
@@ -126,7 +125,7 @@ export default function AttendanceCalendar({
           <CardHeader>
             <CardTitle>{t('attendance.todayAttendance')}</CardTitle>
             <p className="text-sm text-ink/60">
-              {new Date(selectedDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}
+              {formatDate(selectedDate, locale)}
             </p>
           </CardHeader>
           <CardContent>

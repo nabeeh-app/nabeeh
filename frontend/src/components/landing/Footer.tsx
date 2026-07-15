@@ -34,7 +34,7 @@ export function Footer() {
                 <ellipse cx="130" cy="112" rx="11" ry="12" fill="white" />
                 <path d="M86 142Q100 154 114 142" stroke="white" strokeWidth="3.5" strokeLinecap="round" fill="none" />
               </svg>
-              <span className="text-lg font-bold font-display">{isRTL ? 'نظام نبيه' : 'Nabeeh'}</span>
+              <span className="text-lg font-bold font-display">{tNav('brandName')}</span>
             </div>
             <p className="text-sm text-canvas/50 font-body">{t('tagline')}</p>
           </div>

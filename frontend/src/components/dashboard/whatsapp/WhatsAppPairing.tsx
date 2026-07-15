@@ -45,10 +45,8 @@ export default function WhatsAppPairing({
     if (isMockMode) {
       onAlert({
         open: true,
-        title: isRTL ? 'وضع العرض التجريبي' : 'Mock Mode',
-        description: isRTL
-          ? 'الواتساب غير متاح في وضع العرض التجريبي. عيّن NEXT_PUBLIC_USE_MOCK=false وأعد تشغيل الخادم.'
-          : 'WhatsApp is unavailable in mock mode. Set NEXT_PUBLIC_USE_MOCK=false and restart the dev server.',
+        title: t('mockModeTitle'),
+        description: t('mockModeDescription'),
       });
       return;
     }
@@ -70,18 +68,16 @@ export default function WhatsAppPairing({
     if (isMockMode) {
       onAlert({
         open: true,
-        title: isRTL ? 'وضع العرض التجريبي' : 'Mock Mode',
-        description: isRTL
-          ? 'الواتساب غير متاح في وضع العرض التجريبي. عيّن NEXT_PUBLIC_USE_MOCK=false وأعد تشغيل الخادم.'
-          : 'WhatsApp is unavailable in mock mode. Set NEXT_PUBLIC_USE_MOCK=false and restart the dev server.',
+        title: t('mockModeTitle'),
+        description: t('mockModeDescription'),
       });
       return;
     }
     if (!pairingPhone) {
       onAlert({
         open: true,
-        title: isRTL ? 'رقم الهاتف مطلوب' : 'Phone number required',
-        description: isRTL ? 'أدخل رقم الهاتف أولاً' : 'Please enter your phone number first',
+        title: t('phoneRequiredTitle'),
+        description: t('phoneRequiredDescription'),
       });
       return;
     }
@@ -93,7 +89,7 @@ export default function WhatsAppPairing({
       onAlert({
         open: true,
         title: t('alerts.qrRequestFailed'),
-        description: isRTL ? 'فشل في توليد كود الإقران' : 'Failed to generate pairing code',
+        description: t('pairingCodeFailed'),
       });
     }
   };
@@ -129,7 +125,7 @@ export default function WhatsAppPairing({
                 }`}
               >
                 <QrCode className="h-4 w-4" />
-                {isRTL ? 'رمز QR' : 'QR Code'}
+                {t('qrCodeLabel')}
               </button>
               <button
                 onClick={() => setPairingMode('code')}
@@ -140,7 +136,7 @@ export default function WhatsAppPairing({
                 }`}
               >
                 <Phone className="h-4 w-4" />
-                {isRTL ? 'كود الإقران' : 'Pairing Code'}
+                {t('pairingCodeLabel')}
               </button>
             </div>
           )}
@@ -193,13 +189,11 @@ export default function WhatsAppPairing({
                   ) : (
                     <Phone className="h-4 w-4" />
                   )}
-                  {isRTL ? 'توليد الكود' : 'Generate Code'}
+                  {t('generateCode')}
                 </Button>
               </div>
               <p className="text-xs text-ink/50 text-center">
-                {isRTL
-                  ? 'أدخل رقم هاتفك المسجل في واتساب'
-                  : 'Enter your WhatsApp-registered phone number'}
+                {t('phoneHint')}
               </p>
             </div>
           )}
@@ -209,7 +203,7 @@ export default function WhatsAppPairing({
             <div className="space-y-4">
               <div className="text-center">
                 <p className="text-sm text-ink/60 mb-2">
-                  {isRTL ? 'أدخل هذا الكود في واتساب:' : 'Enter this code in WhatsApp:'}
+                  {t('enterCodeInWhatsApp')}
                 </p>
                 <div className="flex items-center justify-center gap-2">
                   <div className="text-3xl font-mono font-bold tracking-[0.3em] text-ink bg-surface-cool/50 px-6 py-4 rounded-lg border border-ink/10">
@@ -237,7 +231,7 @@ export default function WhatsAppPairing({
                   setPairingPhone('');
                 }}
               >
-                {isRTL ? 'إقران بـ QR بدلاً من ذلك' : 'Use QR Code Instead'}
+                {t('useQrInstead')}
               </Button>
             </div>
           )}
@@ -320,24 +314,24 @@ export default function WhatsAppPairing({
         <Card className="border-primary/10">
           <CardContent className="p-6">
             <h3 className="text-sm font-semibold text-ink font-display mb-4">
-              {isRTL ? 'خطوات الإقران بالكود' : 'Pairing Code Steps'}
+              {t('pairingCodeSteps')}
             </h3>
             <ol className="space-y-3 text-sm text-ink/70 font-body list-none">
               <li className="flex items-start gap-3">
                 <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">1</span>
-                <span>{isRTL ? 'افتح واتساب على هاتفك' : 'Open WhatsApp on your phone'}</span>
+                <span>{t('step1Code')}</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">2</span>
-                <span>{isRTL ? 'اذهب إلى الأجهزة المرتبطة' : 'Go to Linked Devices'}</span>
+                <span>{t('step2Code')}</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">3</span>
-                <span>{isRTL ? 'اختر "الإقران برقم الهاتف"' : 'Choose "Link with Phone Number"'}</span>
+                <span>{t('step3Code')}</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">4</span>
-                <span>{isRTL ? 'أدخل الكود أعلاه' : 'Enter the code shown above'}</span>
+                <span>{t('step4Code')}</span>
               </li>
             </ol>
           </CardContent>
