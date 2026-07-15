@@ -1,8 +1,8 @@
 const express = require('express');
-const { supabaseAdmin } = require('../config/database');
+const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createStudentSchema, updateStudentSchema } = require('../middleware/validate');
-const { createStudentsQuery, verifyStudentAccess, verifyOfferingAccess } = require('../lib/enrollmentChain');
+const { createStudentsQuery, verifyStudentAccess, verifyGroupAccess } = require('../lib/enrollmentChain');
 const logger = require('../lib/logger');
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -69,7 +69,7 @@ const getStudents = async (req, res) => {
 // @access  Private
 const getStudent = async (req, res) => {
   // Verify access via Enrollment check
-  const { data: student, error } = await supabaseAdmin
+  const { data: student, error } = await supabase
     .from('students')
     .select(`
       *,
@@ -135,13 +135,8 @@ const createStudent = async (req, res) => {
   }
 
   // Verify Group Ownership (Security)
-  const { data: groupCheck } = await supabaseAdmin
-    .from('groups')
-    .select('offering:offerings(teacher_id)')
-    .eq('id', group_id)
-    .single();
-
-  if (!groupCheck || groupCheck.offering.teacher_id !== req.user.id) {
+  const groupAccess = await verifyGroupAccess(group_id, req.user.id);
+  if (!groupAccess) {
     return res.status(403).json({ success: false, message: 'Unauthorized to add to this group', messageAr: 'غير مصرح بالإضافة إلى هذه المجموعة', code: 'FORBIDDEN' });
   }
 
@@ -165,6 +160,7 @@ const createStudent = async (req, res) => {
     .insert({
       student_id: student.id,
       group_id: group_id,
+      teacher_id: req.user.id,
       status: 'active'
     });
 
@@ -282,7 +278,7 @@ const getStudentStats = async (req, res) => {
     const enrollmentIds = [enrollment.id];
 
     // 1. Attendance Stats
-    const { data: attendance } = await supabaseAdmin
+    const { data: attendance } = await supabase
       .from('attendance')
       .select('status')
       .in('enrollment_id', enrollmentIds);
@@ -312,7 +308,7 @@ const getStudentStats = async (req, res) => {
 
     // 2. Academic Stats (Grades)
     // Get average score across all assessments?
-    const { data: grades } = await supabaseAdmin
+    const { data: grades } = await supabase
       .from('grades')
       .select(`
             score,
@@ -366,7 +362,7 @@ const createStudentWithAudit = async (req, res) => {
 
     // Auto-remove demo data when first real student is added
     try {
-      const { data: hasRealStudents } = await supabaseAdmin
+      const { data: hasRealStudents } = await supabase
         .from('students')
         .select('id', { count: 'exact', head: true })
         .eq('teacher_id', req.user.id)

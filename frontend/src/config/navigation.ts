@@ -57,7 +57,6 @@ export const navigationItems: NavigationItem[] = [
     name: 'grades',
     href: '/dashboard/grades',
     icon: GraduationCap,
-    featureKey: 'grades',
     unlockFeature: 'grades',
     descriptionKey: 'descriptionCount',
     descriptionNs: 'grades',
@@ -66,7 +65,6 @@ export const navigationItems: NavigationItem[] = [
     name: 'courses',
     href: '/dashboard/courses',
     icon: BookOpen,
-    featureKey: 'courses',
     descriptionKey: 'description',
     descriptionNs: 'courses',
   },
@@ -98,7 +96,6 @@ export const navigationItems: NavigationItem[] = [
     name: 'reports',
     href: '/dashboard/reports',
     icon: BarChart3,
-    featureKey: 'reports',
     unlockFeature: 'reports',
     descriptionKey: 'description',
     descriptionNs: 'reports',
@@ -107,7 +104,6 @@ export const navigationItems: NavigationItem[] = [
     name: 'monitor',
     href: '/dashboard/monitor',
     icon: Activity,
-    featureKey: 'monitor',
     descriptionKey: 'description',
     descriptionNs: 'monitor',
   },
@@ -115,7 +111,6 @@ export const navigationItems: NavigationItem[] = [
     name: 'alerts',
     href: '/dashboard/alerts',
     icon: AlertTriangle,
-    featureKey: 'alerts',
   },
   {
     name: 'settings',
@@ -128,7 +123,6 @@ export const navigationItems: NavigationItem[] = [
     name: 'assistants',
     href: '/dashboard/assistants',
     icon: UserPlus,
-    featureKey: 'assistants',
   },
 ];
 
@@ -161,11 +155,5 @@ export function getVisibleNavigation(role?: string): NavigationItem[] {
  * Used by the dashboard layout to block routes for disabled features.
  */
 export const routeFeatureMap: Record<string, FeatureKey> = {
-  grades: 'grades',
-  reports: 'reports',
   messages: 'messaging',
-  courses: 'courses',
-  monitor: 'monitor',
-  assistants: 'assistants',
-  alerts: 'alerts',
 };

@@ -1,5 +1,5 @@
 const express = require('express');
-const { supabaseAdmin } = require('../config/database');
+const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createGradeSchema, bulkGradeSchema, updateGradeSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
@@ -14,7 +14,7 @@ const router = express.Router();
 const resolveEnrollmentAndOffering = async (student_id, subject_name, teacher_id) => {
   // Find enrollment for student in a group belonging to teacher for specific subject
   // We check against name_en, name_ar, or code
-  const { data: enrollments, error } = await supabaseAdmin
+  const { data: enrollments, error } = await supabase
     .from('enrollments')
     .select(`
           id, 
@@ -49,7 +49,7 @@ const getGrades = async (req, res) => {
     end_date
   } = req.query;
 
-  let query = supabaseAdmin
+  let query = supabase
     .from('grades')
     .select(`
       id,
@@ -154,7 +154,7 @@ const createGrade = async (req, res) => {
 
   const assessmentDate = date || new Date().toISOString().split('T')[0];
 
-  let { data: assessment } = await supabaseAdmin
+  let { data: assessment } = await supabase
     .from('assessments')
     .select('id')
     .eq('offering_id', offering_id)
@@ -191,6 +191,8 @@ const createGrade = async (req, res) => {
 
   if (error) throw error;
 
+  res.locals.data = grade;
+
   res.status(201).json({
     success: true,
     data: grade
@@ -222,7 +224,7 @@ const createBulkGrades = async (req, res) => {
   ).values()];
 
   const studentIds = [...new Set(uniquePairs.map(p => p.student_id))];
-  const { data: allEnrollments } = await supabaseAdmin
+  const { data: allEnrollments } = await supabase
     .from('enrollments')
     .select(`
       id,
@@ -294,7 +296,7 @@ const createBulkGrades = async (req, res) => {
   ).values()];
 
   const offeringIds = [...new Set(assessmentKeys.map(k => k.offering_id))];
-  const { data: existingAssessments } = await supabaseAdmin
+  const { data: existingAssessments } = await supabase
     .from('assessments')
     .select('id, offering_id, name, date')
     .in('offering_id', offeringIds);
@@ -393,7 +395,7 @@ const updateGrade = async (req, res) => {
     }
   });
 
-  const { data: currentGrade, error: fetchError } = await supabaseAdmin
+  const { data: currentGrade, error: fetchError } = await supabase
     .from('grades')
     .select('id, assessment_id, assessment:assessments!inner(offering:offerings!inner(teacher_id))')
     .eq('id', req.params.id)
@@ -422,7 +424,7 @@ const updateGrade = async (req, res) => {
     if (gradeUpdateError) throw gradeUpdateError;
   }
 
-  const { data: updatedGrade } = await supabaseAdmin
+  const { data: updatedGrade } = await supabase
     .from('grades')
     .select(`
           id, score, notes,
@@ -459,7 +461,7 @@ const updateGrade = async (req, res) => {
 // @route   DELETE /api/grades/:id
 // @access  Private
 const deleteGrade = async (req, res) => {
-  const { data: grade } = await supabaseAdmin
+  const { data: grade } = await supabase
     .from('grades')
     .select('id, assessment:assessments!inner(offering:offerings!inner(teacher_id))')
     .eq('id', req.params.id)
@@ -489,7 +491,7 @@ const deleteGrade = async (req, res) => {
 const getGradeStats = async (req, res) => {
   const { subject, student_id } = req.query;
 
-  let query = supabaseAdmin
+  let query = supabase
     .from('grades')
     .select(`
       score,

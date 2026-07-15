@@ -1,5 +1,5 @@
 const express = require('express');
-const { supabaseAdmin } = require('../config/database');
+const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, markAttendanceSchema, updateAttendanceSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
@@ -18,7 +18,7 @@ const getAttendance = async (req, res) => {
     group_id
   } = req.query;
 
-  let query = supabaseAdmin
+  let query = supabase
     .from('attendance')
     .select(`
       *,
@@ -106,7 +106,7 @@ const markAttendance = async (req, res) => {
   const groupIds = [...new Set(attendance_records.map(r => r.group_id))];
   const studentIds = attendance_records.map(r => r.student_id);
 
-  const { data: enrollments } = await supabaseAdmin
+  const { data: enrollments } = await supabase
     .from('enrollments')
     .select('id, student_id, group_id, teacher_id')
     .in('group_id', groupIds)
@@ -171,7 +171,7 @@ const getAttendanceSummary = async (req, res) => {
     end_date = new Date().toISOString().split('T')[0]
   } = req.query;
 
-  const { data: summary, error: rpcError } = await supabaseAdmin
+  const { data: summary, error: rpcError } = await supabase
     .rpc('attendance_summary', {
       p_teacher_id: req.user.id,
       p_start_date: start_date,
@@ -200,7 +200,7 @@ const getAttendanceSummary = async (req, res) => {
 const updateAttendance = async (req, res) => {
   const { status, notes } = req.body;
 
-  const { data: record, error: fetchError } = await supabaseAdmin
+  const { data: record, error: fetchError } = await supabase
     .from('attendance')
     .select(`
       id,
@@ -328,7 +328,7 @@ router.post('/lock', authenticateToken, requirePermission('manage_attendance'), 
     return res.status(400).json({ success: false, message: 'session_id and student_id are required', messageAr: 'معرّف الجلسة ومعرّف الطالب مطلوبان', code: 'VALIDATION_ERROR' });
   }
 
-  const { data: existingLock } = await supabaseAdmin
+  const { data: existingLock } = await supabase
     .from('attendance_locks')
     .select('id, locked_by, locked_by_type, locked_at')
     .eq('session_id', session_id)
@@ -511,7 +511,7 @@ router.delete('/lock', authenticateToken, asyncHandler(async (req, res) => {
 router.get('/lock/:sessionId/:studentId', authenticateToken, asyncHandler(async (req, res) => {
   const { sessionId, studentId } = req.params;
 
-  const { data: lock, error } = await supabaseAdmin
+  const { data: lock, error } = await supabase
     .from('attendance_locks')
     .select('id, locked_by, locked_by_type, locked_at, expires_at')
     .eq('session_id', sessionId)

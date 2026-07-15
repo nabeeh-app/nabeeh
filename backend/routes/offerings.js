@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const supabase = require('../config/database').supabaseAdmin;
+const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createOfferingSchema, createGroupSchema, updateGroupSchema } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -208,7 +208,7 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
 router.post('/', authenticateToken, requirePermission('manage_offerings'), validate(createOfferingSchema), asyncHandler(async (req, res) => {
     const { subject_id, grade_level_id, academic_year } = req.body;
 
-    const { data: offering, error } = await supabase
+    const { data: offering, error } = await supabaseAdmin
         .from('offerings')
         .insert({
             teacher_id: req.user.id,
@@ -289,7 +289,7 @@ router.delete('/:id', authenticateToken, requirePermission('manage_offerings'), 
         return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
         .from('offerings')
         .update({ is_active: false })
         .eq('id', req.params.id);
@@ -468,7 +468,7 @@ router.post('/:offeringId/groups', authenticateToken, requirePermission('manage_
 
     if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
-    const { data: group, error } = await supabase
+    const { data: group, error } = await supabaseAdmin
         .from('groups')
         .insert({
             offering_id: offeringId,
@@ -584,7 +584,7 @@ router.put('/:offeringId/groups/:groupId', authenticateToken, requirePermission(
         return res.status(400).json({ success: false, message: 'No valid fields to update', messageAr: 'لا توجد حقول صالحة للتحديث', code: 'VALIDATION_ERROR' });
     }
 
-    const { data: group, error } = await supabase
+    const { data: group, error } = await supabaseAdmin
         .from('groups')
         .update(updates)
         .eq('id', groupId)
@@ -737,7 +737,7 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
     // Re-enroll if previously withdrawn, or create new
     let enrollment;
     if (existing) {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from('enrollments')
             .update({ status: 'active', enrolled_at: new Date().toISOString() })
             .eq('id', existing.id)
@@ -746,7 +746,7 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
         if (error) throw error;
         enrollment = data;
     } else {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from('enrollments')
             .insert({
                 student_id,
@@ -836,7 +836,7 @@ router.delete('/:offeringId/groups/:groupId/enroll/:studentId', authenticateToke
 
     if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
         .from('enrollments')
         .update({ status: 'inactive' })
         .eq('student_id', studentId)

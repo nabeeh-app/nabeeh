@@ -3,7 +3,7 @@ const { z } = require('zod');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { perTeacherLimiter } = require('../middleware/security');
 const sessionManager = require('../lib/sessionManager');
-const { supabaseAdmin } = require('../config/database');
+const { supabase, supabaseAdmin } = require('../config/database');
 const logger = require('../lib/logger');
 const whatsappQuery = require('../lib/whatsappQuery');
 const messageParser = require('../lib/messageParser');
@@ -78,7 +78,7 @@ async function processIncomingMessage(teacherId, phone, messageContent, remoteJi
 
   // Idempotency: skip if we already processed this WhatsApp message
   if (messageId) {
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await supabase
       .from('messages')
       .select('id')
       .eq('whatsapp_message_id', messageId)
@@ -120,7 +120,7 @@ async function processIncomingMessage(teacherId, phone, messageContent, remoteJi
       return;
     }
 
-    const { data: teacher } = await supabaseAdmin
+    const { data: teacher } = await supabase
       .from('teachers')
       .select('id, name, business_name, subscription_tier')
       .eq('id', teacherId)
@@ -665,7 +665,7 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), perTeacherLim
 
   // Auto-pause bot for this conversation when teacher/assistant sends manual message
   try {
-    const { data: parent } = await supabaseAdmin
+    const { data: parent } = await supabase
       .from('parents')
       .select('id, students(id, enrollments(id, group:groups(id, offering:offerings(id, teacher_id))))')
       .eq('phone', `+${cleaned}`)
@@ -676,7 +676,7 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), perTeacherLim
         (s.enrollments || []).some(e => e?.group?.offering?.teacher_id === teacherId)
       );
       if (belongsToTeacher) {
-        const { data: conversation } = await supabaseAdmin.from('conversations')
+        const { data: conversation } = await supabase.from('conversations')
           .select('id').eq('parent_id', parent.id).eq('teacher_id', teacherId).maybeSingle();
         if (conversation) {
           const pauseHours = 4;
@@ -779,7 +779,7 @@ router.post('/bot/resume', asyncHandler(async (req, res) => {
   }
   const { conversation_id } = parsed.data;
 
-  const { data: conversation, error: fetchError } = await supabaseAdmin
+  const { data: conversation, error: fetchError } = await supabase
     .from('conversations')
     .select('id, teacher_id')
     .eq('id', conversation_id)
@@ -864,12 +864,12 @@ router.get('/conversations', asyncHandler(async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 20, 100);
   const offset = (page - 1) * limit;
 
-  const { count } = await supabaseAdmin
+  const { count } = await supabase
     .from('conversations')
     .select('*', { count: 'exact', head: true })
     .eq('teacher_id', req.user.id);
 
-  const { data: conversations, error } = await supabaseAdmin
+  const { data: conversations, error } = await supabase
     .from('conversations')
     .select(`
       *,

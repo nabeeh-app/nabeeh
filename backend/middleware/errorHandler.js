@@ -1,6 +1,10 @@
 const logger = require('../lib/logger');
 
 const errorHandler = (err, req, res, next) => {
+  if (res.headersSent) {
+    return next(err);
+  }
+
   logger.error('Unhandled error', { error: err.message, stack: err.stack });
 
   // PostgreSQL error codes

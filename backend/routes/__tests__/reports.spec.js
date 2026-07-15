@@ -2,6 +2,9 @@ const request = require('supertest');
 const express = require('express');
 
 jest.mock('../../config/database', () => ({
+  supabase: {
+    from: jest.fn()
+  },
   supabaseAdmin: {
     from: jest.fn()
   }
@@ -47,8 +50,14 @@ jest.mock('../../lib/whatsappQuery', () => ({
   saveMessage: jest.fn().mockResolvedValue({})
 }));
 
+jest.mock('../../lib/enrollmentChain', () => ({
+  verifyStudentAccess: jest.fn().mockResolvedValue({ id: 'enrollment-1', student_id: 's1', group_id: 'g1', status: 'active' }),
+  verifyGroupAccess: jest.fn().mockResolvedValue({ id: 'g1', offering_id: 'o1' }),
+}));
+
 const reportsRouter = require('../reports');
 const { supabaseAdmin } = require('../../config/database');
+const { verifyStudentAccess, verifyGroupAccess } = require('../../lib/enrollmentChain');
 
 const app = express();
 app.use(express.json());
@@ -79,9 +88,9 @@ describe('Reports Routes', () => {
 
   describe('POST /api/reports/generate-comment', () => {
     it('should generate a comment successfully', async () => {
+      verifyStudentAccess.mockResolvedValue({ id: 'e1', student_id: 's1', group_id: 'g1', status: 'active' });
       supabaseAdmin.from
         .mockReturnValueOnce(createChainable({ data: { id: 's1', name: 'Ahmed' }, error: null }))
-        .mockReturnValueOnce(createChainable({ data: { id: 'e1' }, error: null }))
         .mockReturnValueOnce(createChainable({ data: { name: 'Teacher', business_name: 'School', preferred_language: 'en' }, error: null }))
         .mockReturnValueOnce(createChainable({ data: { id: 'd1', draft_text: 'AI generated comment', status: 'pending' }, error: null }));
 

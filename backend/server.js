@@ -35,6 +35,7 @@ const errorHandler = require('./middleware/errorHandler');
 const logger = require('./middleware/logger');
 const { authenticateToken, requireRole } = require('./middleware/auth');
 const sessionManager = require('./lib/sessionManager');
+const asyncHandler = require('./middleware/asyncHandler');
 const {
   apiLimiter,
   authLimiter,
@@ -120,10 +121,10 @@ app.get('/ready', (req, res) => {
 });
 
 // Prometheus metrics endpoint
-app.get('/metrics', async (req, res) => {
+app.get('/metrics', asyncHandler(async (req, res) => {
   res.set('Content-Type', metricsRegister.contentType);
   res.end(await metricsRegister.metrics());
-});
+}));
 
 /**
  * @openapi

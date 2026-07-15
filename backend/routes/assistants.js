@@ -1,7 +1,7 @@
 const express = require('express');
 const { z } = require('zod');
 const crypto = require('crypto');
-const { supabaseAdmin } = require('../config/database');
+const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -74,7 +74,7 @@ const leaveTeacherSchema = z.object({
 // --- Helpers ---
 
 async function getTeacherTier(teacherId) {
-  const { data } = await supabaseAdmin
+  const { data } = await supabase
     .from('teachers')
     .select('subscription_tier')
     .eq('id', teacherId)
@@ -83,7 +83,7 @@ async function getTeacherTier(teacherId) {
 }
 
 async function countPendingInvites(teacherId) {
-  const { count } = await supabaseAdmin
+  const { count } = await supabase
     .from('assistant_invites')
     .select('id', { count: 'exact', head: true })
     .eq('teacher_id', teacherId)
@@ -102,7 +102,7 @@ const inviteAssistant = async (req, res) => {
   const [tier, pendingCount, existingInvite, existingUser] = await Promise.all([
     getTeacherTier(teacherId),
     countPendingInvites(teacherId),
-    email ? supabaseAdmin
+    email ? supabase
       .from('assistant_invites')
       .select('id')
       .eq('teacher_id', teacherId)
@@ -110,7 +110,7 @@ const inviteAssistant = async (req, res) => {
       .eq('status', 'pending')
       .maybeSingle()
       .then(r => r.data) : null,
-    email ? supabaseAdmin
+    email ? supabase
       .from('teachers')
       .select('id')
       .eq('email', email.toLowerCase())
@@ -145,7 +145,7 @@ const inviteAssistant = async (req, res) => {
 
   // Check existing user → already assistant?
   if (existingUser) {
-    const { data: existingLink } = await supabaseAdmin
+    const { data: existingLink } = await supabase
       .from('teacher_assistants')
       .select('id')
       .eq('teacher_id', teacherId)
@@ -244,7 +244,7 @@ const inviteAssistant = async (req, res) => {
 const listInvites = async (req, res) => {
   const teacherId = req.user.id;
 
-  const { data: invites, error } = await supabaseAdmin
+  const { data: invites, error } = await supabase
     .from('assistant_invites')
     .select('id, email, permissions, status, created_at, expires_at')
     .eq('teacher_id', teacherId)
@@ -262,7 +262,7 @@ const acceptInvite = async (req, res) => {
   const assistantId = req.user.id;
 
   // Find valid invite
-  const { data: invite, error: inviteError } = await supabaseAdmin
+  const { data: invite, error: inviteError } = await supabase
     .from('assistant_invites')
     .select('*')
     .eq('token', token)
@@ -284,7 +284,7 @@ const acceptInvite = async (req, res) => {
   }
 
   // Check if already an active assistant for this teacher
-  const { data: existingLink } = await supabaseAdmin
+  const { data: existingLink } = await supabase
     .from('teacher_assistants')
     .select('id')
     .eq('teacher_id', invite.teacher_id)
@@ -338,7 +338,7 @@ const acceptInvite = async (req, res) => {
 const listAssistants = async (req, res) => {
   const teacherId = req.user.id;
 
-  const { data: assistants, error } = await supabaseAdmin
+  const { data: assistants, error } = await supabase
     .from('teacher_assistants')
     .select('id, status, permissions, assistant_id, created_at, updated_at')
     .eq('teacher_id', teacherId)
@@ -349,7 +349,7 @@ const listAssistants = async (req, res) => {
   const assistantIds = assistants.map(a => a.assistant_id);
   let teacherMap = {};
   if (assistantIds.length > 0) {
-    const { data: teachers } = await supabaseAdmin
+    const { data: teachers } = await supabase
       .from('teachers')
       .select('id, name, email')
       .in('id', assistantIds);
@@ -384,7 +384,7 @@ const updatePermissions = async (req, res) => {
   }
 
   // Verify ownership
-  const { data: link, error: fetchError } = await supabaseAdmin
+  const { data: link, error: fetchError } = await supabase
     .from('teacher_assistants')
     .select('id, teacher_id, assistant:teachers!assistant_id(name, email)')
     .eq('id', id)
@@ -422,7 +422,7 @@ const updateStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
-  const { data: link, error: fetchError } = await supabaseAdmin
+  const { data: link, error: fetchError } = await supabase
     .from('teacher_assistants')
     .select('id, teacher_id')
     .eq('id', id)
@@ -461,7 +461,7 @@ const removeAssistant = async (req, res) => {
   const teacherId = req.user.id;
   const { id } = req.params;
 
-  const { data: link, error: fetchError } = await supabaseAdmin
+  const { data: link, error: fetchError } = await supabase
     .from('teacher_assistants')
     .select('id, teacher_id')
     .eq('id', id)
@@ -503,7 +503,7 @@ const leaveTeacher = async (req, res) => {
 
   const assistantId = req.user.id;
 
-  const { data: link, error: fetchError } = await supabaseAdmin
+  const { data: link, error: fetchError } = await supabase
     .from('teacher_assistants')
     .select('id, assistant_id')
     .eq('teacher_id', teacher_id)
@@ -544,7 +544,7 @@ const leaveTeacher = async (req, res) => {
 const getInviteByToken = async (req, res) => {
   const { token } = req.params;
 
-  const { data: invite, error } = await supabaseAdmin
+  const { data: invite, error } = await supabase
     .from('assistant_invites')
     .select('id, email, phone, permissions, status, expires_at, created_at')
     .eq('token', token)
@@ -563,7 +563,7 @@ const getInviteByToken = async (req, res) => {
   }
 
   // Get teacher name
-  const { data: teacher } = await supabaseAdmin
+  const { data: teacher } = await supabase
     .from('teachers')
     .select('name')
     .eq('id', invite.teacher_id)

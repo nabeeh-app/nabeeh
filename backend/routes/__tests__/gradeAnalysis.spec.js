@@ -7,6 +7,12 @@ jest.mock('../../config/database', () => ({
   }
 }));
 
+jest.mock('../../lib/enrollmentChain', () => ({
+  verifyOfferingAccess: jest.fn(),
+  verifyStudentAccess: jest.fn(),
+  verifyGroupAccess: jest.fn(),
+}));
+
 jest.mock('../../middleware/validate', () => ({
   validate: (schema) => (req, res, next) => {
     req.validated = {
@@ -36,6 +42,7 @@ jest.mock('../../lib/logger', () => ({
 
 const gradeAnalysisRouter = require('../gradeAnalysis');
 const { supabaseAdmin } = require('../../config/database');
+const { verifyOfferingAccess } = require('../../lib/enrollmentChain');
 
 const app = express();
 app.use(express.json());
@@ -63,8 +70,8 @@ describe('Grade Analysis Routes', () => {
 
   describe('GET /api/grade-analysis/group-comparison', () => {
     it('should return group comparison data', async () => {
+      verifyOfferingAccess.mockResolvedValue({ id: 'o1' });
       supabaseAdmin.from
-        .mockReturnValueOnce(createChainable({ data: { id: 'o1' }, error: null }))
         .mockReturnValueOnce(createChainable({
           data: [
             { id: 'g1', name: 'Group A', enrollments: [{ id: 'e1', grades: [{ score: 80, assessment: { max_score: 100 } }] }] },
@@ -84,7 +91,7 @@ describe('Grade Analysis Routes', () => {
     });
 
     it('should return 404 if offering not found', async () => {
-      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: null, error: null }));
+      verifyOfferingAccess.mockResolvedValue(null);
 
       const res = await request(app)
         .get('/api/grade-analysis/group-comparison')
@@ -94,8 +101,8 @@ describe('Grade Analysis Routes', () => {
     });
 
     it('should handle groups with no enrollments', async () => {
+      verifyOfferingAccess.mockResolvedValue({ id: 'o1' });
       supabaseAdmin.from
-        .mockReturnValueOnce(createChainable({ data: { id: 'o1' }, error: null }))
         .mockReturnValueOnce(createChainable({ data: [{ id: 'g1', name: 'Empty', enrollments: [] }], error: null }));
 
       const res = await request(app)
@@ -110,8 +117,8 @@ describe('Grade Analysis Routes', () => {
 
   describe('GET /api/grade-analysis/at-risk', () => {
     it('should return at-risk students', async () => {
+      verifyOfferingAccess.mockResolvedValue({ id: 'o1' });
       supabaseAdmin.from
-        .mockReturnValueOnce(createChainable({ data: { id: 'o1' }, error: null }))
         .mockReturnValueOnce(createChainable({
           data: [{
             id: 'e1',
@@ -136,7 +143,7 @@ describe('Grade Analysis Routes', () => {
     });
 
     it('should return 404 if offering not found', async () => {
-      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: null, error: null }));
+      verifyOfferingAccess.mockResolvedValue(null);
 
       const res = await request(app)
         .get('/api/grade-analysis/at-risk')
@@ -146,8 +153,8 @@ describe('Grade Analysis Routes', () => {
     });
 
     it('should return empty array when no at-risk students', async () => {
+      verifyOfferingAccess.mockResolvedValue({ id: 'o1' });
       supabaseAdmin.from
-        .mockReturnValueOnce(createChainable({ data: { id: 'o1' }, error: null }))
         .mockReturnValueOnce(createChainable({
           data: [{
             id: 'e1',
@@ -169,8 +176,8 @@ describe('Grade Analysis Routes', () => {
     });
 
     it('should mark as warning when only grade is below threshold', async () => {
+      verifyOfferingAccess.mockResolvedValue({ id: 'o1' });
       supabaseAdmin.from
-        .mockReturnValueOnce(createChainable({ data: { id: 'o1' }, error: null }))
         .mockReturnValueOnce(createChainable({
           data: [{
             id: 'e1',

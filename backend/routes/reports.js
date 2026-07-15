@@ -1,6 +1,6 @@
 const express = require('express');
 const { z } = require('zod');
-const { supabaseAdmin } = require('../config/database');
+const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -8,6 +8,7 @@ const { logAudit } = require('../lib/auditLog');
 const aiService = require('../lib/aiService');
 const { createJob, getJob } = require('../lib/jobQueue');
 const logger = require('../lib/logger');
+const { verifyStudentAccess, verifyGroupAccess } = require('../lib/enrollmentChain');
 
 const router = express.Router();
 
@@ -36,22 +37,16 @@ const generateComment = async (req, res) => {
   const teacherId = req.user.teacherId || req.user.id;
   const { student_id, group_id } = req.body;
 
-  const { data: student } = await supabaseAdmin
+  const { data: student } = await supabase
     .from('students').select('id, name').eq('id', student_id).single();
   if (!student) return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
 
-  const { data: enrollment } = await supabaseAdmin
-    .from('enrollments')
-    .select('id, groups!inner(id, offerings!inner(teacher_id))')
-    .eq('student_id', student_id)
-    .eq('groups.offerings.teacher_id', teacherId)
-    .limit(1)
-    .maybeSingle();
+  const enrollment = await verifyStudentAccess(student_id, teacherId);
   if (!enrollment) {
     return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
   }
 
-  const { data: teacher } = await supabaseAdmin
+  const { data: teacher } = await supabase
     .from('teachers').select('name, business_name, preferred_language').eq('id', teacherId).single();
 
   const gradesResult = await require('../lib/whatsappQuery').getStudentGrades(student_id);
@@ -101,7 +96,7 @@ const getDrafts = async (req, res) => {
   const status = req.query.status;
   const offset = (page - 1) * limit;
 
-  let query = supabaseAdmin
+  let query = supabase
     .from('report_drafts')
     .select('*, students(name, student_id)', { count: 'exact' })
     .eq('teacher_id', teacherId);
@@ -149,7 +144,7 @@ const approveDraft = async (req, res) => {
   const teacherId = req.user.teacherId || req.user.id;
   const { id } = req.validated.params;
 
-  const { data: draft } = await supabaseAdmin
+  const { data: draft } = await supabase
     .from('report_drafts')
     .select('*, students(name, id)')
     .eq('id', id).eq('teacher_id', teacherId).single();
@@ -159,7 +154,7 @@ const approveDraft = async (req, res) => {
   const finalText = draft.edited_text || draft.draft_text;
 
   // Find student's parent
-  const { data: parentLink } = await supabaseAdmin
+  const { data: parentLink } = await supabase
     .from('student_parents')
     .select('parents(id, name, phone)')
     .eq('student_id', draft.student_id)
@@ -224,12 +219,7 @@ const bulkGenerate = async (req, res) => {
   const teacherId = req.user.teacherId || req.user.id;
   const { group_id } = req.body;
 
-  const { data: group } = await supabaseAdmin
-    .from('groups')
-    .select('id, offerings!inner(teacher_id)')
-    .eq('id', group_id)
-    .eq('offerings.teacher_id', teacherId)
-    .maybeSingle();
+  const group = await verifyGroupAccess(group_id, teacherId);
   if (!group) {
     return res.status(404).json({ success: false, message: 'Group not found', messageAr: 'لم يتم العثور على المجموعة', code: 'NOT_FOUND' });
   }
@@ -240,7 +230,7 @@ const bulkGenerate = async (req, res) => {
 
 const getLatestDigest = async (req, res) => {
   const teacherId = req.user.teacherId || req.user.id;
-  const { data } = await supabaseAdmin
+  const { data } = await supabase
     .from('weekly_digests')
     .select('*')
     .eq('teacher_id', teacherId)
@@ -254,7 +244,7 @@ const getLatestDigest = async (req, res) => {
 const getDigestByWeek = async (req, res) => {
   const teacherId = req.user.teacherId || req.user.id;
   const { weekStart } = req.params;
-  const { data } = await supabaseAdmin
+  const { data } = await supabase
     .from('weekly_digests')
     .select('*')
     .eq('teacher_id', teacherId)

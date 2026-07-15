@@ -1,6 +1,6 @@
 const express = require('express');
 const { z } = require('zod');
-const { supabaseAdmin } = require('../config/database');
+const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const logger = require('../lib/logger');
@@ -28,7 +28,7 @@ const getNotifications = async (req, res) => {
   const { page, limit, type, unread_only } = req.validated.query;
   const offset = (page - 1) * limit;
 
-  let query = supabaseAdmin
+  let query = supabase
     .from('notifications')
     .select('*', { count: 'exact' })
     .eq('teacher_id', teacherId);
@@ -59,7 +59,7 @@ const getNotifications = async (req, res) => {
 // ── GET /unread-count ──────────────────────────────────────────
 const getUnreadCount = async (req, res) => {
   const teacherId = req.user.teacherId || req.user.id;
-  const { count } = await supabaseAdmin
+  const { count } = await supabase
     .from('notifications')
     .select('id', { count: 'exact', head: true })
     .eq('teacher_id', teacherId)

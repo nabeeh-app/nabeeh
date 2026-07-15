@@ -3,7 +3,7 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const Papa = require('papaparse');
 const { v4: uuidv4 } = require('uuid');
-const { supabaseAdmin } = require('../config/database');
+const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const { detectColumnType, validateImportData, HEADER_MAPPINGS } = require('../lib/importValidation');
@@ -389,7 +389,7 @@ router.post('/execute', authenticateToken, requirePermission('manage_students'),
     return res.status(400).json({ success: false, message: 'Target group is required', messageAr: 'المجموعة الهدف مطلوبة', code: 'VALIDATION_ERROR' });
   }
 
-  const { data: groupCheck } = await supabaseAdmin
+  const { data: groupCheck } = await supabase
     .from('groups')
     .select('id, offering:offerings(teacher_id, id)')
     .eq('id', groupId)

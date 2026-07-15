@@ -1,5 +1,5 @@
 const express = require('express');
-const { supabaseAdmin } = require('../config/database');
+const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate, createParentSchema, updateParentSchema } = require('../middleware/validate');
 const { verifyStudentAccess, getTeacherEnrollmentIds } = require('../lib/enrollmentChain');
@@ -22,7 +22,7 @@ const getParents = async (req, res) => {
     return res.status(200).json({ success: true, data: [] });
   }
 
-  let parentQuery = supabaseAdmin
+  let parentQuery = supabase
     .from('parents')
     .select(`
           *,
@@ -62,7 +62,7 @@ const getParents = async (req, res) => {
 // @route   GET /api/parents/:id
 // @access  Private
 const getParent = async (req, res) => {
-  const { data: parent, error } = await supabaseAdmin
+  const { data: parent, error } = await supabase
     .from('parents')
     .select(`
       *,
@@ -165,7 +165,7 @@ const updateParent = async (req, res) => {
     }
   });
 
-  const { data: accessCheck } = await supabaseAdmin
+  const { data: accessCheck } = await supabase
     .from('parents')
     .select('student_id')
     .eq('id', req.params.id)
@@ -209,7 +209,7 @@ const updateParent = async (req, res) => {
 // @route   DELETE /api/parents/:id
 // @access  Private
 const deleteParent = async (req, res) => {
-  const { data: parent } = await supabaseAdmin
+  const { data: parent } = await supabase
     .from('parents')
     .select('student_id')
     .eq('id', req.params.id)
