@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/useAuth';
 import { apiClient } from '@/lib/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export default function AdminTeachersPage() {
   const { teacher } = useAuth();
-  const locale = useLocale();
+  const t = useTranslations('admin.teachers');
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -22,17 +22,15 @@ export default function AdminTeachersPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isRTL = locale === 'ar';
-
   if (!teacher || teacher.role !== 'admin') {
     return (
       <div className="p-6">
         <Card>
           <CardHeader>
-            <CardTitle>{isRTL ? 'الدخول مرفوض' : 'Access denied'}</CardTitle>
+            <CardTitle>{t('accessDenied')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>{isRTL ? 'هذه الصفحة مخصصة للمسؤولين فقط.' : 'This page is restricted to administrators.'}</p>
+            <p>{t('accessDeniedDescription')}</p>
           </CardContent>
         </Card>
       </div>
@@ -49,7 +47,7 @@ export default function AdminTeachersPage() {
     setStatus(null);
     try {
       await apiClient.createTeacherAccount(form);
-      setStatus(isRTL ? 'تم إنشاء حساب المعلم بنجاح.' : 'Teacher account created successfully.');
+      setStatus(t('createSuccess'));
       setForm({
         name: '',
         email: '',
@@ -58,7 +56,7 @@ export default function AdminTeachersPage() {
       });
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } }; message?: string };
-      setStatus(err.response?.data?.message || err.message || (isRTL ? 'فشل في إنشاء حساب المعلم.' : 'Failed to create teacher account.'));
+      setStatus(err.response?.data?.message || err.message || t('createFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -68,12 +66,12 @@ export default function AdminTeachersPage() {
     <div className="p-6">
       <Card>
         <CardHeader>
-          <CardTitle>{isRTL ? 'إنشاء حساب معلم' : 'Create Teacher Account'}</CardTitle>
+          <CardTitle>{t('createTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="name">{isRTL ? 'الاسم' : 'Name'}</Label>
+              <Label htmlFor="name">{t('name')}</Label>
               <Input
                 id="name"
                 value={form.name}
@@ -82,7 +80,7 @@ export default function AdminTeachersPage() {
               />
             </div>
             <div>
-              <Label htmlFor="email">{isRTL ? 'البريد الإلكتروني' : 'Email'}</Label>
+              <Label htmlFor="email">{t('email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -92,7 +90,7 @@ export default function AdminTeachersPage() {
               />
             </div>
             <div>
-              <Label htmlFor="password">{isRTL ? 'كلمة المرور' : 'Password'}</Label>
+              <Label htmlFor="password">{t('password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -102,14 +100,14 @@ export default function AdminTeachersPage() {
               />
             </div>
             <div>
-              <Label>{isRTL ? 'الدور' : 'Role'}</Label>
+              <Label>{t('role')}</Label>
               <Select value={form.role} onValueChange={(value) => handleChange('role', value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="teacher">{isRTL ? 'معلم' : 'Teacher'}</SelectItem>
-                  <SelectItem value="admin">{isRTL ? 'مسؤول' : 'Admin'}</SelectItem>
+                  <SelectItem value="teacher">{t('teacherOption')}</SelectItem>
+                  <SelectItem value="admin">{t('adminOption')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -117,7 +115,7 @@ export default function AdminTeachersPage() {
               <p className="text-sm text-ink/60">{status}</p>
             )}
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (isRTL ? 'جاري الإنشاء...' : 'Creating...') : (isRTL ? 'إنشاء' : 'Create')}
+              {isSubmitting ? t('creating') : t('create')}
             </Button>
           </form>
         </CardContent>

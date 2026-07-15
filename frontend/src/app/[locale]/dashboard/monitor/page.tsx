@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations, useLocale } from 'next-intl';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,44 +44,52 @@ export default function SystemMonitorPage() {
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
 
-  const checkSystemHealth = useCallback(async () => {
-    try {
-      setChecking(true);
+  const checkSystemHealthRef = useRef<() => Promise<void>>(undefined);
 
-      const [apiResult, dbResult] = await Promise.allSettled([
-        (async () => {
-          const start = Date.now();
-          await apiClient.getDashboardStats();
-          return { healthy: true, time: Date.now() - start };
-        })(),
-        (async () => {
-          const start = Date.now();
-          await apiClient.getOfferings();
-          return { healthy: true, time: Date.now() - start };
-        })()
-      ]);
+  useEffect(() => {
+    checkSystemHealthRef.current = async () => {
+      try {
+        setChecking(true);
 
-      const apiHealthy = apiResult.status === 'fulfilled' && apiResult.value.healthy;
-      const apiResponseTime = apiResult.status === 'fulfilled' ? apiResult.value.time : 0;
-      const dbHealthy = dbResult.status === 'fulfilled' && dbResult.value.healthy;
-      const dbResponseTime = dbResult.status === 'fulfilled' ? dbResult.value.time : 0;
+        const [apiResult, dbResult] = await Promise.allSettled([
+          (async () => {
+            const start = Date.now();
+            await apiClient.getDashboardStats();
+            return { healthy: true, time: Date.now() - start };
+          })(),
+          (async () => {
+            const start = Date.now();
+            await apiClient.getOfferings();
+            return { healthy: true, time: Date.now() - start };
+          })()
+        ]);
 
-      setSystemInfo({
-        apiHealthy,
-        apiResponseTime,
-        dbHealthy,
-        dbResponseTime,
-        lastChecked: new Date(),
-      });
-    } catch (err) {
-      logger.error('System health check failed', err);
-    } finally {
-      setChecking(false);
-      setLoading(false);
-    }
+        const apiHealthy = apiResult.status === 'fulfilled' && apiResult.value.healthy;
+        const apiResponseTime = apiResult.status === 'fulfilled' ? apiResult.value.time : 0;
+        const dbHealthy = dbResult.status === 'fulfilled' && dbResult.value.healthy;
+        const dbResponseTime = dbResult.status === 'fulfilled' ? dbResult.value.time : 0;
+
+        setSystemInfo({
+          apiHealthy,
+          apiResponseTime,
+          dbHealthy,
+          dbResponseTime,
+          lastChecked: new Date(),
+        });
+      } catch (err) {
+        logger.error('System health check failed', err);
+      } finally {
+        setChecking(false);
+        setLoading(false);
+      }
+    };
   }, []);
 
-  useEffect(() => { checkSystemHealth(); }, [checkSystemHealth]);
+  const checkSystemHealth = useCallback(() => {
+    checkSystemHealthRef.current?.();
+  }, []);
+
+  useEffect(() => { checkSystemHealthRef.current?.(); }, []);
 
   const formatTimeDisplay = (date: Date) => {
     return formatTime(date, locale);

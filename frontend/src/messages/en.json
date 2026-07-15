@@ -234,6 +234,23 @@
     "deliveryBoth": "Both",
     "switchTeacher": "Switch Teacher"
   },
+  "admin": {
+    "teachers": {
+      "accessDenied": "Access denied",
+      "accessDeniedDescription": "This page is restricted to administrators.",
+      "createTitle": "Create Teacher Account",
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "role": "Role",
+      "teacherOption": "Teacher",
+      "adminOption": "Admin",
+      "creating": "Creating...",
+      "create": "Create",
+      "createSuccess": "Teacher account created successfully.",
+      "createFailed": "Failed to create teacher account."
+    }
+  },
   "roles": {
     "admin": "Admin",
     "teacher": "Teacher"
@@ -1353,7 +1370,18 @@
     "formDescription": "Register as a student of {teacher}",
     "groupName": "Class: {name}",
     "successTitle": "Registration Successful!",
-    "successMessage": "You've been registered! Your teacher will confirm your enrollment."
+    "successMessage": "You've been registered! Your teacher will confirm your enrollment.",
+    "noToken": "No registration token found",
+    "loadFailed": "Failed to load registration form",
+    "registrationFailed": "Registration failed",
+    "studentCodeLabel": "Your student code: ",
+    "nameLabel": "Name *",
+    "namePlaceholder": "Enter your full name",
+    "phoneLabel": "Phone",
+    "phonePlaceholder": "+20 1XX XXX XXXX",
+    "parentPhoneLabel": "Parent Phone",
+    "registering": "Registering...",
+    "register": "Register"
   },
   "emptyStates": {
     "students": {

@@ -37,14 +37,8 @@ interface NotificationPref {
   enabled: boolean;
 }
 
-export default function SettingsPage() {
-  const params = useParams();
-  const locale = params.locale as string;
-  const { teacher, updateProfile } = useAuth();
-  const isRTL = locale === 'ar';
-  const t = useTranslations('settings');
-
-  const [settings, setSettings] = useState<TeacherSettings>(() => ({
+function mapTeacherToSettings(teacher: { name?: string; email?: string; phone?: string; whatsapp_number?: string | null; business_name?: string | null; bio?: string | null; subjects?: string[] | null; address?: string | null; city?: string | null; country?: string | null; timezone?: string | null; telegram_username?: string | null } | null): TeacherSettings {
+  return {
     name: teacher?.name || '',
     email: teacher?.email || '',
     phone: teacher?.phone || '',
@@ -57,7 +51,24 @@ export default function SettingsPage() {
     country: teacher?.country || 'Egypt',
     timezone: teacher?.timezone || 'Africa/Cairo',
     telegram_username: teacher?.telegram_username || ''
-  }));
+  };
+}
+
+export default function SettingsPage() {
+  const params = useParams();
+  const locale = params.locale as string;
+  const { teacher, updateProfile } = useAuth();
+  const isRTL = locale === 'ar';
+  const t = useTranslations('settings');
+
+  const [settings, setSettings] = useState<TeacherSettings>(() => mapTeacherToSettings(null));
+
+  // Reset form when teacher loads or changes (React render-phase reset pattern)
+  const [trackedTeacherId, setTrackedTeacherId] = useState<string | null>(null);
+  if (teacher?.id !== trackedTeacherId) {
+    setTrackedTeacherId(teacher?.id ?? null);
+    setSettings(mapTeacherToSettings(teacher));
+  }
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

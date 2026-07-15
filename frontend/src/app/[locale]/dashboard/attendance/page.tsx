@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -84,30 +84,30 @@ export default function AttendancePage() {
 
   const effectiveSelectedGroupId = selectedGroupId || groups[0]?.id || '';
 
-  const studentsParams = effectiveSelectedGroupId ? {
+  const studentsParams = useMemo(() => effectiveSelectedGroupId ? {
     limit: 100,
     status: 'active',
     group_id: effectiveSelectedGroupId,
-  } : undefined;
+  } : undefined, [effectiveSelectedGroupId]);
 
   const { data: studentsResponse } = useStudents(studentsParams);
-  const students: Student[] = studentsResponse?.data ?? [];
+  const students: Student[] = useMemo(() => studentsResponse?.data ?? [], [studentsResponse]);
 
-  const attendanceParams = effectiveSelectedGroupId ? {
+  const attendanceParams = useMemo(() => effectiveSelectedGroupId ? {
     limit: 100,
     start_date: dateRange.from,
     end_date: dateRange.to,
     group_id: effectiveSelectedGroupId,
-  } : undefined;
+  } : undefined, [effectiveSelectedGroupId, dateRange.from, dateRange.to]);
 
   const { data: attendanceResponse } = useAttendanceRecords(attendanceParams);
   const attendanceRecords = attendanceResponse?.data ?? [];
 
-  const summaryParams = effectiveSelectedGroupId ? {
+  const summaryParams = useMemo(() => effectiveSelectedGroupId ? {
     start_date: dateRange.from,
     end_date: dateRange.to,
     group_id: effectiveSelectedGroupId,
-  } : undefined;
+  } : undefined, [effectiveSelectedGroupId, dateRange.from, dateRange.to]);
 
   const { data: attendanceStats } = useAttendanceSummary(summaryParams);
   const createAttendance = useCreateAttendance();

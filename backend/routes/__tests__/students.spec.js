@@ -2,6 +2,9 @@ const request = require('supertest');
 const express = require('express');
 
 jest.mock('../../config/database', () => ({
+  supabase: {
+    from: jest.fn()
+  },
   supabaseAdmin: {
     from: jest.fn()
   }
@@ -27,12 +30,22 @@ jest.mock('../../middleware/validate', () => ({
   updateStudentSchema: {}
 }));
 
+jest.mock('../../lib/enrollmentChain', () => ({
+  createStudentsQuery: jest.fn(),
+  verifyStudentAccess: jest.fn(),
+  verifyGroupAccess: jest.fn(),
+  getStudentEnrollmentsForTeacher: jest.fn(),
+}));
+
 const studentsRouter = require('../students');
-const { supabaseAdmin } = require('../../config/database');
+const { supabase, supabaseAdmin } = require('../../config/database');
+const { createStudentsQuery, verifyStudentAccess, verifyGroupAccess, getStudentEnrollmentsForTeacher } = require('../../lib/enrollmentChain');
+const errorHandler = require('../../middleware/errorHandler');
 
 const app = express();
 app.use(express.json());
 app.use('/api/students', studentsRouter);
+app.use(errorHandler);
 
 function createChainable(resolveWith) {
   const chain = {
@@ -60,7 +73,8 @@ describe('Students Routes', () => {
         { id: 's2', name: 'Sara Mohamed', student_code: 'ST-002', phone: '+201234567891' }
       ];
 
-      supabaseAdmin.from.mockReturnValue(createChainable({ data: mockStudents, error: null, count: 2 }));
+      const chain = createChainable({ data: mockStudents, error: null, count: 2 });
+      createStudentsQuery.mockReturnValue(chain);
 
       const res = await request(app).get('/api/students');
 
@@ -71,11 +85,12 @@ describe('Students Routes', () => {
       expect(res.body.pagination.page).toBe(1);
       expect(res.body.pagination.limit).toBe(10);
       expect(res.body.pagination.total).toBe(2);
+      expect(createStudentsQuery).toHaveBeenCalledWith('teacher-1');
     });
 
     it('should call ilike with search parameter', async () => {
       const chain = createChainable({ data: [], error: null, count: 0 });
-      supabaseAdmin.from.mockReturnValue(chain);
+      createStudentsQuery.mockReturnValue(chain);
 
       const res = await request(app)
         .get('/api/students')
@@ -87,7 +102,7 @@ describe('Students Routes', () => {
 
     it('should apply group_id filter when provided', async () => {
       const chain = createChainable({ data: [], error: null, count: 0 });
-      supabaseAdmin.from.mockReturnValue(chain);
+      createStudentsQuery.mockReturnValue(chain);
 
       await request(app)
         .get('/api/students')
@@ -98,7 +113,7 @@ describe('Students Routes', () => {
 
     it('should apply enrollment status filter', async () => {
       const chain = createChainable({ data: [], error: null, count: 0 });
-      supabaseAdmin.from.mockReturnValue(chain);
+      createStudentsQuery.mockReturnValue(chain);
 
       await request(app)
         .get('/api/students')
@@ -107,22 +122,9 @@ describe('Students Routes', () => {
       expect(chain.eq).toHaveBeenCalledWith('enrollments.status', 'inactive');
     });
 
-    it('should use correct select with enrollment joins', async () => {
-      const chain = createChainable({ data: [], error: null, count: 0 });
-      supabaseAdmin.from.mockReturnValue(chain);
-
-      await request(app).get('/api/students');
-
-      expect(supabaseAdmin.from).toHaveBeenCalledWith('students');
-      const selectArg = chain.select.mock.calls[0][0];
-      expect(selectArg).toContain('enrollments!inner');
-      expect(selectArg).toContain('groups!inner');
-      expect(selectArg).toContain('offerings!inner');
-      expect(selectArg).toContain('parents');
-    });
-
     it('should return 400 on database error', async () => {
-      supabaseAdmin.from.mockReturnValue(createChainable({ data: null, error: { message: 'DB error' }, count: null }));
+      const chain = createChainable({ data: null, error: { message: 'DB error' }, count: null });
+      createStudentsQuery.mockReturnValue(chain);
 
       const res = await request(app).get('/api/students');
 
@@ -141,7 +143,7 @@ describe('Students Routes', () => {
         enrollments: []
       };
 
-      supabaseAdmin.from.mockReturnValue(createChainable({ data: mockStudent, error: null }));
+      supabase.from.mockReturnValue(createChainable({ data: mockStudent, error: null }));
 
       const res = await request(app).get('/api/students/s1');
 
@@ -154,7 +156,7 @@ describe('Students Routes', () => {
 
     it('should use correct select with attendance and grade joins', async () => {
       const chain = createChainable({ data: null, error: { message: 'Not found' } });
-      supabaseAdmin.from.mockReturnValue(chain);
+      supabase.from.mockReturnValue(chain);
 
       await request(app).get('/api/students/s1');
 
@@ -166,7 +168,7 @@ describe('Students Routes', () => {
     });
 
     it('should return 404 for non-existent student', async () => {
-      supabaseAdmin.from.mockReturnValue(createChainable({ data: null, error: { message: 'Not found' } }));
+      supabase.from.mockReturnValue(createChainable({ data: null, error: { message: 'Not found' } }));
 
       const res = await request(app).get('/api/students/nonexistent');
 
@@ -179,10 +181,7 @@ describe('Students Routes', () => {
     it('should create a student and enroll in group', async () => {
       const mockStudent = { id: 's1', name: 'New Student', student_code: 'ST-003' };
 
-      const groupCheckChain = createChainable({
-        data: { offering: { teacher_id: 'teacher-1' } },
-        error: null
-      });
+      verifyGroupAccess.mockResolvedValue({ id: 'g1', offering_id: 'o1' });
 
       const insertChain = {
         insert: jest.fn().mockReturnValue({
@@ -197,7 +196,6 @@ describe('Students Routes', () => {
       };
 
       supabaseAdmin.from
-        .mockReturnValueOnce(groupCheckChain)
         .mockReturnValueOnce(insertChain)
         .mockReturnValueOnce(enrollChain);
 
@@ -212,15 +210,13 @@ describe('Students Routes', () => {
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
       expect(res.body.data.name).toBe('New Student');
+      expect(verifyGroupAccess).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440000', 'teacher-1');
     });
 
     it('should create parents when provided', async () => {
       const mockStudent = { id: 's1', name: 'New Student', student_code: 'ST-003' };
 
-      const groupCheckChain = createChainable({
-        data: { offering: { teacher_id: 'teacher-1' } },
-        error: null
-      });
+      verifyGroupAccess.mockResolvedValue({ id: 'g1', offering_id: 'o1' });
 
       const insertChain = {
         insert: jest.fn().mockReturnValue({
@@ -239,7 +235,6 @@ describe('Students Routes', () => {
       };
 
       supabaseAdmin.from
-        .mockReturnValueOnce(groupCheckChain)
         .mockReturnValueOnce(insertChain)
         .mockReturnValueOnce(enrollChain)
         .mockReturnValueOnce(parentsChain);
@@ -263,12 +258,7 @@ describe('Students Routes', () => {
     });
 
     it('should return 403 if group belongs to another teacher', async () => {
-      const groupCheckChain = createChainable({
-        data: { offering: { teacher_id: 'other-teacher' } },
-        error: null
-      });
-
-      supabaseAdmin.from.mockReturnValueOnce(groupCheckChain);
+      verifyGroupAccess.mockResolvedValue(null);
 
       const res = await request(app)
         .post('/api/students')
@@ -284,8 +274,7 @@ describe('Students Routes', () => {
     });
 
     it('should return 403 if group does not exist', async () => {
-      const groupCheckChain = createChainable({ data: null, error: null });
-      supabaseAdmin.from.mockReturnValueOnce(groupCheckChain);
+      verifyGroupAccess.mockResolvedValue(null);
 
       const res = await request(app)
         .post('/api/students')
@@ -309,10 +298,7 @@ describe('Students Routes', () => {
     });
 
     it('should return 500 if student insert fails', async () => {
-      const groupCheckChain = createChainable({
-        data: { offering: { teacher_id: 'teacher-1' } },
-        error: null
-      });
+      verifyGroupAccess.mockResolvedValue({ id: 'g1', offering_id: 'o1' });
 
       const insertChain = {
         insert: jest.fn().mockReturnValue({
@@ -322,9 +308,7 @@ describe('Students Routes', () => {
         })
       };
 
-      supabaseAdmin.from
-        .mockReturnValueOnce(groupCheckChain)
-        .mockReturnValueOnce(insertChain);
+      supabaseAdmin.from.mockReturnValueOnce(insertChain);
 
       const res = await request(app)
         .post('/api/students')
@@ -338,10 +322,7 @@ describe('Students Routes', () => {
     });
 
     it('should return 500 if enrollment insert fails', async () => {
-      const groupCheckChain = createChainable({
-        data: { offering: { teacher_id: 'teacher-1' } },
-        error: null
-      });
+      verifyGroupAccess.mockResolvedValue({ id: 'g1', offering_id: 'o1' });
 
       const mockStudent = { id: 's1', name: 'New Student' };
       const insertChain = {
@@ -357,7 +338,6 @@ describe('Students Routes', () => {
       };
 
       supabaseAdmin.from
-        .mockReturnValueOnce(groupCheckChain)
         .mockReturnValueOnce(insertChain)
         .mockReturnValueOnce(enrollChain);
 
@@ -375,13 +355,7 @@ describe('Students Routes', () => {
 
   describe('PUT /api/students/:id', () => {
     it('should update a student', async () => {
-      const countChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        then: jest.fn().mockImplementation((resolve) => {
-          resolve({ count: 1, error: null });
-        })
-      };
+      verifyStudentAccess.mockResolvedValue({ id: 'e1', student_id: 's1', group_id: 'g1', status: 'active' });
 
       const updateChain = {
         update: jest.fn().mockReturnValue({
@@ -396,9 +370,7 @@ describe('Students Routes', () => {
         })
       };
 
-      supabaseAdmin.from
-        .mockReturnValueOnce(countChain)
-        .mockReturnValueOnce(updateChain);
+      supabaseAdmin.from.mockReturnValueOnce(updateChain);
 
       const res = await request(app)
         .put('/api/students/550e8400-e29b-41d4-a716-446655440000')
@@ -410,13 +382,7 @@ describe('Students Routes', () => {
     });
 
     it('should only allow updating allowed fields', async () => {
-      const countChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        then: jest.fn().mockImplementation((resolve) => {
-          resolve({ count: 1, error: null });
-        })
-      };
+      verifyStudentAccess.mockResolvedValue({ id: 'e1', student_id: 's1', group_id: 'g1', status: 'active' });
 
       const updateChain = {
         update: jest.fn().mockReturnValue({
@@ -431,9 +397,7 @@ describe('Students Routes', () => {
         })
       };
 
-      supabaseAdmin.from
-        .mockReturnValueOnce(countChain)
-        .mockReturnValueOnce(updateChain);
+      supabaseAdmin.from.mockReturnValueOnce(updateChain);
 
       await request(app)
         .put('/api/students/550e8400-e29b-41d4-a716-446655440000')
@@ -446,15 +410,7 @@ describe('Students Routes', () => {
     });
 
     it('should return 403 if student has no enrollment for this teacher', async () => {
-      const countChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        then: jest.fn().mockImplementation((resolve) => {
-          resolve({ count: 0, error: null });
-        })
-      };
-
-      supabaseAdmin.from.mockReturnValueOnce(countChain);
+      verifyStudentAccess.mockResolvedValue(null);
 
       const res = await request(app)
         .put('/api/students/550e8400-e29b-41d4-a716-446655440000')
@@ -465,13 +421,7 @@ describe('Students Routes', () => {
     });
 
     it('should return 500 if update fails', async () => {
-      const countChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        then: jest.fn().mockImplementation((resolve) => {
-          resolve({ count: 1, error: null });
-        })
-      };
+      verifyStudentAccess.mockResolvedValue({ id: 'e1', student_id: 's1', group_id: 'g1', status: 'active' });
 
       const updateChain = {
         update: jest.fn().mockReturnValue({
@@ -486,9 +436,7 @@ describe('Students Routes', () => {
         })
       };
 
-      supabaseAdmin.from
-        .mockReturnValueOnce(countChain)
-        .mockReturnValueOnce(updateChain);
+      supabaseAdmin.from.mockReturnValueOnce(updateChain);
 
       const res = await request(app)
         .put('/api/students/550e8400-e29b-41d4-a716-446655440000')
@@ -572,13 +520,10 @@ describe('Students Routes', () => {
 
   describe('GET /api/students/:id/stats', () => {
     it('should return attendance and academic stats', async () => {
-      const enrollmentsChain = createChainable({
-        data: [
-          { id: 'e1', group: { offering: { teacher_id: 'teacher-1' } } },
-          { id: 'e2', group: { offering: { teacher_id: 'teacher-1' } } }
-        ],
-        error: null
-      });
+      getStudentEnrollmentsForTeacher.mockResolvedValue([
+        { id: 'e1', student_id: 's1', group_id: 'g1', status: 'active' },
+        { id: 'e2', student_id: 's1', group_id: 'g2', status: 'active' }
+      ]);
 
       const attendanceChain = createChainable({
         data: [
@@ -598,8 +543,7 @@ describe('Students Routes', () => {
         error: null
       });
 
-      supabaseAdmin.from
-        .mockReturnValueOnce(enrollmentsChain)
+      supabase.from
         .mockReturnValueOnce(attendanceChain)
         .mockReturnValueOnce(gradesChain);
 
@@ -618,19 +562,19 @@ describe('Students Routes', () => {
 
       expect(res.body.data.academic.total_assessments).toBe(2);
       expect(res.body.data.academic.average_score).toBe(87.5);
+
+      expect(getStudentEnrollmentsForTeacher).toHaveBeenCalledWith('s1', 'teacher-1');
     });
 
     it('should return zeros when student has no attendance or grades', async () => {
-      const enrollmentsChain = createChainable({
-        data: [{ id: 'e1', group: { offering: { teacher_id: 'teacher-1' } } }],
-        error: null
-      });
+      getStudentEnrollmentsForTeacher.mockResolvedValue([
+        { id: 'e1', student_id: 's1', group_id: 'g1', status: 'active' }
+      ]);
 
       const attendanceChain = createChainable({ data: [], error: null });
       const gradesChain = createChainable({ data: [], error: null });
 
-      supabaseAdmin.from
-        .mockReturnValueOnce(enrollmentsChain)
+      supabase.from
         .mockReturnValueOnce(attendanceChain)
         .mockReturnValueOnce(gradesChain);
 
@@ -644,8 +588,7 @@ describe('Students Routes', () => {
     });
 
     it('should return 404 if student has no enrollments for this teacher', async () => {
-      const enrollmentsChain = createChainable({ data: [], error: null });
-      supabaseAdmin.from.mockReturnValueOnce(enrollmentsChain);
+      getStudentEnrollmentsForTeacher.mockResolvedValue([]);
 
       const res = await request(app).get('/api/students/s1/stats');
 
@@ -654,8 +597,7 @@ describe('Students Routes', () => {
     });
 
     it('should return 404 on enrollment query error', async () => {
-      const enrollmentsChain = createChainable({ data: null, error: { message: 'DB error' } });
-      supabaseAdmin.from.mockReturnValueOnce(enrollmentsChain);
+      getStudentEnrollmentsForTeacher.mockResolvedValue(null);
 
       const res = await request(app).get('/api/students/s1/stats');
 
@@ -664,10 +606,9 @@ describe('Students Routes', () => {
     });
 
     it('should handle grades with null max_score', async () => {
-      const enrollmentsChain = createChainable({
-        data: [{ id: 'e1', group: { offering: { teacher_id: 'teacher-1' } } }],
-        error: null
-      });
+      getStudentEnrollmentsForTeacher.mockResolvedValue([
+        { id: 'e1', student_id: 's1', group_id: 'g1', status: 'active' }
+      ]);
 
       const attendanceChain = createChainable({ data: [], error: null });
       const gradesChain = createChainable({
@@ -678,8 +619,7 @@ describe('Students Routes', () => {
         error: null
       });
 
-      supabaseAdmin.from
-        .mockReturnValueOnce(enrollmentsChain)
+      supabase.from
         .mockReturnValueOnce(attendanceChain)
         .mockReturnValueOnce(gradesChain);
 
@@ -687,6 +627,40 @@ describe('Students Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.academic.total_assessments).toBe(2);
+    });
+
+    it('should aggregate across all enrollments', async () => {
+      getStudentEnrollmentsForTeacher.mockResolvedValue([
+        { id: 'e1', student_id: 's1', group_id: 'g1', status: 'active' },
+        { id: 'e2', student_id: 's1', group_id: 'g2', status: 'active' }
+      ]);
+
+      const attendanceChain = createChainable({
+        data: [
+          { status: 'present' },
+          { status: 'absent' },
+          { status: 'present' }
+        ],
+        error: null
+      });
+
+      const gradesChain = createChainable({
+        data: [
+          { score: 80, assessment: { max_score: 100 } }
+        ],
+        error: null
+      });
+
+      supabase.from
+        .mockReturnValueOnce(attendanceChain)
+        .mockReturnValueOnce(gradesChain);
+
+      const res = await request(app).get('/api/students/s1/stats');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.attendance.total_days).toBe(3);
+      expect(attendanceChain.in).toHaveBeenCalledWith('enrollment_id', ['e1', 'e2']);
+      expect(gradesChain.in).toHaveBeenCalledWith('enrollment_id', ['e1', 'e2']);
     });
   });
 });

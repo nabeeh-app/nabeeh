@@ -2,7 +2,7 @@ const express = require('express');
 const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createStudentSchema, updateStudentSchema } = require('../middleware/validate');
-const { createStudentsQuery, verifyStudentAccess, verifyGroupAccess } = require('../lib/enrollmentChain');
+const { createStudentsQuery, verifyStudentAccess, verifyGroupAccess, getStudentEnrollmentsForTeacher } = require('../lib/enrollmentChain');
 const logger = require('../lib/logger');
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -268,14 +268,13 @@ const deleteStudent = async (req, res) => {
 const getStudentStats = async (req, res) => {
   const { id } = req.params;
 
-    // Verify access
-    // Student -> Enrollment -> Group -> Offering -> Teacher
-    const enrollment = await verifyStudentAccess(id, req.user.id);
-    if (!enrollment) {
+    // Verify access via all enrollments for this student under this teacher
+    const enrollments = await getStudentEnrollmentsForTeacher(id, req.user.id);
+    if (!enrollments || enrollments.length === 0) {
       return res.status(404).json({ success: false, message: 'Student not found or unauthorized', messageAr: 'لم يتم العثور على الطالب أو غير مصرح', code: 'NOT_FOUND' });
     }
 
-    const enrollmentIds = [enrollment.id];
+    const enrollmentIds = enrollments.map(e => e.id);
 
     // 1. Attendance Stats
     const { data: attendance } = await supabase

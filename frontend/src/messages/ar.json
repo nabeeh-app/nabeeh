@@ -234,6 +234,23 @@
     "deliveryBoth": "كلاهما",
     "switchTeacher": "تغيير المدرس"
   },
+  "admin": {
+    "teachers": {
+      "accessDenied": "الدخول مرفوض",
+      "accessDeniedDescription": "هذه الصفحة مخصصة للمسؤولين فقط.",
+      "createTitle": "إنشاء حساب معلم",
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "password": "كلمة المرور",
+      "role": "الدور",
+      "teacherOption": "معلم",
+      "adminOption": "مسؤول",
+      "creating": "جاري الإنشاء...",
+      "create": "إنشاء",
+      "createSuccess": "تم إنشاء حساب المعلم بنجاح.",
+      "createFailed": "فشل في إنشاء حساب المعلم."
+    }
+  },
   "roles": {
     "admin": "مدير",
     "teacher": "مدرس"
@@ -1352,7 +1369,18 @@
     "formDescription": "سجّل كطالب لدى {teacher}",
     "groupName": "الفصل: {name}",
     "successTitle": "تم التسجيل بنجاح!",
-    "successMessage": "تم تسجيلك! المدرس هيأكّد تسجيلك."
+    "successMessage": "تم تسجيلك! المدرس هيأكّد تسجيلك.",
+    "noToken": "مفيش رمز تسجيل",
+    "loadFailed": "فشل تحميل نموذج التسجيل",
+    "registrationFailed": "فشل التسجيل",
+    "studentCodeLabel": "كود الطالب بتاعك: ",
+    "nameLabel": "الاسم *",
+    "namePlaceholder": "أدخل اسمك الكامل",
+    "phoneLabel": "الهاتف",
+    "phonePlaceholder": "+20 1XX XXX XXXX",
+    "parentPhoneLabel": "هاتف ولي الأمر",
+    "registering": "جاري التسجيل...",
+    "register": "تسجيل"
   },
   "emptyStates": {
     "students": {

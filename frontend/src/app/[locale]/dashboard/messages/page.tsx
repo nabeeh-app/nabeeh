@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -101,27 +101,35 @@ export default function MessagesPage() {
     ? getStatusBadge(selectedConversation.is_active ? 'active' : 'inactive', badgeLocale)
     : null;
 
-  const loadConversations = useCallback(async () => {
-    try {
-      setIsLoadingConversations(true);
-      setError(null);
+  const loadConversationsRef = useRef<() => Promise<void>>(undefined);
 
-      const response = await apiClient.getConversations({ page: 1, limit: 50 });
-      const nextConversations = response.data ?? [];
-      setConversations(nextConversations);
+  useEffect(() => {
+    loadConversationsRef.current = async () => {
+      try {
+        setIsLoadingConversations(true);
+        setError(null);
 
-      setSelectedConversationId(prev => {
-        if (prev && nextConversations.some(conversation => conversation.id === prev)) {
-          return prev;
-        }
-        return nextConversations[0]?.id ?? null;
-      });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load conversations';
-      setError(message);
-    } finally {
-      setIsLoadingConversations(false);
-    }
+        const response = await apiClient.getConversations({ page: 1, limit: 50 });
+        const nextConversations = response.data ?? [];
+        setConversations(nextConversations);
+
+        setSelectedConversationId(prev => {
+          if (prev && nextConversations.some(conversation => conversation.id === prev)) {
+            return prev;
+          }
+          return nextConversations[0]?.id ?? null;
+        });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to load conversations';
+        setError(message);
+      } finally {
+        setIsLoadingConversations(false);
+      }
+    };
+  }, []);
+
+  const loadConversations = useCallback(() => {
+    loadConversationsRef.current?.();
   }, []);
 
   const handleSendMessage = async (phone: string, message: string) => {
@@ -136,13 +144,10 @@ export default function MessagesPage() {
     }
   };
 
-  useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+  useEffect(() => { loadConversationsRef.current?.(); }, []);
 
   useEffect(() => {
     if (!selectedConversationId) {
-      setMessages([]);
       return;
     }
     let cancelled = false;

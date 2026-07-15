@@ -126,22 +126,22 @@ export default function GradesPage() {
     return '';
   })();
 
-  const studentsParams = effectiveSelectedGroupId ? {
+  const studentsParams = useMemo(() => effectiveSelectedGroupId ? {
     limit: 100,
     status: 'active',
     group_id: effectiveSelectedGroupId,
-  } : undefined;
+  } : undefined, [effectiveSelectedGroupId]);
 
-  const gradesParams = effectiveSelectedGroupId ? {
+  const gradesParams = useMemo(() => effectiveSelectedGroupId ? {
     limit: 500,
     start_date: dateRange.from,
     end_date: dateRange.to,
     subject: currentSubjectName || undefined,
     group_id: effectiveSelectedGroupId,
-  } : undefined;
+  } : undefined, [effectiveSelectedGroupId, dateRange.from, dateRange.to, currentSubjectName]);
 
   const { data: studentsResponse, isLoading: studentsLoading } = useStudents(studentsParams);
-  const students: Student[] = studentsResponse?.data ?? [];
+  const students: Student[] = useMemo(() => studentsResponse?.data ?? [], [studentsResponse]);
 
   const { data: gradesResponse, isLoading: gradesLoading } = useGrades(gradesParams);
   const rawGrades = gradesResponse?.data ?? [];

@@ -22,7 +22,7 @@ export default function StudentRegistrationPage() {
   const [loading, setLoading] = useState(hasToken);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(
-    !hasToken ? 'No registration token found' : null
+    !hasToken ? t('noToken') : null
   );
   const [success, setSuccess] = useState(false);
   const [studentCode, setStudentCode] = useState<string | null>(null);
@@ -45,13 +45,13 @@ export default function StudentRegistrationPage() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load registration form');
+          setError(err instanceof Error ? err.message : t('loadFailed'));
           setLoading(false);
         }
       });
 
     return () => { cancelled = true; };
-  }, [token]);
+  }, [token, t]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -69,12 +69,12 @@ export default function StudentRegistrationPage() {
         setStudentCode(result.studentCode);
         setSuccess(true);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Registration failed');
+        setError(err instanceof Error ? err.message : t('registrationFailed'));
       } finally {
         setSubmitting(false);
       }
     },
-    [token, name, phone, parentPhone]
+    [token, name, phone, parentPhone, t]
   );
 
   if (loading) {
@@ -110,7 +110,7 @@ export default function StudentRegistrationPage() {
           <p className="text-sm text-[var(--color-ink)]/60">{t('successMessage')}</p>
           {studentCode && (
             <p className="text-sm text-[var(--color-ink)]/60">
-              Your student code: <span className="font-mono font-semibold">{studentCode}</span>
+              {t('studentCodeLabel')}<span className="font-mono font-semibold">{studentCode}</span>
             </p>
           )}
         </div>
@@ -135,36 +135,36 @@ export default function StudentRegistrationPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">Name *</label>
+            <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">{t('nameLabel')}</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               className="w-full rounded-lg border border-[var(--color-ink)]/20 bg-[var(--color-surface)] px-3 py-2.5 text-sm focus:border-[var(--color-primary)] focus:outline-none"
-              placeholder="Enter your full name"
+              placeholder={t('namePlaceholder')}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">Phone</label>
+            <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">{t('phoneLabel')}</label>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="w-full rounded-lg border border-[var(--color-ink)]/20 bg-[var(--color-surface)] px-3 py-2.5 text-sm focus:border-[var(--color-primary)] focus:outline-none"
-              placeholder="+20 1XX XXX XXXX"
+              placeholder={t('phonePlaceholder')}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">Parent Phone</label>
+            <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">{t('parentPhoneLabel')}</label>
             <input
               type="tel"
               value={parentPhone}
               onChange={(e) => setParentPhone(e.target.value)}
               className="w-full rounded-lg border border-[var(--color-ink)]/20 bg-[var(--color-surface)] px-3 py-2.5 text-sm focus:border-[var(--color-primary)] focus:outline-none"
-              placeholder="+20 1XX XXX XXXX"
+              placeholder={t('phonePlaceholder')}
             />
           </div>
 
@@ -175,7 +175,7 @@ export default function StudentRegistrationPage() {
             disabled={submitting || !name.trim()}
             className="w-full rounded-lg bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-primary)]/90 disabled:opacity-50"
           >
-            {submitting ? 'Registering...' : 'Register'}
+            {submitting ? t('registering') : t('register')}
           </button>
         </form>
       </div>
