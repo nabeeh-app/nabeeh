@@ -1,7 +1,8 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
-const supabase = require('../config/database').supabaseAdmin;
+const { supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
+const asyncHandler = require('../middleware/asyncHandler');
 const { logAudit } = require('../lib/auditLog');
 const logger = require('../lib/logger');
 
@@ -87,106 +88,101 @@ const router = express.Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/link', authenticateToken, requirePermission('manage_students'), async (req, res) => {
-  try {
-    const { groupId, expiresInHours = 168 } = req.body;
+router.post('/link', authenticateToken, requirePermission('manage_students'), asyncHandler(async (req, res) => {
+  const { groupId, expiresInHours = 168 } = req.body;
 
-    if (!groupId) {
-      return res.status(400).json({ success: false, message: 'Group ID is required', messageAr: 'معرّف المجموعة مطلوب', code: 'VALIDATION_ERROR' });
-    }
-
-    const { data: group, error: groupError } = await supabase
-      .from('groups')
-      .select('id, name, offering:offerings(teacher_id, subject:subjects(name_en, name_ar))')
-      .eq('id', groupId)
-      .single();
-
-    if (groupError || !group) {
-      return res.status(404).json({ success: false, message: 'Group not found', messageAr: 'لم يتم العثور على المجموعة', code: 'NOT_FOUND' });
-    }
-
-    if (group.offering.teacher_id !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Unauthorized for this group', messageAr: 'غير مصرح لهذه المجموعة', code: 'FORBIDDEN' });
-    }
-
-    const token = uuidv4();
-    const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString();
-
-    const { error: tokenError } = await supabase
-      .from('self_registration_tokens')
-      .insert([{
-        token,
-        group_id: groupId,
-        teacher_id: req.user.id,
-        expires_at: expiresAt,
-        max_uses: 100,
-        use_count: 0
-      }]);
-
-    if (tokenError) {
-      if (tokenError.code === '42P01') {
-        logger.warn('self_registration_tokens table does not exist — creating it', { teacherId: req.user.id });
-        await supabase.rpc('exec_sql', {
-          sql: `
-            CREATE TABLE IF NOT EXISTS self_registration_tokens (
-              id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-              token UUID NOT NULL UNIQUE,
-              group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
-              teacher_id UUID REFERENCES teachers(id) ON DELETE CASCADE,
-              expires_at TIMESTAMPTZ NOT NULL,
-              max_uses INT DEFAULT 100,
-              use_count INT DEFAULT 0,
-              created_at TIMESTAMPTZ DEFAULT NOW()
-            );
-            ALTER TABLE self_registration_tokens ENABLE ROW LEVEL SECURITY;
-          `
-        });
-
-        const { error: retryError } = await supabase
-          .from('self_registration_tokens')
-          .insert([{
-            token,
-            group_id: groupId,
-            teacher_id: req.user.id,
-            expires_at: expiresAt,
-            max_uses: 100,
-            use_count: 0
-          }]);
-
-        if (retryError) throw retryError;
-      } else {
-        throw tokenError;
-      }
-    }
-
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const registrationUrl = `${frontendUrl}/register/student?token=${token}`;
-
-    await logAudit({
-      actorId: req.user.id,
-      actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
-      teacherId: req.user.teacherId || req.user.id,
-      action: 'registration_link_created',
-      entityType: 'self_registration',
-      metadata: { groupId, groupName: group.name, expiresAt },
-      ipAddress: req.ip
-    });
-
-    res.json({
-      success: true,
-      data: {
-        url: registrationUrl,
-        token,
-        expiresAt,
-        groupName: group.name,
-        subject: group.offering.subject?.name_en || group.offering.subject?.name_ar || ''
-      }
-    });
-  } catch (error) {
-    logger.error('Generate registration link error', { error: error.message, teacherId: req.user.id });
-    res.status(500).json({ success: false, message: 'Failed to generate registration link', messageAr: 'فشل في إنشاء رابط التسجيل', code: 'INTERNAL_ERROR' });
+  if (!groupId) {
+    return res.status(400).json({ success: false, message: 'Group ID is required', messageAr: 'معرّف المجموعة مطلوب', code: 'VALIDATION_ERROR' });
   }
-});
+
+  const { data: group, error: groupError } = await supabaseAdmin
+    .from('groups')
+    .select('id, name, offering:offerings(teacher_id, subject:subjects(name_en, name_ar))')
+    .eq('id', groupId)
+    .single();
+
+  if (groupError || !group) {
+    return res.status(404).json({ success: false, message: 'Group not found', messageAr: 'لم يتم العثور على المجموعة', code: 'NOT_FOUND' });
+  }
+
+  if (group.offering.teacher_id !== req.user.id) {
+    return res.status(403).json({ success: false, message: 'Unauthorized for this group', messageAr: 'غير مصرح لهذه المجموعة', code: 'FORBIDDEN' });
+  }
+
+  const token = uuidv4();
+  const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString();
+
+  const { error: tokenError } = await supabaseAdmin
+    .from('self_registration_tokens')
+    .insert([{
+      token,
+      group_id: groupId,
+      teacher_id: req.user.id,
+      expires_at: expiresAt,
+      max_uses: 100,
+      use_count: 0
+    }]);
+
+  if (tokenError) {
+    if (tokenError.code === '42P01') {
+      logger.warn('self_registration_tokens table does not exist — creating it', { teacherId: req.user.id });
+      await supabaseAdmin.rpc('exec_sql', {
+        sql: `
+          CREATE TABLE IF NOT EXISTS self_registration_tokens (
+            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+            token UUID NOT NULL UNIQUE,
+            group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+            teacher_id UUID REFERENCES teachers(id) ON DELETE CASCADE,
+            expires_at TIMESTAMPTZ NOT NULL,
+            max_uses INT DEFAULT 100,
+            use_count INT DEFAULT 0,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+          );
+          ALTER TABLE self_registration_tokens ENABLE ROW LEVEL SECURITY;
+        `
+      });
+
+      const { error: retryError } = await supabaseAdmin
+        .from('self_registration_tokens')
+        .insert([{
+          token,
+          group_id: groupId,
+          teacher_id: req.user.id,
+          expires_at: expiresAt,
+          max_uses: 100,
+          use_count: 0
+        }]);
+
+      if (retryError) throw retryError;
+    } else {
+      throw tokenError;
+    }
+  }
+
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const registrationUrl = `${frontendUrl}/register/student?token=${token}`;
+
+  await logAudit({
+    actorId: req.user.id,
+    actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
+    teacherId: req.user.teacherId || req.user.id,
+    action: 'registration_link_created',
+    entityType: 'self_registration',
+    metadata: { groupId, groupName: group.name, expiresAt },
+    ipAddress: req.ip
+  });
+
+  res.json({
+    success: true,
+    data: {
+      url: registrationUrl,
+      token,
+      expiresAt,
+      groupName: group.name,
+      subject: group.offering.subject?.name_en || group.offering.subject?.name_ar || ''
+    }
+  });
+}));
 
 /**
  * @openapi
@@ -244,41 +240,36 @@ router.post('/link', authenticateToken, requirePermission('manage_students'), as
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/form/:token', async (req, res) => {
-  try {
-    const { token } = req.params;
+router.get('/form/:token', asyncHandler(async (req, res) => {
+  const { token } = req.params;
 
-    const { data: tokenRecord, error: tokenError } = await supabase
-      .from('self_registration_tokens')
-      .select('*, group:groups(name, offering:offerings(teacher:teachers(name)))')
-      .eq('token', token)
-      .single();
+  const { data: tokenRecord, error: tokenError } = await supabaseAdmin
+    .from('self_registration_tokens')
+    .select('*, group:groups(name, offering:offerings(teacher:teachers(name)))')
+    .eq('token', token)
+    .single();
 
-    if (tokenError || !tokenRecord) {
-      return res.status(404).json({ success: false, message: 'Invalid or expired registration link', messageAr: 'رابط التسجيل غير صالح أو منتهي الصلاحية', code: 'NOT_FOUND' });
-    }
-
-    if (new Date(tokenRecord.expires_at) < new Date()) {
-      return res.status(410).json({ success: false, message: 'This registration link has expired', messageAr: 'انتهت صلاحية رابط التسجيل هذا', code: 'NOT_FOUND' });
-    }
-
-    if (tokenRecord.use_count >= tokenRecord.max_uses) {
-      return res.status(410).json({ success: false, message: 'This registration link has reached its maximum uses', messageAr: 'وصل رابط التسجيل إلى الحد الأقصى للاستخدامات', code: 'NOT_FOUND' });
-    }
-
-    res.json({
-      success: true,
-      data: {
-        groupName: tokenRecord.group?.name,
-        teacherName: tokenRecord.group?.offering?.teacher?.name,
-        fields: ['name', 'phone']
-      }
-    });
-  } catch (error) {
-    logger.error('Get registration form error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Failed to load registration form', messageAr: 'فشل في تحميل نموذج التسجيل', code: 'INTERNAL_ERROR' });
+  if (tokenError || !tokenRecord) {
+    return res.status(404).json({ success: false, message: 'Invalid or expired registration link', messageAr: 'رابط التسجيل غير صالح أو منتهي الصلاحية', code: 'NOT_FOUND' });
   }
-});
+
+  if (new Date(tokenRecord.expires_at) < new Date()) {
+    return res.status(410).json({ success: false, message: 'This registration link has expired', messageAr: 'انتهت صلاحية رابط التسجيل هذا', code: 'NOT_FOUND' });
+  }
+
+  if (tokenRecord.use_count >= tokenRecord.max_uses) {
+    return res.status(410).json({ success: false, message: 'This registration link has reached its maximum uses', messageAr: 'وصل رابط التسجيل إلى الحد الأقصى للاستخدامات', code: 'NOT_FOUND' });
+  }
+
+  res.json({
+    success: true,
+    data: {
+      groupName: tokenRecord.group?.name,
+      teacherName: tokenRecord.group?.offering?.teacher?.name,
+      fields: ['name', 'phone']
+    }
+  });
+}));
 
 /**
  * @openapi
@@ -358,96 +349,91 @@ router.get('/form/:token', async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/submit/:token', async (req, res) => {
-  try {
-    const { token } = req.params;
-    const { name, phone, parent_phone } = req.body;
+router.post('/submit/:token', asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const { name, phone, parent_phone } = req.body;
 
-    if (!name || !name.trim()) {
-      return res.status(400).json({ success: false, message: 'Name is required', messageAr: 'الاسم مطلوب', code: 'VALIDATION_ERROR' });
-    }
-
-    const { data: tokenRecord, error: tokenError } = await supabase
-      .from('self_registration_tokens')
-      .select('*')
-      .eq('token', token)
-      .single();
-
-    if (tokenError || !tokenRecord) {
-      return res.status(404).json({ success: false, message: 'Invalid or expired registration link', messageAr: 'رابط التسجيل غير صالح أو منتهي الصلاحية', code: 'NOT_FOUND' });
-    }
-
-    if (new Date(tokenRecord.expires_at) < new Date()) {
-      return res.status(410).json({ success: false, message: 'This registration link has expired', messageAr: 'انتهت صلاحية رابط التسجيل هذا', code: 'NOT_FOUND' });
-    }
-
-    if (tokenRecord.use_count >= tokenRecord.max_uses) {
-      return res.status(410).json({ success: false, message: 'This registration link has reached its maximum uses', messageAr: 'وصل رابط التسجيل إلى الحد الأقصى للاستخدامات', code: 'NOT_FOUND' });
-    }
-
-    const studentCode = `REG-${Date.now().toString(36).toUpperCase()}`;
-
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .insert([{
-        name: name.trim(),
-        phone: phone || null,
-        student_code: studentCode,
-        teacher_id: tokenRecord.teacher_id,
-        is_demo: false
-      }])
-      .select()
-      .single();
-
-    if (studentError) throw studentError;
-
-    const { error: enrollError } = await supabase
-      .from('enrollments')
-      .insert({
-        student_id: student.id,
-        group_id: tokenRecord.group_id,
-        teacher_id: tokenRecord.teacher_id,
-        status: 'active'
-      });
-
-    if (enrollError) throw enrollError;
-
-    if (parent_phone) {
-      await supabase.from('parents').insert([{
-        student_id: student.id,
-        name: `Parent of ${name.trim()}`,
-        phone: parent_phone,
-        relationship: 'guardian',
-        is_primary: true,
-        preferred_language: 'ar'
-      }]);
-    }
-
-    await supabase
-      .from('self_registration_tokens')
-      .update({ use_count: tokenRecord.use_count + 1 })
-      .eq('id', tokenRecord.id);
-
-    await logAudit({
-      actorId: tokenRecord.teacher_id,
-      actorType: 'system',
-      teacherId: tokenRecord.teacher_id,
-      action: 'student_self_registered',
-      entityType: 'student',
-      entityId: student.id,
-      metadata: { name: name.trim(), token, groupName: tokenRecord.group_id },
-      ipAddress: req.ip
-    });
-
-    res.status(201).json({
-      success: true,
-      data: { studentId: student.id, studentCode },
-      message: 'Registration successful! Your teacher will confirm your enrollment.'
-    });
-  } catch (error) {
-    logger.error('Self-registration submit error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Registration failed. Please try again.', messageAr: 'فشل التسجيل. يرجى المحاولة مرة أخرى.', code: 'INTERNAL_ERROR' });
+  if (!name || !name.trim()) {
+    return res.status(400).json({ success: false, message: 'Name is required', messageAr: 'الاسم مطلوب', code: 'VALIDATION_ERROR' });
   }
-});
+
+  const { data: tokenRecord, error: tokenError } = await supabaseAdmin
+    .from('self_registration_tokens')
+    .select('*')
+    .eq('token', token)
+    .single();
+
+  if (tokenError || !tokenRecord) {
+    return res.status(404).json({ success: false, message: 'Invalid or expired registration link', messageAr: 'رابط التسجيل غير صالح أو منتهي الصلاحية', code: 'NOT_FOUND' });
+  }
+
+  if (new Date(tokenRecord.expires_at) < new Date()) {
+    return res.status(410).json({ success: false, message: 'This registration link has expired', messageAr: 'انتهت صلاحية رابط التسجيل هذا', code: 'NOT_FOUND' });
+  }
+
+  if (tokenRecord.use_count >= tokenRecord.max_uses) {
+    return res.status(410).json({ success: false, message: 'This registration link has reached its maximum uses', messageAr: 'وصل رابط التسجيل إلى الحد الأقصى للاستخدامات', code: 'NOT_FOUND' });
+  }
+
+  const studentCode = `REG-${Date.now().toString(36).toUpperCase()}`;
+
+  const { data: student, error: studentError } = await supabaseAdmin
+    .from('students')
+    .insert([{
+      name: name.trim(),
+      phone: phone || null,
+      student_code: studentCode,
+      teacher_id: tokenRecord.teacher_id,
+      is_demo: false
+    }])
+    .select()
+    .single();
+
+  if (studentError) throw studentError;
+
+  const { error: enrollError } = await supabaseAdmin
+    .from('enrollments')
+    .insert({
+      student_id: student.id,
+      group_id: tokenRecord.group_id,
+      teacher_id: tokenRecord.teacher_id,
+      status: 'active'
+    });
+
+  if (enrollError) throw enrollError;
+
+  if (parent_phone) {
+    await supabaseAdmin.from('parents').insert([{
+      student_id: student.id,
+      name: `Parent of ${name.trim()}`,
+      phone: parent_phone,
+      relationship: 'guardian',
+      is_primary: true,
+      preferred_language: 'ar'
+    }]);
+  }
+
+  await supabaseAdmin
+    .from('self_registration_tokens')
+    .update({ use_count: tokenRecord.use_count + 1 })
+    .eq('id', tokenRecord.id);
+
+  await logAudit({
+    actorId: tokenRecord.teacher_id,
+    actorType: 'system',
+    teacherId: tokenRecord.teacher_id,
+    action: 'student_self_registered',
+    entityType: 'student',
+    entityId: student.id,
+    metadata: { name: name.trim(), token, groupName: tokenRecord.group_id },
+    ipAddress: req.ip
+  });
+
+  res.status(201).json({
+    success: true,
+    data: { studentId: student.id, studentCode },
+    message: 'Registration successful! Your teacher will confirm your enrollment.'
+  });
+}));
 
 module.exports = router;

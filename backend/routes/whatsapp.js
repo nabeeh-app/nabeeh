@@ -10,6 +10,7 @@ const messageParser = require('../lib/messageParser');
 const aiResponder = require('../lib/aiResponder');
 const { normalizePhoneNumber } = require('../lib/phone');
 const metrics = require('../lib/metrics');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
@@ -381,20 +382,15 @@ router.get('/status', (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/pair', perTeacherLimiter(5, 60000), async (req, res) => {
-  try {
-    const teacherId = req.user.id;
-    const client = await sessionManager.getOrCreateSession(teacherId, { autoConnect: false });
-    await client.startPairing();
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.set('Pragma', 'no-cache');
-    res.set('Expires', '0');
-    res.json(getStatusPayload(teacherId));
-  } catch (error) {
-    logger.error('Failed to start WhatsApp pairing', { teacherId: req.user.id, error: error.message });
-    res.status(500).json({ success: false, message: 'Failed to start WhatsApp pairing session', messageAr: 'فشل في بدء جلسة اقتران واتساب', code: 'WHATSAPP_ERROR' });
-  }
-});
+router.post('/pair', perTeacherLimiter(5, 60000), asyncHandler(async (req, res) => {
+  const teacherId = req.user.id;
+  const client = await sessionManager.getOrCreateSession(teacherId, { autoConnect: false });
+  await client.startPairing();
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.json(getStatusPayload(teacherId));
+}));
 
 const pairCodeSchema = z.object({
   phone: z.string().regex(/^\+?[1-9]\d{6,14}$/, 'Invalid phone number format')
@@ -466,42 +462,37 @@ const resumeSchema = z.object({
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/pair-code', perTeacherLimiter(5, 60000), async (req, res) => {
-  try {
-    const parsed = pairCodeSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ success: false, message: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' });
-    }
-
-    const teacherId = req.user.id;
-    const { phone } = parsed.data;
-    const cleaned = normalizePhoneNumber(phone);
-
-    const client = await sessionManager.getOrCreateSession(teacherId, { autoConnect: false });
-
-    // Set pairing mode BEFORE connect so QR expiry timer doesn't fire
-    client.pairingCodeMode = true;
-    client.clearQrExpiryTimer();
-
-    // Fresh start: logout then connect
-    await client.logout();
-    await client.connect();
-
-    // Wait for the QR event
-    await client.waitForReady(20000);
-
-    // Now safe to request pairing code
-    const code = await client.requestPairingCode(cleaned);
-
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.set('Pragma', 'no-cache');
-    res.set('Expires', '0');
-    res.json({ success: true, data: { code, phone: cleaned } });
-  } catch (error) {
-    logger.error('Failed to request pairing code', { teacherId: req.user.id, error: error.message });
-    res.status(500).json({ success: false, message: 'Failed to generate pairing code', messageAr: 'فشل في إنشاء رمز الاقتران', code: 'WHATSAPP_ERROR' });
+router.post('/pair-code', perTeacherLimiter(5, 60000), asyncHandler(async (req, res) => {
+  const parsed = pairCodeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ success: false, message: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' });
   }
-});
+
+  const teacherId = req.user.id;
+  const { phone } = parsed.data;
+  const cleaned = normalizePhoneNumber(phone);
+
+  const client = await sessionManager.getOrCreateSession(teacherId, { autoConnect: false });
+
+  // Set pairing mode BEFORE connect so QR expiry timer doesn't fire
+  client.pairingCodeMode = true;
+  client.clearQrExpiryTimer();
+
+  // Fresh start: logout then connect
+  await client.logout();
+  await client.connect();
+
+  // Wait for the QR event
+  await client.waitForReady(20000);
+
+  // Now safe to request pairing code
+  const code = await client.requestPairingCode(cleaned);
+
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.json({ success: true, data: { code, phone: cleaned } });
+}));
 
 /**
  * @openapi
@@ -581,10 +572,10 @@ router.get('/qr', (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/logout', async (req, res) => {
+router.post('/logout', asyncHandler(async (req, res) => {
   const success = await sessionManager.destroySession(req.user.id, { deleteCredentials: true });
   res.json({ success: true, message: success ? 'Logged out successfully' : 'No active session to logout' });
-});
+}));
 
 /**
  * @openapi
@@ -650,82 +641,77 @@ router.post('/logout', async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/send-to-number', requirePermission('send_whatsapp'), perTeacherLimiter(30, 60000), async (req, res) => {
-  try {
-    const parsed = sendMessageSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ success: false, message: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' });
-    }
-
-    const teacherId = req.user.id;
-    const { phone, message } = parsed.data;
-
-    const client = sessionManager.getSession(teacherId);
-    if (!client) {
-      return res.status(503).json({ success: false, message: 'No WhatsApp session found. Please pair your phone first.', messageAr: 'لم يتم العثور على جلسة واتساب. يرجى اقتران هاتفك أولاً', code: 'WHATSAPP_ERROR' });
-    }
-
-    const status = client.getStatus();
-    if (status.status !== 'connected') {
-      return res.status(503).json({ success: false, message: 'WhatsApp session is not connected. Please scan the QR code again.', messageAr: 'جلسة واتساب غير متصلة. يرجى مسح رمز QR مرة أخرى', code: 'WHATSAPP_ERROR' });
-    }
-
-    const cleaned = normalizePhoneNumber(phone);
-    await client.sendMessage(cleaned, message);
-
-    // Auto-pause bot for this conversation when teacher/assistant sends manual message
-    try {
-      const { data: parent } = await supabaseAdmin
-        .from('parents')
-        .select('id, students(id, enrollments(id, group:groups(id, offering:offerings(id, teacher_id))))')
-        .eq('phone', `+${cleaned}`)
-        .maybeSingle();
-
-      if (parent) {
-        const belongsToTeacher = (parent.students || []).some(s =>
-          (s.enrollments || []).some(e => e?.group?.offering?.teacher_id === teacherId)
-        );
-        if (belongsToTeacher) {
-          const { data: conversation } = await supabaseAdmin.from('conversations')
-            .select('id').eq('parent_id', parent.id).eq('teacher_id', teacherId).maybeSingle();
-          if (conversation) {
-            const pauseHours = 4;
-            await supabaseAdmin.from('conversations').update({
-              last_responder_id: teacherId,
-              last_responder_type: req.user.role,
-              bot_paused_until: new Date(Date.now() + pauseHours * 3600000).toISOString()
-            }).eq('id', conversation.id);
-          }
-        } else {
-          logger.warn('Cross-tenant parent lookup blocked', { teacherId });
-        }
-      }
-    } catch (pauseError) {
-      logger.error('Failed to auto-pause bot', { error: pauseError.message });
-    }
-
-    // Audit log
-    try {
-      const { logAudit } = require('../lib/auditLog');
-      await logAudit({
-        actorId: teacherId,
-        actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
-        teacherId: req.user.teacherId || teacherId,
-        action: 'whatsapp_sent',
-        entityType: 'conversation',
-        metadata: { phone: redactPhone(cleaned), message_length: message.length },
-        ipAddress: req.ip
-      });
-    } catch (auditError) {
-      logger.error('Failed to write audit log', { error: auditError.message });
-    }
-
-    res.json({ success: true, message: 'Message sent successfully' });
-  } catch (error) {
-    logger.error('Send message error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Failed to send message', messageAr: 'فشل في إرسال الرسالة', code: 'WHATSAPP_ERROR' });
+router.post('/send-to-number', requirePermission('send_whatsapp'), perTeacherLimiter(30, 60000), asyncHandler(async (req, res) => {
+  const parsed = sendMessageSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ success: false, message: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' });
   }
-});
+
+  const teacherId = req.user.id;
+  const { phone, message } = parsed.data;
+
+  const client = sessionManager.getSession(teacherId);
+  if (!client) {
+    return res.status(503).json({ success: false, message: 'No WhatsApp session found. Please pair your phone first.', messageAr: 'لم يتم العثور على جلسة واتساب. يرجى اقتران هاتفك أولاً', code: 'WHATSAPP_ERROR' });
+  }
+
+  const status = client.getStatus();
+  if (status.status !== 'connected') {
+    return res.status(503).json({ success: false, message: 'WhatsApp session is not connected. Please scan the QR code again.', messageAr: 'جلسة واتساب غير متصلة. يرجى مسح رمز QR مرة أخرى', code: 'WHATSAPP_ERROR' });
+  }
+
+  const cleaned = normalizePhoneNumber(phone);
+  await client.sendMessage(cleaned, message);
+
+  // Auto-pause bot for this conversation when teacher/assistant sends manual message
+  try {
+    const { data: parent } = await supabaseAdmin
+      .from('parents')
+      .select('id, students(id, enrollments(id, group:groups(id, offering:offerings(id, teacher_id))))')
+      .eq('phone', `+${cleaned}`)
+      .maybeSingle();
+
+    if (parent) {
+      const belongsToTeacher = (parent.students || []).some(s =>
+        (s.enrollments || []).some(e => e?.group?.offering?.teacher_id === teacherId)
+      );
+      if (belongsToTeacher) {
+        const { data: conversation } = await supabaseAdmin.from('conversations')
+          .select('id').eq('parent_id', parent.id).eq('teacher_id', teacherId).maybeSingle();
+        if (conversation) {
+          const pauseHours = 4;
+          await supabaseAdmin.from('conversations').update({
+            last_responder_id: teacherId,
+            last_responder_type: req.user.role,
+            bot_paused_until: new Date(Date.now() + pauseHours * 3600000).toISOString()
+          }).eq('id', conversation.id);
+        }
+      } else {
+        logger.warn('Cross-tenant parent lookup blocked', { teacherId });
+      }
+    }
+  } catch (pauseError) {
+    logger.error('Failed to auto-pause bot', { error: pauseError.message });
+  }
+
+  // Audit log
+  try {
+    const { logAudit } = require('../lib/auditLog');
+    await logAudit({
+      actorId: teacherId,
+      actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
+      teacherId: req.user.teacherId || teacherId,
+      action: 'whatsapp_sent',
+      entityType: 'conversation',
+      metadata: { phone: redactPhone(cleaned), message_length: message.length },
+      ipAddress: req.ip
+    });
+  } catch (auditError) {
+    logger.error('Failed to write audit log', { error: auditError.message });
+  }
+
+  res.json({ success: true, message: 'Message sent successfully' });
+}));
 
 // Resume bot for a conversation
 /**
@@ -786,39 +772,34 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), perTeacherLim
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/bot/resume', async (req, res) => {
-  try {
-    const parsed = resumeSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ success: false, message: parsed.error.issues[0].message, messageAr: 'معرّف المحادثة مطلوب', code: 'VALIDATION_ERROR' });
-    }
-    const { conversation_id } = parsed.data;
-
-    const { data: conversation, error: fetchError } = await supabaseAdmin
-      .from('conversations')
-      .select('id, teacher_id')
-      .eq('id', conversation_id)
-      .eq('teacher_id', req.user.id)
-      .single();
-
-    if (fetchError || !conversation) {
-      return res.status(404).json({ success: false, message: 'Conversation not found', messageAr: 'لم يتم العثور على المحادثة', code: 'NOT_FOUND' });
-    }
-
-    const { error } = await supabaseAdmin
-      .from('conversations')
-      .update({ bot_paused_until: null })
-      .eq('id', conversation_id);
-
-    if (error) throw error;
-
-    logger.info('Bot resumed for conversation', { conversationId: conversation_id });
-    res.json({ success: true, message: 'Bot resumed successfully' });
-  } catch (error) {
-    logger.error('Resume bot error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Failed to resume bot', messageAr: 'فشل في استئناف البوت', code: 'WHATSAPP_ERROR' });
+router.post('/bot/resume', asyncHandler(async (req, res) => {
+  const parsed = resumeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ success: false, message: parsed.error.issues[0].message, messageAr: 'معرّف المحادثة مطلوب', code: 'VALIDATION_ERROR' });
   }
-});
+  const { conversation_id } = parsed.data;
+
+  const { data: conversation, error: fetchError } = await supabaseAdmin
+    .from('conversations')
+    .select('id, teacher_id')
+    .eq('id', conversation_id)
+    .eq('teacher_id', req.user.id)
+    .single();
+
+  if (fetchError || !conversation) {
+    return res.status(404).json({ success: false, message: 'Conversation not found', messageAr: 'لم يتم العثور على المحادثة', code: 'NOT_FOUND' });
+  }
+
+  const { error } = await supabaseAdmin
+    .from('conversations')
+    .update({ bot_paused_until: null })
+    .eq('id', conversation_id);
+
+  if (error) throw error;
+
+  logger.info('Bot resumed for conversation', { conversationId: conversation_id });
+  res.json({ success: true, message: 'Bot resumed successfully' });
+}));
 
 /**
  * @openapi
@@ -878,39 +859,34 @@ router.post('/bot/resume', async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/conversations', async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-    const offset = (page - 1) * limit;
+router.get('/conversations', asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+  const offset = (page - 1) * limit;
 
-    const { count } = await supabaseAdmin
-      .from('conversations')
-      .select('*', { count: 'exact', head: true })
-      .eq('teacher_id', req.user.id);
+  const { count } = await supabaseAdmin
+    .from('conversations')
+    .select('*', { count: 'exact', head: true })
+    .eq('teacher_id', req.user.id);
 
-    const { data: conversations, error } = await supabaseAdmin
-      .from('conversations')
-      .select(`
-        *,
-        parents (name, phone, students (name, student_id)),
-        messages (id, direction, content, created_at)
-      `)
-      .eq('teacher_id', req.user.id)
-      .order('last_message_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+  const { data: conversations, error } = await supabaseAdmin
+    .from('conversations')
+    .select(`
+      *,
+      parents (name, phone, students (name, student_id)),
+      messages (id, direction, content, created_at)
+    `)
+    .eq('teacher_id', req.user.id)
+    .order('last_message_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
-    if (error) throw error;
-    res.json({
-      success: true,
-      data: conversations,
-      pagination: { page, limit, total: count }
-    });
-  } catch (error) {
-    logger.error('Get conversations error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching conversations', messageAr: 'خطأ في الخادم أثناء جلب المحادثات', code: 'INTERNAL_ERROR' });
-  }
-});
+  if (error) throw error;
+  res.json({
+    success: true,
+    data: conversations,
+    pagination: { page, limit, total: count }
+  });
+}));
 
 /**
  * @openapi
@@ -954,20 +930,15 @@ router.get('/sessions', requirePermission('manage_settings'), (req, res) => {
  *       401:
  *         description: Unauthorized
  */
-router.delete('/sessions/:teacherId', requirePermission('manage_settings'), async (req, res) => {
-  try {
-    const parsed = sessionParamsSchema.safeParse(req.params);
-    if (!parsed.success) {
-      return res.status(400).json({ success: false, message: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' });
-    }
-
-    const forceLogout = req.query.force === 'true';
-    await sessionManager.destroySession(parsed.data.teacherId, { deleteCredentials: forceLogout });
-    res.json({ success: true, message: forceLogout ? 'Session logged out' : 'Session disconnected' });
-  } catch (error) {
-    logger.error('Failed to disconnect session', { teacherId: req.params.teacherId, error: error.message });
-    res.status(500).json({ success: false, message: 'Failed to disconnect session', messageAr: 'فشل في قطع اتصال الجلسة', code: 'WHATSAPP_ERROR' });
+router.delete('/sessions/:teacherId', requirePermission('manage_settings'), asyncHandler(async (req, res) => {
+  const parsed = sessionParamsSchema.safeParse(req.params);
+  if (!parsed.success) {
+    return res.status(400).json({ success: false, message: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' });
   }
-});
+
+  const forceLogout = req.query.force === 'true';
+  await sessionManager.destroySession(parsed.data.teacherId, { deleteCredentials: forceLogout });
+  res.json({ success: true, message: forceLogout ? 'Session logged out' : 'Session disconnected' });
+}));
 
 module.exports = { router, normalizePhoneNumber };

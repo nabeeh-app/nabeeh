@@ -8,6 +8,7 @@ const errorHandler = (err, req, res, next) => {
     return res.status(409).json({
       success: false,
       message: 'Resource already exists',
+      messageAr: 'المورد موجود بالفعل',
       code: 'DUPLICATE_ENTRY'
     });
   }
@@ -16,6 +17,7 @@ const errorHandler = (err, req, res, next) => {
     return res.status(400).json({
       success: false,
       message: 'Referenced resource not found',
+      messageAr: 'الموارد المرجعية غير موجودة',
       code: 'FK_VIOLATION'
     });
   }
@@ -24,6 +26,7 @@ const errorHandler = (err, req, res, next) => {
     return res.status(400).json({
       success: false,
       message: 'Invalid ID format',
+      messageAr: 'تنسيق المعرّف غير صالح',
       code: 'INVALID_UUID'
     });
   }
@@ -33,6 +36,7 @@ const errorHandler = (err, req, res, next) => {
     return res.status(404).json({
       success: false,
       message: 'Resource not found',
+      messageAr: 'المورد غير موجود',
       code: 'NOT_FOUND'
     });
   }
@@ -42,6 +46,7 @@ const errorHandler = (err, req, res, next) => {
     return res.status(403).json({
       success: false,
       message: 'Access denied',
+      messageAr: 'تم رفض الوصول',
       code: 'INSUFFICIENT_PRIVILEGE'
     });
   }
@@ -50,6 +55,8 @@ const errorHandler = (err, req, res, next) => {
   res.status(statusCode).json({
     success: false,
     message: err.message || 'Server Error',
+    messageAr: 'خطأ في الخادم',
+    code: err.code || 'INTERNAL_ERROR',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 };

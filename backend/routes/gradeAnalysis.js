@@ -3,6 +3,7 @@ const { z } = require('zod');
 const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const asyncHandler = require('../middleware/asyncHandler');
 const logger = require('../lib/logger');
 
 const router = express.Router();
@@ -36,336 +37,311 @@ const overviewSchema = z.object({
 
 // ── GET /group-comparison — Average scores per group for an offering ──
 const getGroupComparison = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { offering_id } = req.validated.query;
+  const teacherId = req.user.teacherId || req.user.id;
+  const { offering_id } = req.validated.query;
 
-    // Verify offering belongs to teacher
-    const { data: offering } = await supabaseAdmin
-      .from('offerings')
-      .select('id')
-      .eq('id', offering_id)
-      .eq('teacher_id', teacherId)
-      .single();
+  // Verify offering belongs to teacher
+  const { data: offering } = await supabaseAdmin
+    .from('offerings')
+    .select('id')
+    .eq('id', offering_id)
+    .eq('teacher_id', teacherId)
+    .single();
 
-    if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
+  if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
 
-    // Get groups with their enrollments and grades
-    const { data: groups } = await supabaseAdmin
-      .from('groups')
-      .select(`
+  // Get groups with their enrollments and grades
+  const { data: groups } = await supabaseAdmin
+    .from('groups')
+    .select(`
+      id,
+      name,
+      enrollments(
         id,
-        name,
-        enrollments(
-          id,
-          grades(score, assessment:assessments(max_score))
-        )
-      `)
-      .eq('offering_id', offering_id);
+        grades(score, assessment:assessments(max_score))
+      )
+    `)
+    .eq('offering_id', offering_id);
 
-    if (!groups) return res.json({ success: true, data: [] });
+  if (!groups) return res.json({ success: true, data: [] });
 
-    const result = groups.map(group => {
-      const enrollments = group.enrollments || [];
-      const allScores = [];
+  const result = groups.map(group => {
+    const enrollments = group.enrollments || [];
+    const allScores = [];
 
-      enrollments.forEach(e => {
-        (e.grades || []).forEach(g => {
-          if (g.assessment?.max_score) {
-            allScores.push((g.score / g.assessment.max_score) * 100);
-          }
-        });
+    enrollments.forEach(e => {
+      (e.grades || []).forEach(g => {
+        if (g.assessment?.max_score) {
+          allScores.push((g.score / g.assessment.max_score) * 100);
+        }
       });
-
-      const avg = allScores.length > 0
-        ? allScores.reduce((a, b) => a + b, 0) / allScores.length
-        : 0;
-
-      return {
-        group_id: group.id,
-        group_name: group.name,
-        student_count: enrollments.length,
-        average_score: Math.round(avg * 10) / 10,
-        assessments_count: allScores.length,
-      };
     });
 
-    res.json({ success: true, data: result });
-  } catch (error) {
-    logger.error('Get group comparison error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching group comparison', messageAr: 'خطأ في الخادم أثناء جلب مقارنة المجموعات', code: 'INTERNAL_ERROR' });
-  }
+    const avg = allScores.length > 0
+      ? allScores.reduce((a, b) => a + b, 0) / allScores.length
+      : 0;
+
+    return {
+      group_id: group.id,
+      group_name: group.name,
+      student_count: enrollments.length,
+      average_score: Math.round(avg * 10) / 10,
+      assessments_count: allScores.length,
+    };
+  });
+
+  res.json({ success: true, data: result });
 };
 
 // ── GET /at-risk — Students with grades below threshold + poor attendance ──
 const getAtRisk = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { offering_id, grade_threshold, attendance_threshold } = req.validated.query;
+  const teacherId = req.user.teacherId || req.user.id;
+  const { offering_id, grade_threshold, attendance_threshold } = req.validated.query;
 
-    // Verify offering belongs to teacher
-    const { data: offering } = await supabaseAdmin
-      .from('offerings')
-      .select('id')
-      .eq('id', offering_id)
-      .eq('teacher_id', teacherId)
-      .single();
+  // Verify offering belongs to teacher
+  const { data: offering } = await supabaseAdmin
+    .from('offerings')
+    .select('id')
+    .eq('id', offering_id)
+    .eq('teacher_id', teacherId)
+    .single();
 
-    if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
+  if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
 
-    // Get all enrollments in this offering with grades and attendance
-    const { data: enrollments } = await supabaseAdmin
-      .from('enrollments')
-      .select(`
-        id,
-        student_id,
-        students(name, student_id),
-        group:groups(id),
-        grades(score, assessment:assessments(max_score)),
-        attendance(status)
-      `)
-      .eq('group.offering_id', offering_id);
+  // Get all enrollments in this offering with grades and attendance
+  const { data: enrollments } = await supabaseAdmin
+    .from('enrollments')
+    .select(`
+      id,
+      student_id,
+      students(name, student_id),
+      group:groups(id),
+      grades(score, assessment:assessments(max_score)),
+      attendance(status)
+    `)
+    .eq('group.offering_id', offering_id);
 
-    if (!enrollments) return res.json({ success: true, data: [] });
+  if (!enrollments) return res.json({ success: true, data: [] });
 
-    const atRisk = [];
+  const atRisk = [];
 
-    for (const enrollment of enrollments) {
-      const studentName = enrollment.students?.name || 'Student';
-      const studentCode = enrollment.students?.student_id || '';
+  for (const enrollment of enrollments) {
+    const studentName = enrollment.students?.name || 'Student';
+    const studentCode = enrollment.students?.student_id || '';
 
-      // Calculate average grade
-      const grades = enrollment.grades || [];
-      const percentages = grades
-        .filter(g => g.assessment?.max_score)
-        .map(g => (g.score / g.assessment.max_score) * 100);
+    // Calculate average grade
+    const grades = enrollment.grades || [];
+    const percentages = grades
+      .filter(g => g.assessment?.max_score)
+      .map(g => (g.score / g.assessment.max_score) * 100);
 
-      const avgGrade = percentages.length > 0
-        ? percentages.reduce((a, b) => a + b, 0) / percentages.length
-        : null;
+    const avgGrade = percentages.length > 0
+      ? percentages.reduce((a, b) => a + b, 0) / percentages.length
+      : null;
 
-      // Calculate attendance rate
-      const attendance = enrollment.attendance || [];
-      const attended = attendance.filter(a => a.status === 'present' || a.status === 'late').length;
-      const attendanceRate = attendance.length > 0 ? (attended / attendance.length) * 100 : null;
+    // Calculate attendance rate
+    const attendance = enrollment.attendance || [];
+    const attended = attendance.filter(a => a.status === 'present' || a.status === 'late').length;
+    const attendanceRate = attendance.length > 0 ? (attended / attendance.length) * 100 : null;
 
-      const gradeBelow = avgGrade !== null && avgGrade < grade_threshold;
-      const attendanceBelow = attendanceRate !== null && attendanceRate < attendance_threshold;
+    const gradeBelow = avgGrade !== null && avgGrade < grade_threshold;
+    const attendanceBelow = attendanceRate !== null && attendanceRate < attendance_threshold;
 
-      if (gradeBelow || attendanceBelow) {
-        let severity = 'warning';
-        if (gradeBelow && attendanceBelow) severity = 'critical';
+    if (gradeBelow || attendanceBelow) {
+      let severity = 'warning';
+      if (gradeBelow && attendanceBelow) severity = 'critical';
 
-        atRisk.push({
-          student_id: enrollment.student_id,
-          student_name: studentName,
-          student_code: studentCode,
-          average_grade: avgGrade !== null ? Math.round(avgGrade * 10) / 10 : null,
-          attendance_rate: attendanceRate !== null ? Math.round(attendanceRate * 10) / 10 : null,
-          severity,
-          grade_below_threshold: gradeBelow,
-          attendance_below_threshold: attendanceBelow,
-        });
-      }
+      atRisk.push({
+        student_id: enrollment.student_id,
+        student_name: studentName,
+        student_code: studentCode,
+        average_grade: avgGrade !== null ? Math.round(avgGrade * 10) / 10 : null,
+        attendance_rate: attendanceRate !== null ? Math.round(attendanceRate * 10) / 10 : null,
+        severity,
+        grade_below_threshold: gradeBelow,
+        attendance_below_threshold: attendanceBelow,
+      });
     }
-
-    // Sort: critical first, then by average grade ascending
-    atRisk.sort((a, b) => {
-      if (a.severity !== b.severity) return a.severity === 'critical' ? -1 : 1;
-      return (a.average_grade || 0) - (b.average_grade || 0);
-    });
-
-    res.json({ success: true, data: atRisk });
-  } catch (error) {
-    logger.error('Get at-risk students error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching at-risk students', messageAr: 'خطأ في الخادم أثناء جلب الطلاب المعرضين للخطر', code: 'INTERNAL_ERROR' });
   }
+
+  // Sort: critical first, then by average grade ascending
+  atRisk.sort((a, b) => {
+    if (a.severity !== b.severity) return a.severity === 'critical' ? -1 : 1;
+    return (a.average_grade || 0) - (b.average_grade || 0);
+  });
+
+  res.json({ success: true, data: atRisk });
 };
 
 // ── GET /distribution/:assessmentId — Grade distribution histogram ──
 const getDistribution = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { assessmentId } = req.validated.params;
+  const teacherId = req.user.teacherId || req.user.id;
+  const { assessmentId } = req.validated.params;
 
-    // Verify assessment belongs to teacher
-    const { data: assessment } = await supabaseAdmin
-      .from('assessments')
-      .select('id, name, max_score, offering:offerings(teacher_id)')
-      .eq('id', assessmentId)
-      .single();
+  // Verify assessment belongs to teacher
+  const { data: assessment } = await supabaseAdmin
+    .from('assessments')
+    .select('id, name, max_score, offering:offerings(teacher_id)')
+    .eq('id', assessmentId)
+    .single();
 
-    if (!assessment || assessment.offering?.teacher_id !== teacherId) {
-      return res.status(404).json({ success: false, message: 'Assessment not found', messageAr: 'لم يتم العثور على التقييم', code: 'NOT_FOUND' });
-    }
+  if (!assessment || assessment.offering?.teacher_id !== teacherId) {
+    return res.status(404).json({ success: false, message: 'Assessment not found', messageAr: 'لم يتم العثور على التقييم', code: 'NOT_FOUND' });
+  }
 
-    // Get all grades for this assessment
-    const { data: grades } = await supabaseAdmin
-      .from('grades')
-      .select('score')
-      .eq('assessment_id', assessmentId);
+  // Get all grades for this assessment
+  const { data: grades } = await supabaseAdmin
+    .from('grades')
+    .select('score')
+    .eq('assessment_id', assessmentId);
 
-    if (!grades || grades.length === 0) {
-      return res.json({
-        success: true,
-        data: {
-          assessment_name: assessment.name,
-          max_score: assessment.max_score,
-          total_students: 0,
-          distribution: [],
-          average: 0,
-          median: 0,
-        },
-      });
-    }
-
-    const maxScore = assessment.max_score || 100;
-    const percentages = grades.map(g => (g.score / maxScore) * 100);
-
-    // Build histogram buckets: 0-10, 10-20, ..., 90-100
-    const buckets = Array.from({ length: 10 }, (_, i) => ({
-      range: `${i * 10}-${(i + 1) * 10}`,
-      min: i * 10,
-      max: (i + 1) * 10,
-      count: 0,
-    }));
-
-    percentages.forEach(pct => {
-      const idx = Math.min(Math.floor(pct / 10), 9);
-      buckets[idx].count++;
-    });
-
-    const sorted = [...percentages].sort((a, b) => a - b);
-    const median = sorted.length > 0
-      ? sorted.length % 2 === 0
-        ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
-        : sorted[Math.floor(sorted.length / 2)]
-      : 0;
-
-    res.json({
+  if (!grades || grades.length === 0) {
+    return res.json({
       success: true,
       data: {
         assessment_name: assessment.name,
-        max_score: maxScore,
-        total_students: grades.length,
-        distribution: buckets,
-        average: Math.round((percentages.reduce((a, b) => a + b, 0) / percentages.length) * 10) / 10,
-        median: Math.round(median * 10) / 10,
+        max_score: assessment.max_score,
+        total_students: 0,
+        distribution: [],
+        average: 0,
+        median: 0,
       },
     });
-  } catch (error) {
-    logger.error('Get grade distribution error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching grade distribution', messageAr: 'خطأ في الخادم أثناء جلب توزيع الدرجات', code: 'INTERNAL_ERROR' });
   }
+
+  const maxScore = assessment.max_score || 100;
+  const percentages = grades.map(g => (g.score / maxScore) * 100);
+
+  // Build histogram buckets: 0-10, 10-20, ..., 90-100
+  const buckets = Array.from({ length: 10 }, (_, i) => ({
+    range: `${i * 10}-${(i + 1) * 10}`,
+    min: i * 10,
+    max: (i + 1) * 10,
+    count: 0,
+  }));
+
+  percentages.forEach(pct => {
+    const idx = Math.min(Math.floor(pct / 10), 9);
+    buckets[idx].count++;
+  });
+
+  const sorted = [...percentages].sort((a, b) => a - b);
+  const median = sorted.length > 0
+    ? sorted.length % 2 === 0
+      ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+      : sorted[Math.floor(sorted.length / 2)]
+    : 0;
+
+  res.json({
+    success: true,
+    data: {
+      assessment_name: assessment.name,
+      max_score: maxScore,
+      total_students: grades.length,
+      distribution: buckets,
+      average: Math.round((percentages.reduce((a, b) => a + b, 0) / percentages.length) * 10) / 10,
+      median: Math.round(median * 10) / 10,
+    },
+  });
 };
 
 // ── GET /trends/:studentId — Grade trend over time for a student ──
 const getTrends = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { studentId } = req.validated.params;
+  const teacherId = req.user.teacherId || req.user.id;
+  const { studentId } = req.validated.params;
 
-    // Get grades for this student, joined through enrollment -> offering -> teacher
-    const { data: grades } = await supabaseAdmin
-      .from('grades')
-      .select(`
-        score,
-        assessment:assessments(name, date, max_score, offering:offerings(teacher_id))
-      `)
-      .eq('enrollment.student_id', studentId)
-      .eq('assessment.offerings.teacher_id', teacherId)
-      .order('assessment.date', { ascending: true });
+  // Get grades for this student, joined through enrollment -> offering -> teacher
+  const { data: grades } = await supabaseAdmin
+    .from('grades')
+    .select(`
+      score,
+      assessment:assessments(name, date, max_score, offering:offerings(teacher_id))
+    `)
+    .eq('enrollment.student_id', studentId)
+    .eq('assessment.offerings.teacher_id', teacherId)
+    .order('assessment.date', { ascending: true });
 
-    if (!grades || grades.length === 0) {
-      return res.json({ success: true, data: { student_id: studentId, trends: [] } });
-    }
-
-    const trends = grades
-      .filter(g => g.assessment?.max_score)
-      .map(g => ({
-        assessment_name: g.assessment.name,
-        date: g.assessment.date,
-        score: g.score,
-        max_score: g.assessment.max_score,
-        percentage: Math.round((g.score / g.assessment.max_score) * 100 * 10) / 10,
-      }));
-
-    res.json({ success: true, data: { student_id: studentId, trends } });
-  } catch (error) {
-    logger.error('Get grade trends error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching grade trends', messageAr: 'خطأ في الخادم أثناء جلب اتجاهات الدرجات', code: 'INTERNAL_ERROR' });
+  if (!grades || grades.length === 0) {
+    return res.json({ success: true, data: { student_id: studentId, trends: [] } });
   }
+
+  const trends = grades
+    .filter(g => g.assessment?.max_score)
+    .map(g => ({
+      assessment_name: g.assessment.name,
+      date: g.assessment.date,
+      score: g.score,
+      max_score: g.assessment.max_score,
+      percentage: Math.round((g.score / g.assessment.max_score) * 100 * 10) / 10,
+    }));
+
+  res.json({ success: true, data: { student_id: studentId, trends } });
 };
 
 // ── GET /overview/:offeringId — Aggregate stats for offering ──
 const getOverview = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { offeringId } = req.validated.params;
+  const teacherId = req.user.teacherId || req.user.id;
+  const { offeringId } = req.validated.params;
 
-    // Verify offering belongs to teacher
-    const { data: offering } = await supabaseAdmin
-      .from('offerings')
-      .select('id, subject:subjects(name), grade_level:grade_levels(name)')
-      .eq('id', offeringId)
-      .eq('teacher_id', teacherId)
-      .single();
+  // Verify offering belongs to teacher
+  const { data: offering } = await supabaseAdmin
+    .from('offerings')
+    .select('id, subject:subjects(name), grade_level:grade_levels(name)')
+    .eq('id', offeringId)
+    .eq('teacher_id', teacherId)
+    .single();
 
-    if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
+  if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
 
-    // Get all grades in this offering
-    const { data: grades } = await supabaseAdmin
-      .from('grades')
-      .select(`
-        score,
-        assessment:assessments(name, max_score),
-        enrollment:enrollments(student_id, students(name))
-      `)
-      .eq('assessment.offerings.id', offeringId);
+  // Get all grades in this offering
+  const { data: grades } = await supabaseAdmin
+    .from('grades')
+    .select(`
+      score,
+      assessment:assessments(name, max_score),
+      enrollment:enrollments(student_id, students(name))
+    `)
+    .eq('assessment.offerings.id', offeringId);
 
-    // Get enrollment count
-    const { count: studentCount } = await supabaseAdmin
-      .from('enrollments')
-      .select('id', { count: 'exact', head: true })
-      .eq('group.offering_id', offeringId);
+  // Get enrollment count
+  const { count: studentCount } = await supabaseAdmin
+    .from('enrollments')
+    .select('id', { count: 'exact', head: true })
+    .eq('group.offering_id', offeringId);
 
-    const allPercentages = (grades || [])
-      .filter(g => g.assessment?.max_score)
-      .map(g => (g.score / g.assessment.max_score) * 100);
+  const allPercentages = (grades || [])
+    .filter(g => g.assessment?.max_score)
+    .map(g => (g.score / g.assessment.max_score) * 100);
 
-    const avg = allPercentages.length > 0
-      ? allPercentages.reduce((a, b) => a + b, 0) / allPercentages.length
-      : 0;
+  const avg = allPercentages.length > 0
+    ? allPercentages.reduce((a, b) => a + b, 0) / allPercentages.length
+    : 0;
 
-    const sorted = [...allPercentages].sort((a, b) => a - b);
-    const median = sorted.length > 0
-      ? sorted.length % 2 === 0
-        ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
-        : sorted[Math.floor(sorted.length / 2)]
-      : 0;
+  const sorted = [...allPercentages].sort((a, b) => a - b);
+  const median = sorted.length > 0
+    ? sorted.length % 2 === 0
+      ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+      : sorted[Math.floor(sorted.length / 2)]
+    : 0;
 
-    const passCount = allPercentages.filter(p => p >= 50).length;
-    const passRate = allPercentages.length > 0 ? (passCount / allPercentages.length) * 100 : 0;
+  const passCount = allPercentages.filter(p => p >= 50).length;
+  const passRate = allPercentages.length > 0 ? (passCount / allPercentages.length) * 100 : 0;
 
-    res.json({
-      success: true,
-      data: {
-        offering_id: offeringId,
-        subject: offering.subject?.name || null,
-        grade_level: offering.grade_level?.name || null,
-        total_students: studentCount || 0,
-        total_grades: allPercentages.length,
-        average: Math.round(avg * 10) / 10,
-        median: Math.round(median * 10) / 10,
-        pass_rate: Math.round(passRate * 10) / 10,
-        highest: sorted.length > 0 ? Math.round(sorted[sorted.length - 1] * 10) / 10 : 0,
-        lowest: sorted.length > 0 ? Math.round(sorted[0] * 10) / 10 : 0,
-      },
-    });
-  } catch (error) {
-    logger.error('Get grade overview error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching grade overview', messageAr: 'خطأ في الخادم أثناء جلب نظرة عامة على الدرجات', code: 'INTERNAL_ERROR' });
-  }
+  res.json({
+    success: true,
+    data: {
+      offering_id: offeringId,
+      subject: offering.subject?.name || null,
+      grade_level: offering.grade_level?.name || null,
+      total_students: studentCount || 0,
+      total_grades: allPercentages.length,
+      average: Math.round(avg * 10) / 10,
+      median: Math.round(median * 10) / 10,
+      pass_rate: Math.round(passRate * 10) / 10,
+      highest: sorted.length > 0 ? Math.round(sorted[sorted.length - 1] * 10) / 10 : 0,
+      lowest: sorted.length > 0 ? Math.round(sorted[0] * 10) / 10 : 0,
+    },
+  });
 };
 
 // ── Route Definitions ──────────────────────────────────────────
@@ -437,7 +413,7 @@ const getOverview = async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/group-comparison', authenticateToken, validate(groupComparisonSchema), getGroupComparison);
+router.get('/group-comparison', authenticateToken, validate(groupComparisonSchema), asyncHandler(getGroupComparison));
 /**
  * @openapi
  * /api/grade-analysis/at-risk:
@@ -527,7 +503,7 @@ router.get('/group-comparison', authenticateToken, validate(groupComparisonSchem
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/at-risk', authenticateToken, validate(atRiskSchema), getAtRisk);
+router.get('/at-risk', authenticateToken, validate(atRiskSchema), asyncHandler(getAtRisk));
 /**
  * @openapi
  * /api/grade-analysis/distribution/{assessmentId}:
@@ -607,7 +583,7 @@ router.get('/at-risk', authenticateToken, validate(atRiskSchema), getAtRisk);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/distribution/:assessmentId', authenticateToken, validate(distributionSchema), getDistribution);
+router.get('/distribution/:assessmentId', authenticateToken, validate(distributionSchema), asyncHandler(getDistribution));
 /**
  * @openapi
  * /api/grade-analysis/trends/{studentId}:
@@ -675,7 +651,7 @@ router.get('/distribution/:assessmentId', authenticateToken, validate(distributi
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/trends/:studentId', authenticateToken, validate(trendsSchema), getTrends);
+router.get('/trends/:studentId', authenticateToken, validate(trendsSchema), asyncHandler(getTrends));
 /**
  * @openapi
  * /api/grade-analysis/overview/{offeringId}:
@@ -754,6 +730,6 @@ router.get('/trends/:studentId', authenticateToken, validate(trendsSchema), getT
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/overview/:offeringId', authenticateToken, validate(overviewSchema), getOverview);
+router.get('/overview/:offeringId', authenticateToken, validate(overviewSchema), asyncHandler(getOverview));
 
 module.exports = router;

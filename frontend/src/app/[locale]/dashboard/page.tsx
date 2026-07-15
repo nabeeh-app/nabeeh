@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAuth, usePermissions } from '@/hooks/useAuth';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { Users, BarChart3, FileText, MessageSquare, GraduationCap, User, Users2, Zap, ClipboardList, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { getVisibleNavigation } from '@/config/navigation';
+import { StatCard } from '@/components/ui/StatCards';
 
 export default function DashboardPage() {
   const { teacher } = useAuth();
@@ -24,7 +24,7 @@ export default function DashboardPage() {
   const tMonitor = useTranslations('monitor');
   const tRoles = useTranslations('roles');
 
-  const navItems = useMemo(() => getVisibleNavigation(teacher?.role), [teacher?.role]);
+  const navItems = getVisibleNavigation(teacher?.role);
 
   const getDescription = (item: (typeof navItems)[number]): string | null => {
     if (!item.descriptionKey || !item.descriptionNs) return null;
@@ -48,7 +48,7 @@ export default function DashboardPage() {
 
   const formatNumber = (value: number) => new Intl.NumberFormat(locale).format(value);
 
-  const attendanceRate = useMemo(() => {
+  const attendanceRate = (() => {
     if (!stats?.recent_attendance?.length) return 0;
     const latest = stats.recent_attendance.reduce((currentLatest, entry) => {
       if (!currentLatest) return entry;
@@ -56,12 +56,12 @@ export default function DashboardPage() {
     }, stats.recent_attendance[0]);
     if (!latest.total) return 0;
     return Math.round((latest.present / latest.total) * 100);
-  }, [stats]);
+  })();
 
-  const totalGrades = useMemo(() => {
+  const totalGrades = (() => {
     if (!stats?.recent_grades?.length) return 0;
     return stats.recent_grades.reduce((sum, entry) => sum + entry.count, 0);
-  }, [stats]);
+  })();
 
   const totalStudents = stats?.total_students ?? 0;
   const activeStudents = stats?.active_students ?? 0;
@@ -185,27 +185,6 @@ export default function DashboardPage() {
             </>
           )}
         </div>
-    </div>
-  );
-}
-
-function StatCard({ title, value, icon }: { title: string; value: string; icon: LucideIcon }) {
-  const Icon = icon;
-  return (
-    <div className="bg-surface-sage p-5 rounded-md">
-      <div className="flex items-center gap-4">
-        <div className="flex-shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-          <Icon className="h-4 w-4 text-primary" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-ink/50 truncate font-body uppercase tracking-wider">
-            {title}
-          </p>
-          <p className="text-3xl font-bold text-ink font-display leading-tight">
-            {value}
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

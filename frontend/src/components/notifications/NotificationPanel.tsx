@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import Link from 'next/link';
@@ -15,7 +14,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { apiClient } from '@/lib/client';
+import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
 import type { Notification } from '@/types';
 
 const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
@@ -30,51 +29,22 @@ const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
 
 interface NotificationPanelProps {
   onClose: () => void;
-  onReadAll: () => void;
 }
 
-export function NotificationPanel({ onClose, onReadAll }: NotificationPanelProps) {
+export function NotificationPanel({ onClose }: NotificationPanelProps) {
   const t = useTranslations('notifications');
   const locale = useLocale();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: response, isLoading } = useNotifications({ limit: 20 });
+  const notifications = response?.data ?? [];
+  const markRead = useMarkNotificationRead();
+  const markAllRead = useMarkAllNotificationsRead();
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const response = await apiClient.getNotifications({ limit: 20 });
-        if (response.success) {
-          setNotifications(response.data);
-        }
-      } catch {
-        // Silently fail
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchNotifications();
-  }, []);
-
-  const handleMarkAllRead = async () => {
-    try {
-      await apiClient.markAllNotificationsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      onReadAll();
-    } catch {
-      // Silently fail
-    }
+  const handleMarkAllRead = () => {
+    markAllRead.mutate();
   };
 
-  const handleMarkRead = async (id: string) => {
-    try {
-      await apiClient.markNotificationRead(id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-      );
-      onReadAll();
-    } catch {
-      // Silently fail
-    }
+  const handleMarkRead = (id: string) => {
+    markRead.mutate(id);
   };
 
   const timeAgo = (dateStr: string) => {
@@ -94,7 +64,7 @@ export function NotificationPanel({ onClose, onReadAll }: NotificationPanelProps
     <div className="absolute right-0 top-full mt-2 w-80 max-h-[70vh] bg-popover border border-border shadow-lg z-50 rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <h3 className="font-semibold text-ink font-display">{t('title')}</h3>
-        {notifications.some((n) => !n.is_read) && (
+        {notifications.some((n: Notification) => !n.is_read) && (
           <Button
             variant="ghost"
             size="sm"
@@ -108,7 +78,7 @@ export function NotificationPanel({ onClose, onReadAll }: NotificationPanelProps
       </div>
 
       <div className="overflow-y-auto max-h-[50vh]">
-        {loading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin h-6 w-6 border-b-2 border-ink" />
           </div>
@@ -118,7 +88,7 @@ export function NotificationPanel({ onClose, onReadAll }: NotificationPanelProps
             <p className="text-sm text-ink/50">{t('empty')}</p>
           </div>
         ) : (
-          notifications.map((notification) => {
+          notifications.map((notification: Notification) => {
             const Icon = NOTIFICATION_ICONS[notification.type] || Bell;
             return (
               <div

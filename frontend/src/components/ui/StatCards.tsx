@@ -49,3 +49,30 @@ export function StatCards({ stats }: StatCardsProps) {
     </div>
   );
 }
+
+interface SingleStatCardProps {
+  title: string;
+  value: string;
+  icon: LucideIcon;
+}
+
+export function StatCard({ title, value, icon }: SingleStatCardProps) {
+  const Icon = icon;
+  return (
+    <div className="bg-surface-sage p-5 rounded-md">
+      <div className="flex items-center gap-4">
+        <div className="flex-shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+          <Icon className="h-4 w-4 text-primary" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-ink/50 truncate font-body uppercase tracking-wider">
+            {title}
+          </p>
+          <p className="text-3xl font-bold text-ink font-display leading-tight">
+            {value}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,36 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { NotificationPanel } from './NotificationPanel';
-import { apiClient } from '@/lib/client';
+import { useUnreadNotificationCount } from '@/hooks/useNotifications';
 
 export function NotificationBell() {
   const t = useTranslations('notifications');
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { data: countResponse } = useUnreadNotificationCount();
+  const unreadCount = countResponse?.data?.count ?? 0;
   const [isOpen, setIsOpen] = useState(false);
-
-  const fetchUnreadCount = useCallback(async () => {
-    try {
-      const response = await apiClient.getUnreadNotificationCount();
-      if (response.success) {
-        setUnreadCount(response.data.count);
-      }
-    } catch {
-      // Silently fail — don't crash the header
-    }
-  }, []);
-
-  useEffect(() => {
-    void (async () => {
-      await fetchUnreadCount();
-    })();
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, [fetchUnreadCount]);
 
   return (
     <div className="relative">
@@ -58,10 +40,7 @@ export function NotificationBell() {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <NotificationPanel
-            onClose={() => setIsOpen(false)}
-            onReadAll={fetchUnreadCount}
-          />
+          <NotificationPanel onClose={() => setIsOpen(false)} />
         </>
       )}
     </div>

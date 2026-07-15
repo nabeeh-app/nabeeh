@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { LogOut, Menu, X, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -41,7 +41,7 @@ export function Sidebar() {
     return words[0].charAt(0) + words[0].charAt(1);
   };
 
-  const navItems = useMemo(() => getVisibleNavigation(teacher?.role), [teacher?.role]);
+  const navItems = getVisibleNavigation(teacher?.role);
 
   const sidebarContent = (
     <div className="flex h-full w-64 flex-col bg-sidebar border-s border-sidebar-border">

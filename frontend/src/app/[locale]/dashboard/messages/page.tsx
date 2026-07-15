@@ -137,36 +137,12 @@ export default function MessagesPage() {
   };
 
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        setIsLoadingConversations(true);
-        setError(null);
-        const response = await apiClient.getConversations({ page: 1, limit: 50 });
-        if (cancelled) return;
-        const nextConversations = response.data ?? [];
-        setConversations(nextConversations);
-        setSelectedConversationId(prev => {
-          if (prev && nextConversations.some(c => c.id === prev)) return prev;
-          return nextConversations[0]?.id ?? null;
-        });
-      } catch (err: unknown) {
-        if (cancelled) return;
-        const message = err instanceof Error ? err.message : 'Failed to load conversations';
-        setError(message);
-      } finally {
-        if (!cancelled) setIsLoadingConversations(false);
-      }
-    };
-    load();
-    return () => { cancelled = true; };
-  }, []);
+    loadConversations();
+  }, [loadConversations]);
 
   useEffect(() => {
     if (!selectedConversationId) {
-      void (async () => {
-        setMessages([]);
-      })();
+      setMessages([]);
       return;
     }
     let cancelled = false;

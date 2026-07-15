@@ -1,8 +1,9 @@
 const express = require('express');
-const supabase = require('../config/database').supabaseAdmin;
+const { supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, markAttendanceSchema, updateAttendanceSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
@@ -10,276 +11,231 @@ const router = express.Router();
 // @route   GET /api/attendance
 // @access  Private
 const getAttendance = async (req, res) => {
-  try {
-    const {
-      start_date = new Date().toISOString().split('T')[0],
-      end_date = new Date().toISOString().split('T')[0],
-      student_id,
-      group_id // Filter by specific group
-    } = req.query;
+  const {
+    start_date = new Date().toISOString().split('T')[0],
+    end_date = new Date().toISOString().split('T')[0],
+    student_id,
+    group_id
+  } = req.query;
 
-    let query = supabase
-      .from('attendance')
-      .select(`
-        *,
-        enrollment:enrollments!inner (
-            id,
-            teacher_id,
-            student:students (id, name, student_code),
-            group:groups!inner (
-                id, name,
-                offering:offerings!inner ( subject:subjects(*) )
-            )
-        ),
-        session:sessions!inner (
-            date
-        )
-      `)
-      .gte('sessions.date', start_date)
-      .lte('sessions.date', end_date)
-      .eq('enrollment.teacher_id', req.user.id)
-      .order('created_at', { ascending: false });
+  let query = supabaseAdmin
+    .from('attendance')
+    .select(`
+      *,
+      enrollment:enrollments!inner (
+          id,
+          teacher_id,
+          student:students (id, name, student_code),
+          group:groups!inner (
+              id, name,
+              offering:offerings!inner ( subject:subjects(*) )
+          )
+      ),
+      session:sessions!inner (
+          date
+      )
+    `)
+    .gte('sessions.date', start_date)
+    .lte('sessions.date', end_date)
+    .eq('enrollment.teacher_id', req.user.id)
+    .order('created_at', { ascending: false });
 
-    if (student_id) {
-      // Filter via enrollment
-      query = query.eq('enrollment.student_id', student_id);
-    }
-
-    if (group_id) {
-      query = query.eq('enrollment.group_id', group_id);
-    }
-
-    const { data: attendance, error } = await query;
-
-    if (error) throw error;
-
-    // Transform result to flatter structure if helpful for frontend
-    const flatAttendance = attendance.map(a => ({
-      id: a.id,
-      date: a.session?.date,
-      status: a.status,
-      notes: a.notes,
-      student_id: a.enrollment.student.id,
-      group_id: a.enrollment.group.id,
-      student: a.enrollment.student,
-      group: {
-        id: a.enrollment.group.id,
-        name: a.enrollment.group.name,
-        subject: a.enrollment.group.offering.subject.name_en
-      }
-    }));
-
-    res.status(200).json({
-      success: true,
-      data: flatAttendance
-    });
-  } catch (error) {
-    logger.error('Get attendance error', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Server error fetching attendance',
-      messageAr: 'خطأ في الخادم أثناء جلب سجلات الحضور',
-      code: 'INTERNAL_ERROR'
-    });
+  if (student_id) {
+    query = query.eq('enrollment.student_id', student_id);
   }
+
+  if (group_id) {
+    query = query.eq('enrollment.group_id', group_id);
+  }
+
+  const { data: attendance, error } = await query;
+
+  if (error) throw error;
+
+  const flatAttendance = attendance.map(a => ({
+    id: a.id,
+    date: a.session?.date,
+    status: a.status,
+    notes: a.notes,
+    student_id: a.enrollment.student.id,
+    group_id: a.enrollment.group.id,
+    student: a.enrollment.student,
+    group: {
+      id: a.enrollment.group.id,
+      name: a.enrollment.group.name,
+      subject: a.enrollment.group.offering.subject.name_en
+    }
+  }));
+
+  res.status(200).json({
+    success: true,
+    data: flatAttendance
+  });
 };
 
 // @desc    Mark attendance for students (Active in a Group)
 // @route   POST /api/attendance
 // @access  Private
 const markAttendance = async (req, res) => {
-  try {
-    const incomingRecords = req.body.attendance_records || req.body.attendance;
-    const requestDate = req.body.date;
+  const incomingRecords = req.body.attendance_records || req.body.attendance;
+  const requestDate = req.body.date;
 
-    if (!incomingRecords || !Array.isArray(incomingRecords)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Attendance records array is required',
-        messageAr: 'مطلوب مصفوفة سجلات الحضور',
-        code: 'VALIDATION_ERROR'
-      });
-    }
-
-    const attendance_records = incomingRecords.map(record => ({
-      ...record,
-      date: record.date || requestDate
-    })).filter(record => Boolean(record.student_id && record.group_id));
-
-    if (attendance_records.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Each attendance record must include student_id and group_id',
-        messageAr: 'يجب أن يتضمن كل سجل حضور معرّف الطالب ومعرّف المجموعة',
-        code: 'VALIDATION_ERROR'
-      });
-    }
-
-    // 1. Resolve Enrollments
-    // We need to map (student_id, group_id) -> enrollment_id
-    // Efficient way: Fetch all relevant enrollments for these pairs?
-    // Or just fetch enrollments for the group(s) involved.
-    // Assuming mostly one group per batch:
-    const groupIds = [...new Set(attendance_records.map(r => r.group_id))];
-    const studentIds = attendance_records.map(r => r.student_id);
-
-    const { data: enrollments } = await supabase
-      .from('enrollments')
-      .select('id, student_id, group_id, teacher_id')
-      .in('group_id', groupIds)
-      .in('student_id', studentIds)
-      .eq('teacher_id', req.user.id);
-
-    const enrollmentMap = {};
-    enrollments?.forEach(e => {
-      enrollmentMap[`${e.student_id}_${e.group_id}`] = e.id;
-    });
-
-    const activeRecords = [];
-    const missingEnrollments = [];
-
-    attendance_records.forEach(record => {
-      const enrollmentId = enrollmentMap[`${record.student_id}_${record.group_id}`];
-      if (enrollmentId) {
-        activeRecords.push({
-          enrollment_id: enrollmentId,
-          date: record.date || new Date().toISOString().split('T')[0],
-          status: record.status,
-          notes: record.notes
-        });
-      } else {
-        missingEnrollments.push(record.student_id);
-      }
-    });
-
-    if (activeRecords.length === 0) {
-      return res.status(400).json({ success: false, message: 'No valid enrollments found for these students/groups', messageAr: 'لم يتم العثور على تسجيلات صالحة لهؤلاء الطلاب/المجموعات', code: 'VALIDATION_ERROR' });
-    }
-
-    // 2. Upsert Attendance
-    const { data: attendance, error } = await supabase
-      .from('attendance')
-      .upsert(activeRecords, {
-        onConflict: 'enrollment_id,date'
-      })
-      .select();
-
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-        messageAr: 'فشل في تحديث سجل الحضور',
-        code: 'VALIDATION_ERROR'
-      });
-    }
-
-    res.status(201).json({
-      success: true,
-      data: attendance,
-      message: 'Attendance marked successfully'
-    });
-  } catch (error) {
-    logger.error('Mark attendance error', { error: error.message });
-    res.status(500).json({
+  if (!incomingRecords || !Array.isArray(incomingRecords)) {
+    return res.status(400).json({
       success: false,
-      message: 'Server error marking attendance',
-      messageAr: 'خطأ في الخادم أثناء تسجيل الحضور',
-      code: 'INTERNAL_ERROR'
+      message: 'Attendance records array is required',
+      messageAr: 'مطلوب مصفوفة سجلات الحضور',
+      code: 'VALIDATION_ERROR'
     });
   }
+
+  const attendance_records = incomingRecords.map(record => ({
+    ...record,
+    date: record.date || requestDate
+  })).filter(record => Boolean(record.student_id && record.group_id));
+
+  if (attendance_records.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Each attendance record must include student_id and group_id',
+      messageAr: 'يجب أن يتضمن كل سجل حضور معرّف الطالب ومعرّف المجموعة',
+      code: 'VALIDATION_ERROR'
+    });
+  }
+
+  const groupIds = [...new Set(attendance_records.map(r => r.group_id))];
+  const studentIds = attendance_records.map(r => r.student_id);
+
+  const { data: enrollments } = await supabaseAdmin
+    .from('enrollments')
+    .select('id, student_id, group_id, teacher_id')
+    .in('group_id', groupIds)
+    .in('student_id', studentIds)
+    .eq('teacher_id', req.user.id);
+
+  const enrollmentMap = {};
+  enrollments?.forEach(e => {
+    enrollmentMap[`${e.student_id}_${e.group_id}`] = e.id;
+  });
+
+  const activeRecords = [];
+  const missingEnrollments = [];
+
+  attendance_records.forEach(record => {
+    const enrollmentId = enrollmentMap[`${record.student_id}_${record.group_id}`];
+    if (enrollmentId) {
+      activeRecords.push({
+        enrollment_id: enrollmentId,
+        date: record.date || new Date().toISOString().split('T')[0],
+        status: record.status,
+        notes: record.notes
+      });
+    } else {
+      missingEnrollments.push(record.student_id);
+    }
+  });
+
+  if (activeRecords.length === 0) {
+    return res.status(400).json({ success: false, message: 'No valid enrollments found for these students/groups', messageAr: 'لم يتم العثور على تسجيلات صالحة لهؤلاء الطلاب/المجموعات', code: 'VALIDATION_ERROR' });
+  }
+
+  const { data: attendance, error } = await supabaseAdmin
+    .from('attendance')
+    .upsert(activeRecords, {
+      onConflict: 'enrollment_id,date'
+    })
+    .select();
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+      messageAr: 'فشل في تحديث سجل الحضور',
+      code: 'VALIDATION_ERROR'
+    });
+  }
+
+  res.status(201).json({
+    success: true,
+    data: attendance,
+    message: 'Attendance marked successfully'
+  });
 };
 
 // @desc    Get attendance summary
 // @route   GET /api/attendance/summary
 // @access  Private
 const getAttendanceSummary = async (req, res) => {
-  try {
-    const {
-      start_date = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      end_date = new Date().toISOString().split('T')[0]
-    } = req.query;
+  const {
+    start_date = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    end_date = new Date().toISOString().split('T')[0]
+  } = req.query;
 
-    // Single RPC call replaces fetching all rows + JS-side aggregation
-    const { data: summary, error: rpcError } = await supabase
-      .rpc('attendance_summary', {
-        p_teacher_id: req.user.id,
-        p_start_date: start_date,
-        p_end_date: end_date
-      })
-      .single();
+  const { data: summary, error: rpcError } = await supabaseAdmin
+    .rpc('attendance_summary', {
+      p_teacher_id: req.user.id,
+      p_start_date: start_date,
+      p_end_date: end_date
+    })
+    .single();
 
-    if (rpcError) throw rpcError;
+  if (rpcError) throw rpcError;
 
-    res.status(200).json({
-      success: true,
-      data: {
-        total_sessions: Number(summary.total_sessions) || 0,
-        present_count: Number(summary.present_count) || 0,
-        absent_count: Number(summary.absent_count) || 0,
-        late_count: Number(summary.late_count) || 0,
-        excused_count: Number(summary.excused_count) || 0,
-        attendance_rate: Number(summary.attendance_rate) || 0
-      }
-    });
-  } catch (error) {
-    logger.error('Get attendance summary error', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Server error fetching attendance summary',
-      messageAr: 'خطأ في الخادم أثناء جلب ملخص الحضور',
-      code: 'INTERNAL_ERROR'
-    });
-  }
+  res.status(200).json({
+    success: true,
+    data: {
+      total_sessions: Number(summary.total_sessions) || 0,
+      present_count: Number(summary.present_count) || 0,
+      absent_count: Number(summary.absent_count) || 0,
+      late_count: Number(summary.late_count) || 0,
+      excused_count: Number(summary.excused_count) || 0,
+      attendance_rate: Number(summary.attendance_rate) || 0
+    }
+  });
 };
 
 // @desc    Update a single attendance record
 // @route   PATCH /api/attendance/:id
 // @access  Private
 const updateAttendance = async (req, res) => {
-  try {
-    const { status, notes } = req.body;
+  const { status, notes } = req.body;
 
-    // Verify ownership via enrollment chain
-    const { data: record, error: fetchError } = await supabase
-      .from('attendance')
-      .select(`
-        id,
-        enrollment:enrollments!inner (
-          teacher_id
-        )
-      `)
-      .eq('id', req.params.id)
-      .single();
+  const { data: record, error: fetchError } = await supabaseAdmin
+    .from('attendance')
+    .select(`
+      id,
+      enrollment:enrollments!inner (
+        teacher_id
+      )
+    `)
+    .eq('id', req.params.id)
+    .single();
 
-    if (fetchError || !record) {
-      return res.status(404).json({ success: false, message: 'Attendance record not found', messageAr: 'لم يتم العثور على سجل الحضور', code: 'NOT_FOUND' });
-    }
-
-    if (record.enrollment.teacher_id !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
-    }
-
-    const updates = {};
-    if (status) updates.status = status;
-    if (notes !== undefined) updates.notes = notes;
-
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ success: false, message: 'No fields to update', messageAr: 'لا توجد حقول للتحديث', code: 'VALIDATION_ERROR' });
-    }
-
-    const { data: updated, error } = await supabase
-      .from('attendance')
-      .update(updates)
-      .eq('id', req.params.id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.json({ success: true, data: updated });
-  } catch (error) {
-    logger.error('Update attendance error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error updating attendance', messageAr: 'خطأ في الخادم أثناء تحديث سجل الحضور', code: 'INTERNAL_ERROR' });
+  if (fetchError || !record) {
+    return res.status(404).json({ success: false, message: 'Attendance record not found', messageAr: 'لم يتم العثور على سجل الحضور', code: 'NOT_FOUND' });
   }
+
+  if (record.enrollment.teacher_id !== req.user.id) {
+    return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
+  }
+
+  const updates = {};
+  if (status) updates.status = status;
+  if (notes !== undefined) updates.notes = notes;
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ success: false, message: 'No fields to update', messageAr: 'لا توجد حقول للتحديث', code: 'VALIDATION_ERROR' });
+  }
+
+  const { data: updated, error } = await supabaseAdmin
+    .from('attendance')
+    .update(updates)
+    .eq('id', req.params.id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  res.json({ success: true, data: updated });
 };
 
 // ============================================================
@@ -365,62 +321,53 @@ const updateAttendance = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 // Acquire lock on a student for a session
-router.post('/lock', authenticateToken, requirePermission('manage_attendance'), async (req, res) => {
-  try {
-    const { session_id, student_id } = req.body;
+router.post('/lock', authenticateToken, requirePermission('manage_attendance'), asyncHandler(async (req, res) => {
+  const { session_id, student_id } = req.body;
 
-    if (!session_id || !student_id) {
-      return res.status(400).json({ success: false, message: 'session_id and student_id are required', messageAr: 'معرّف الجلسة ومعرّف الطالب مطلوبان', code: 'VALIDATION_ERROR' });
-    }
-
-    // Check for existing lock
-    const { data: existingLock } = await supabase
-      .from('attendance_locks')
-      .select('id, locked_by, locked_by_type, locked_at')
-      .eq('session_id', session_id)
-      .eq('student_id', student_id)
-      .single();
-
-    if (existingLock) {
-      const lockAge = Date.now() - new Date(existingLock.locked_at).getTime();
-      const fiveMinutes = 5 * 60 * 1000;
-
-      if (lockAge < fiveMinutes) {
-        // Lock is still active
-        const lockOwnerName = existingLock.locked_by === req.user.id ? 'you' : 'another user';
-        return res.status(409).json({
-          success: false,
-          message: `Locked by ${lockOwnerName}`,
-          messageAr: existingLock.locked_by === req.user.id ? 'القفل محتفظ به من قِبَلك' : 'القفل محتفظ به من مستخدم آخر',
-          code: 'LOCK_CONFLICT',
-          data: { locked_by: existingLock.locked_by, locked_at: existingLock.locked_at }
-        });
-      }
-
-      // Lock expired — release and re-lock
-      await supabase.from('attendance_locks').delete().eq('id', existingLock.id);
-    }
-
-    // Acquire new lock
-    const { data: lock, error: lockError } = await supabase
-      .from('attendance_locks')
-      .insert([{
-        session_id,
-        student_id,
-        locked_by: req.user.id,
-        locked_by_type: req.user.role || 'teacher'
-      }])
-      .select()
-      .single();
-
-    if (lockError) throw lockError;
-
-    res.status(201).json({ success: true, data: lock, message: 'Lock acquired' });
-  } catch (error) {
-    logger.error('Acquire attendance lock error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error acquiring lock', messageAr: 'خطأ في الخادم أثناء الحصول على القفل', code: 'INTERNAL_ERROR' });
+  if (!session_id || !student_id) {
+    return res.status(400).json({ success: false, message: 'session_id and student_id are required', messageAr: 'معرّف الجلسة ومعرّف الطالب مطلوبان', code: 'VALIDATION_ERROR' });
   }
-});
+
+  const { data: existingLock } = await supabaseAdmin
+    .from('attendance_locks')
+    .select('id, locked_by, locked_by_type, locked_at')
+    .eq('session_id', session_id)
+    .eq('student_id', student_id)
+    .single();
+
+  if (existingLock) {
+    const lockAge = Date.now() - new Date(existingLock.locked_at).getTime();
+    const fiveMinutes = 5 * 60 * 1000;
+
+    if (lockAge < fiveMinutes) {
+      const lockOwnerName = existingLock.locked_by === req.user.id ? 'you' : 'another user';
+      return res.status(409).json({
+        success: false,
+        message: `Locked by ${lockOwnerName}`,
+        messageAr: existingLock.locked_by === req.user.id ? 'القفل محتفظ به من قِبَلك' : 'القفل محتفظ به من مستخدم آخر',
+        code: 'LOCK_CONFLICT',
+        data: { locked_by: existingLock.locked_by, locked_at: existingLock.locked_at }
+      });
+    }
+
+    await supabaseAdmin.from('attendance_locks').delete().eq('id', existingLock.id);
+  }
+
+  const { data: lock, error: lockError } = await supabaseAdmin
+    .from('attendance_locks')
+    .insert([{
+      session_id,
+      student_id,
+      locked_by: req.user.id,
+      locked_by_type: req.user.role || 'teacher'
+    }])
+    .select()
+    .single();
+
+  if (lockError) throw lockError;
+
+  res.status(201).json({ success: true, data: lock, message: 'Lock acquired' });
+}));
 
 /**
  * @openapi
@@ -479,29 +426,24 @@ router.post('/lock', authenticateToken, requirePermission('manage_attendance'), 
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 // Release lock
-router.delete('/lock', authenticateToken, async (req, res) => {
-  try {
-    const { session_id, student_id } = req.body;
+router.delete('/lock', authenticateToken, asyncHandler(async (req, res) => {
+  const { session_id, student_id } = req.body;
 
-    if (!session_id || !student_id) {
-      return res.status(400).json({ success: false, message: 'session_id and student_id are required', messageAr: 'معرّف الجلسة ومعرّف الطالب مطلوبان', code: 'VALIDATION_ERROR' });
-    }
-
-    const { error } = await supabase
-      .from('attendance_locks')
-      .delete()
-      .eq('session_id', session_id)
-      .eq('student_id', student_id)
-      .eq('locked_by', req.user.id);
-
-    if (error) throw error;
-
-    res.json({ success: true, message: 'Lock released' });
-  } catch (error) {
-    logger.error('Release attendance lock error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error releasing lock', messageAr: 'خطأ في الخادم أثناء تحرير القفل', code: 'INTERNAL_ERROR' });
+  if (!session_id || !student_id) {
+    return res.status(400).json({ success: false, message: 'session_id and student_id are required', messageAr: 'معرّف الجلسة ومعرّف الطالب مطلوبان', code: 'VALIDATION_ERROR' });
   }
-});
+
+  const { error } = await supabaseAdmin
+    .from('attendance_locks')
+    .delete()
+    .eq('session_id', session_id)
+    .eq('student_id', student_id)
+    .eq('locked_by', req.user.id);
+
+  if (error) throw error;
+
+  res.json({ success: true, message: 'Lock released' });
+}));
 
 /**
  * @openapi
@@ -566,36 +508,31 @@ router.delete('/lock', authenticateToken, async (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 // Check lock status
-router.get('/lock/:sessionId/:studentId', authenticateToken, async (req, res) => {
-  try {
-    const { sessionId, studentId } = req.params;
+router.get('/lock/:sessionId/:studentId', authenticateToken, asyncHandler(async (req, res) => {
+  const { sessionId, studentId } = req.params;
 
-    const { data: lock, error } = await supabase
-      .from('attendance_locks')
-      .select('id, locked_by, locked_by_type, locked_at, expires_at')
-      .eq('session_id', sessionId)
-      .eq('student_id', studentId)
-      .single();
+  const { data: lock, error } = await supabaseAdmin
+    .from('attendance_locks')
+    .select('id, locked_by, locked_by_type, locked_at, expires_at')
+    .eq('session_id', sessionId)
+    .eq('student_id', studentId)
+    .single();
 
-    if (error || !lock) {
-      return res.json({ success: true, data: { locked: false } });
-    }
-
-    const lockAge = Date.now() - new Date(lock.locked_at).getTime();
-    const fiveMinutes = 5 * 60 * 1000;
-    const isExpired = lockAge >= fiveMinutes;
-
-    if (isExpired) {
-      await supabase.from('attendance_locks').delete().eq('id', lock.id);
-      return res.json({ success: true, data: { locked: false } });
-    }
-
-    res.json({ success: true, data: { locked: true, ...lock } });
-  } catch (error) {
-    logger.error('Check attendance lock error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error checking lock', messageAr: 'خطأ في الخادم أثناء التحقق من القفل', code: 'INTERNAL_ERROR' });
+  if (error || !lock) {
+    return res.json({ success: true, data: { locked: false } });
   }
-});
+
+  const lockAge = Date.now() - new Date(lock.locked_at).getTime();
+  const fiveMinutes = 5 * 60 * 1000;
+  const isExpired = lockAge >= fiveMinutes;
+
+  if (isExpired) {
+    await supabaseAdmin.from('attendance_locks').delete().eq('id', lock.id);
+    return res.json({ success: true, data: { locked: false } });
+  }
+
+  res.json({ success: true, data: { locked: true, ...lock } });
+}));
 
 // ============================================================
 // Audit logging for attendance actions
@@ -701,7 +638,7 @@ const updateAttendanceWithAudit = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 // Route definitions
-router.get('/', authenticateToken, getAttendance);
+router.get('/', authenticateToken, asyncHandler(getAttendance));
 
 /**
  * @openapi
@@ -779,7 +716,7 @@ router.get('/', authenticateToken, getAttendance);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/', authenticateToken, requirePermission('manage_attendance'), validate(markAttendanceSchema), markAttendanceWithAudit);
+router.post('/', authenticateToken, requirePermission('manage_attendance'), validate(markAttendanceSchema), asyncHandler(markAttendanceWithAudit));
 
 /**
  * @openapi
@@ -841,7 +778,7 @@ router.post('/', authenticateToken, requirePermission('manage_attendance'), vali
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/summary', authenticateToken, getAttendanceSummary);
+router.get('/summary', authenticateToken, asyncHandler(getAttendanceSummary));
 
 /**
  * @openapi
@@ -911,6 +848,6 @@ router.get('/summary', authenticateToken, getAttendanceSummary);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.patch('/:id', authenticateToken, requirePermission('manage_attendance'), validate(updateAttendanceSchema), updateAttendanceWithAudit);
+router.patch('/:id', authenticateToken, requirePermission('manage_attendance'), validate(updateAttendanceSchema), asyncHandler(updateAttendanceWithAudit));
 
 module.exports = router;

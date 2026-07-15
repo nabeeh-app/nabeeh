@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useDebounce } from '@/hooks/useDebounce';
 import { formatPhoneNumber, validateEmail } from '@/lib/utils';
 import { Save, CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import apiClient from '@/lib/client';
+import { apiClient } from '@/lib/client';
 import logger from '@/lib/logger';
 import { PageHeader } from '@/components/ui/PageHeader';
 import ProfileForm from '@/components/dashboard/settings/ProfileForm';
@@ -44,20 +44,20 @@ export default function SettingsPage() {
   const isRTL = locale === 'ar';
   const t = useTranslations('settings');
 
-  const [settings, setSettings] = useState<TeacherSettings>({
-    name: '',
-    email: '',
-    phone: '',
-    whatsapp_number: '',
-    business_name: '',
-    bio: '',
-    subjects: [],
-    address: '',
-    city: '',
-    country: 'Egypt',
-    timezone: 'Africa/Cairo',
-    telegram_username: ''
-  });
+  const [settings, setSettings] = useState<TeacherSettings>(() => ({
+    name: teacher?.name || '',
+    email: teacher?.email || '',
+    phone: teacher?.phone || '',
+    whatsapp_number: teacher?.whatsapp_number || teacher?.phone || '',
+    business_name: teacher?.business_name || '',
+    bio: teacher?.bio || '',
+    subjects: teacher?.subjects || [],
+    address: teacher?.address || '',
+    city: teacher?.city || '',
+    country: teacher?.country || 'Egypt',
+    timezone: teacher?.timezone || 'Africa/Cairo',
+    telegram_username: teacher?.telegram_username || ''
+  }));
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -73,27 +73,6 @@ export default function SettingsPage() {
     { key: 'assignments', label: t('notifAssignments'), enabled: false },
     { key: 'system', label: t('notifSystem'), enabled: true },
   ]);
-
-  useEffect(() => {
-    if (teacher) {
-      void (async () => {
-        setSettings({
-          name: teacher.name || '',
-          email: teacher.email || '',
-          phone: teacher.phone || '',
-          whatsapp_number: teacher.whatsapp_number || teacher.phone || '',
-          business_name: teacher.business_name || '',
-          bio: teacher.bio || '',
-          subjects: teacher.subjects || [],
-          address: teacher.address || '',
-          city: teacher.city || '',
-          country: teacher.country || 'Egypt',
-          timezone: teacher.timezone || 'Africa/Cairo',
-          telegram_username: teacher.telegram_username || ''
-        });
-      })();
-    }
-  }, [teacher]);
 
   const debouncedWhatsappNumber = useDebounce(settings.whatsapp_number, 500);
 

@@ -34,21 +34,21 @@ export default async function PrivacyPolicy({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const isAr = locale === "ar";
+  const isRTL = locale === "ar";
 
   return (
     <div className="min-h-screen bg-canvas">
       <LandingNav />
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <h1 className="text-4xl font-bold text-ink font-display mb-2">
-          {isAr ? "سياسة الخصوصية" : "Privacy Policy"}
+          {isRTL ? "سياسة الخصوصية" : "Privacy Policy"}
         </h1>
         <p className="text-sm text-ink/50 font-body mb-10">
-          {isAr ? "آخر تحديث: يونيو 2026" : "Last updated: June 2026"}
+          {isRTL ? "آخر تحديث: يونيو 2026" : "Last updated: June 2026"}
         </p>
 
         <div className="prose prose-ink max-w-none font-body space-y-8 text-ink/80 leading-relaxed">
-          {isAr ? (
+          {isRTL ? (
             <>
               <Section title="1. مقدمة">
                 نظام نبيه (&quot;الخدمة&quot;) هو منصة تعليمية ذكية تعمل عبر الويب وتُدار بواسطة نبيه (&quot;نحن&quot;). نلتزم بحماية خصوصيتك وبياناتك الشخصية. تصف هذه السياسة كيفية جمع واستخدام وحماية معلوماتك باستخدام الخدمة.
@@ -246,7 +246,7 @@ export default async function PrivacyPolicy({
             href={`/${locale}`}
             className="text-primary hover:text-primary/80 font-body font-medium"
           >
-            {isAr ? "← العودة إلى الصفحة الرئيسية" : "← Back to Homepage"}
+            {isRTL ? "← العودة إلى الصفحة الرئيسية" : "← Back to Homepage"}
           </Link>
         </div>
       </main>

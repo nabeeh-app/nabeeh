@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { QrCode, RefreshCw, Link2, Loader2, Phone, Copy, Check } from 'lucide-react';
 import { useState } from 'react';
-import apiClient from '@/lib/client';
+import { apiClient } from '@/lib/client';
 import logger from '@/lib/logger';
 
 interface WhatsAppPairingProps {

@@ -1,7 +1,8 @@
 const express = require('express');
-const supabase = require('../config/database').supabaseAdmin;
+const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const logger = require('../lib/logger');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
@@ -9,112 +10,91 @@ const router = express.Router();
 // @route   GET /api/messages/conversations
 // @access  Private
 const getConversations = async (req, res) => {
-  try {
-    const { data: conversations, error } = await supabase
-      .from('conversations')
-      .select(`
-        *,
-        parents (
-          name,
-          phone,
-          preferred_language,
-          students (name, student_id)
-        )
-      `)
-      .eq('teacher_id', req.user.id)
-      .order('last_message_at', { ascending: false });
+  const { data: conversations, error } = await supabaseAdmin
+    .from('conversations')
+    .select(`
+      *,
+      parents (
+        name,
+        phone,
+        preferred_language,
+        students (name, student_id)
+      )
+    `)
+    .eq('teacher_id', req.user.id)
+    .order('last_message_at', { ascending: false });
 
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-        messageAr: 'خطأ في استعلام قاعدة البيانات',
-        code: 'VALIDATION_ERROR'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: conversations
-    });
-  } catch (error) {
-    logger.error('Get conversations error', { error: error.message });
-    res.status(500).json({
+  if (error) {
+    return res.status(400).json({
       success: false,
-      message: 'Server error fetching conversations',
-      messageAr: 'خطأ في الخادم أثناء جلب المحادثات',
-      code: 'INTERNAL_ERROR'
+      message: error.message,
+      messageAr: 'خطأ في استعلام قاعدة البيانات',
+      code: 'VALIDATION_ERROR'
     });
   }
+
+  res.status(200).json({
+    success: true,
+    data: conversations
+  });
 };
 
 // @desc    Get messages for a conversation
 // @route   GET /api/messages/conversations/:id
 // @access  Private
 const getConversationMessages = async (req, res) => {
-  try {
-    const { page = 1, limit = 50 } = req.query;
-    const offset = (page - 1) * limit;
+  const { page = 1, limit = 50 } = req.query;
+  const offset = (page - 1) * limit;
 
-    // Verify conversation belongs to teacher
-    const { data: conversation } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('id', req.params.id)
-      .eq('teacher_id', req.user.id)
-      .single();
+  const { data: conversation } = await supabaseAdmin
+    .from('conversations')
+    .select('id')
+    .eq('id', req.params.id)
+    .eq('teacher_id', req.user.id)
+    .single();
 
-    if (!conversation) {
-      return res.status(404).json({
-        success: false,
-        message: 'Conversation not found',
-        messageAr: 'لم يتم العثور على المحادثة',
-        code: 'NOT_FOUND'
-      });
-    }
-
-    const { data: messages, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('conversation_id', req.params.id)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-        messageAr: 'خطأ في جلب الرسائل',
-        code: 'VALIDATION_ERROR'
-      });
-    }
-
-    const { count: total } = await supabase
-      .from('messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('conversation_id', req.params.id);
-
-    const totalPages = Math.ceil((total || 0) / limit);
-
-    res.status(200).json({
-      success: true,
-      data: messages.reverse(), // Show oldest first
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: total || 0,
-        pages: totalPages
-      }
-    });
-  } catch (error) {
-    logger.error('Get conversation messages error', { error: error.message });
-    res.status(500).json({
+  if (!conversation) {
+    return res.status(404).json({
       success: false,
-      message: 'Server error fetching messages',
-      messageAr: 'خطأ في الخادم أثناء جلب الرسائل',
-      code: 'INTERNAL_ERROR'
+      message: 'Conversation not found',
+      messageAr: 'لم يتم العثور على المحادثة',
+      code: 'NOT_FOUND'
     });
   }
+
+  const { data: messages, error } = await supabaseAdmin
+    .from('messages')
+    .select('*')
+    .eq('conversation_id', req.params.id)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+      messageAr: 'خطأ في جلب الرسائل',
+      code: 'VALIDATION_ERROR'
+    });
+  }
+
+  const { count: total } = await supabaseAdmin
+    .from('messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('conversation_id', req.params.id);
+
+  const totalPages = Math.ceil((total || 0) / limit);
+
+  res.status(200).json({
+    success: true,
+    data: messages.reverse(),
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: total || 0,
+      pages: totalPages
+    }
+  });
 };
 
 // Message sending is handled by WhatsApp routes - this endpoint is deprecated
@@ -123,64 +103,52 @@ const getConversationMessages = async (req, res) => {
 // @route   GET /api/messages/stats
 // @access  Private
 const getMessageStats = async (req, res) => {
-  try {
-    const { start_date, end_date } = req.query;
-    const startDate = start_date || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const endDate = end_date || new Date().toISOString();
+  const { start_date, end_date } = req.query;
+  const startDate = start_date || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const endDate = end_date || new Date().toISOString();
 
-    // Single RPC call replaces 3 separate count queries
-    const { data: statsRow, error: rpcError } = await supabase
-      .rpc('message_stats', {
-        p_teacher_id: req.user.id,
-        p_start_date: startDate,
-        p_end_date: endDate
-      })
-      .single();
+  const { data: statsRow, error: rpcError } = await supabaseAdmin
+    .rpc('message_stats', {
+      p_teacher_id: req.user.id,
+      p_start_date: startDate,
+      p_end_date: endDate
+    })
+    .single();
 
-    if (rpcError) throw rpcError;
+  if (rpcError) throw rpcError;
 
-    const totalMessages = Number(statsRow.total_count) || 0;
-    const incomingMessages = Number(statsRow.incoming_count) || 0;
-    const automatedMessages = Number(statsRow.automated_count) || 0;
+  const totalMessages = Number(statsRow.total_count) || 0;
+  const incomingMessages = Number(statsRow.incoming_count) || 0;
+  const automatedMessages = Number(statsRow.automated_count) || 0;
 
-    // Get most common intents (still needs separate query for grouped data)
-    const { data: intents } = await supabase
-      .from('messages')
-      .select(`
-        intent,
-        conversations!inner (teacher_id)
-      `)
-      .eq('conversations.teacher_id', req.user.id)
-      .not('intent', 'is', null)
-      .gte('created_at', startDate)
-      .lte('created_at', endDate);
+  const { data: intents } = await supabaseAdmin
+    .from('messages')
+    .select(`
+      intent,
+      conversations!inner (teacher_id)
+    `)
+    .eq('conversations.teacher_id', req.user.id)
+    .not('intent', 'is', null)
+    .gte('created_at', startDate)
+    .lte('created_at', endDate);
 
-    const intentCounts = {};
-    intents?.forEach(msg => {
-      intentCounts[msg.intent] = (intentCounts[msg.intent] || 0) + 1;
-    });
+  const intentCounts = {};
+  intents?.forEach(msg => {
+    intentCounts[msg.intent] = (intentCounts[msg.intent] || 0) + 1;
+  });
 
-    res.status(200).json({
-      success: true,
-      data: {
-        total_messages: totalMessages,
-        incoming_messages: incomingMessages,
-        outgoing_messages: totalMessages - incomingMessages,
-        automated_messages: automatedMessages,
-        manual_messages: totalMessages - automatedMessages,
-        common_intents: intentCounts,
-        period: { start_date: startDate, end_date: endDate }
-      }
-    });
-  } catch (error) {
-    logger.error('Get message stats error', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Server error fetching message statistics',
-      messageAr: 'خطأ في الخادم أثناء جلب إحصائيات الرسائل',
-      code: 'INTERNAL_ERROR'
-    });
-  }
+  res.status(200).json({
+    success: true,
+    data: {
+      total_messages: totalMessages,
+      incoming_messages: incomingMessages,
+      outgoing_messages: totalMessages - incomingMessages,
+      automated_messages: automatedMessages,
+      manual_messages: totalMessages - automatedMessages,
+      common_intents: intentCounts,
+      period: { start_date: startDate, end_date: endDate }
+    }
+  });
 };
 
 // Route definitions
@@ -227,7 +195,7 @@ const getMessageStats = async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/conversations', authenticateToken, getConversations);
+router.get('/conversations', authenticateToken, asyncHandler(getConversations));
 /**
  * @openapi
  * /api/messages/conversations/{id}:
@@ -302,7 +270,7 @@ router.get('/conversations', authenticateToken, getConversations);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/conversations/:id', authenticateToken, getConversationMessages);
+router.get('/conversations/:id', authenticateToken, asyncHandler(getConversationMessages));
 // router.post('/send', authenticateToken, sendMessage); // Deprecated - use WhatsApp routes
 /**
  * @openapi
@@ -372,6 +340,6 @@ router.get('/conversations/:id', authenticateToken, getConversationMessages);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/stats', authenticateToken, getMessageStats);
+router.get('/stats', authenticateToken, asyncHandler(getMessageStats));
 
 module.exports = router;

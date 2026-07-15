@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Upload, FileSpreadsheet, ClipboardPaste } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -23,41 +23,35 @@ export default function FileUploadZone({
   const [showPaste, setShowPaste] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(true);
-  }, []);
+  };
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
+  const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-  }, []);
+  };
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragOver(false);
-      const file = e.dataTransfer.files[0];
-      if (file) onFileSelected(file);
-    },
-    [onFileSelected]
-  );
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) onFileSelected(file);
+  };
 
-  const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) onFileSelected(file);
-    },
-    [onFileSelected]
-  );
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) onFileSelected(file);
+  };
 
-  const handlePaste = useCallback(() => {
+  const handlePaste = () => {
     if (pasteText.trim() && onPasteData) {
       onPasteData(pasteText);
       setPasteText('');
       setShowPaste(false);
     }
-  }, [pasteText, onPasteData]);
+  };
 
   return (
     <div className="space-y-4">

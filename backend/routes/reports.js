@@ -3,6 +3,7 @@ const { z } = require('zod');
 const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const asyncHandler = require('../middleware/asyncHandler');
 const { logAudit } = require('../lib/auditLog');
 const aiService = require('../lib/aiService');
 const { createJob, getJob } = require('../lib/jobQueue');
@@ -32,276 +33,236 @@ const bulkGenerateSchema = z.object({
 });
 
 const generateComment = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { student_id, group_id } = req.body;
+  const teacherId = req.user.teacherId || req.user.id;
+  const { student_id, group_id } = req.body;
 
-    const { data: student } = await supabaseAdmin
-      .from('students').select('id, name').eq('id', student_id).single();
-    if (!student) return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
+  const { data: student } = await supabaseAdmin
+    .from('students').select('id, name').eq('id', student_id).single();
+  if (!student) return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
 
-    const { data: enrollment } = await supabaseAdmin
-      .from('enrollments')
-      .select('id, groups!inner(id, offerings!inner(teacher_id))')
-      .eq('student_id', student_id)
-      .eq('groups.offerings.teacher_id', teacherId)
-      .limit(1)
-      .maybeSingle();
-    if (!enrollment) {
-      return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
-    }
-
-    const { data: teacher } = await supabaseAdmin
-      .from('teachers').select('name, business_name, preferred_language').eq('id', teacherId).single();
-
-    const gradesResult = await require('../lib/whatsappQuery').getStudentGrades(student_id);
-    const attendanceRecords = await require('../lib/whatsappQuery').getAllStudentAttendance(student_id);
-    const totalSessions = attendanceRecords.length;
-    const presentCount = attendanceRecords.filter(a => a.status === 'present' || a.status === 'late').length;
-    const attendanceRate = totalSessions > 0 ? `${Math.round((presentCount / totalSessions) * 100)}%` : 'N/A';
-
-    const draftText = await aiService.generateReportComment({
-      studentName: student.name,
-      grades: gradesResult?.recentGrades || [],
-      attendance: { total_sessions: totalSessions, present: presentCount, rate: attendanceRate },
-      trends: 'Steady improvement over recent weeks',
-      language: teacher?.preferred_language || 'en',
-    }, {
-      teacherName: teacher?.name || 'Teacher',
-      businessName: teacher?.business_name || '',
-    });
-
-    const { data: draft, error } = await supabaseAdmin
-      .from('report_drafts')
-      .insert([{
-        teacher_id: teacherId,
-        student_id,
-        group_id: group_id || null,
-        draft_text: draftText,
-        data_sources: { grades: gradesResult?.recentGrades || [], attendance: attendanceRecords },
-        status: 'pending',
-      }])
-      .select().single();
-
-    if (error) throw error;
-
-    await logAudit({
-      actorId: teacherId, actorType: 'teacher', teacherId,
-      action: 'report_comment_generated', entityType: 'report_draft',
-      entityId: draft.id, ipAddress: req.ip,
-    });
-
-    res.status(201).json({ success: true, data: draft });
-  } catch (error) {
-    logger.error('Generate comment error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error generating comment', messageAr: 'خطأ في الخادم أثناء إنشاء التعليق', code: 'INTERNAL_ERROR' });
+  const { data: enrollment } = await supabaseAdmin
+    .from('enrollments')
+    .select('id, groups!inner(id, offerings!inner(teacher_id))')
+    .eq('student_id', student_id)
+    .eq('groups.offerings.teacher_id', teacherId)
+    .limit(1)
+    .maybeSingle();
+  if (!enrollment) {
+    return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
   }
+
+  const { data: teacher } = await supabaseAdmin
+    .from('teachers').select('name, business_name, preferred_language').eq('id', teacherId).single();
+
+  const gradesResult = await require('../lib/whatsappQuery').getStudentGrades(student_id);
+  const attendanceRecords = await require('../lib/whatsappQuery').getAllStudentAttendance(student_id);
+  const totalSessions = attendanceRecords.length;
+  const presentCount = attendanceRecords.filter(a => a.status === 'present' || a.status === 'late').length;
+  const attendanceRate = totalSessions > 0 ? `${Math.round((presentCount / totalSessions) * 100)}%` : 'N/A';
+
+  const draftText = await aiService.generateReportComment({
+    studentName: student.name,
+    grades: gradesResult?.recentGrades || [],
+    attendance: { total_sessions: totalSessions, present: presentCount, rate: attendanceRate },
+    trends: 'Steady improvement over recent weeks',
+    language: teacher?.preferred_language || 'en',
+  }, {
+    teacherName: teacher?.name || 'Teacher',
+    businessName: teacher?.business_name || '',
+  });
+
+  const { data: draft, error } = await supabaseAdmin
+    .from('report_drafts')
+    .insert([{
+      teacher_id: teacherId,
+      student_id,
+      group_id: group_id || null,
+      draft_text: draftText,
+      data_sources: { grades: gradesResult?.recentGrades || [], attendance: attendanceRecords },
+      status: 'pending',
+    }])
+    .select().single();
+
+  if (error) throw error;
+
+  await logAudit({
+    actorId: teacherId, actorType: 'teacher', teacherId,
+    action: 'report_comment_generated', entityType: 'report_draft',
+    entityId: draft.id, ipAddress: req.ip,
+  });
+
+  res.status(201).json({ success: true, data: draft });
 };
 
 const getDrafts = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const status = req.query.status;
-    const offset = (page - 1) * limit;
+  const teacherId = req.user.teacherId || req.user.id;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const status = req.query.status;
+  const offset = (page - 1) * limit;
 
-    let query = supabaseAdmin
-      .from('report_drafts')
-      .select('*, students(name, student_id)', { count: 'exact' })
-      .eq('teacher_id', teacherId);
+  let query = supabaseAdmin
+    .from('report_drafts')
+    .select('*, students(name, student_id)', { count: 'exact' })
+    .eq('teacher_id', teacherId);
 
-    if (status) query = query.eq('status', status);
-    query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+  if (status) query = query.eq('status', status);
+  query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
 
-    const { data, error, count } = await query;
-    if (error) throw error;
+  const { data, error, count } = await query;
+  if (error) throw error;
 
-    res.json({
-      success: true,
-      data: (data || []).map(d => ({
-        ...d,
-        student_name: d.students?.name || null,
-        student_code: d.students?.student_id || null,
-        students: undefined,
-      })),
-      pagination: { page, limit, total: count || 0, pages: Math.ceil((count || 0) / limit) },
-    });
-  } catch (error) {
-    logger.error('Get drafts error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching drafts', messageAr: 'خطأ في الخادم أثناء جلب المسودات', code: 'INTERNAL_ERROR' });
-  }
+  res.json({
+    success: true,
+    data: (data || []).map(d => ({
+      ...d,
+      student_name: d.students?.name || null,
+      student_code: d.students?.student_id || null,
+      students: undefined,
+    })),
+    pagination: { page, limit, total: count || 0, pages: Math.ceil((count || 0) / limit) },
+  });
 };
 
 const updateDraft = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { id } = req.validated.params;
-    const { edited_text, status } = req.validated.body;
+  const teacherId = req.user.teacherId || req.user.id;
+  const { id } = req.validated.params;
+  const { edited_text, status } = req.validated.body;
 
-    const updates = { edited_text };
-    if (status) updates.status = status;
-    else updates.status = 'edited';
+  const updates = { edited_text };
+  if (status) updates.status = status;
+  else updates.status = 'edited';
 
-    const { data, error } = await supabaseAdmin
-      .from('report_drafts')
-      .update(updates)
-      .eq('id', id).eq('teacher_id', teacherId)
-      .select().single();
+  const { data, error } = await supabaseAdmin
+    .from('report_drafts')
+    .update(updates)
+    .eq('id', id).eq('teacher_id', teacherId)
+    .select().single();
 
-    if (error) throw error;
-    if (!data) return res.status(404).json({ success: false, message: 'Draft not found', messageAr: 'لم يتم العثور على المسودة', code: 'NOT_FOUND' });
+  if (error) throw error;
+  if (!data) return res.status(404).json({ success: false, message: 'Draft not found', messageAr: 'لم يتم العثور على المسودة', code: 'NOT_FOUND' });
 
-    res.json({ success: true, data });
-  } catch (error) {
-    logger.error('Update draft error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error updating draft', messageAr: 'خطأ في الخادم أثناء تحديث المسودة', code: 'INTERNAL_ERROR' });
-  }
+  res.json({ success: true, data });
 };
 
 const approveDraft = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { id } = req.validated.params;
+  const teacherId = req.user.teacherId || req.user.id;
+  const { id } = req.validated.params;
 
-    const { data: draft } = await supabaseAdmin
-      .from('report_drafts')
-      .select('*, students(name, id)')
-      .eq('id', id).eq('teacher_id', teacherId).single();
+  const { data: draft } = await supabaseAdmin
+    .from('report_drafts')
+    .select('*, students(name, id)')
+    .eq('id', id).eq('teacher_id', teacherId).single();
 
-    if (!draft) return res.status(404).json({ success: false, message: 'Draft not found', messageAr: 'لم يتم العثور على المسودة', code: 'NOT_FOUND' });
+  if (!draft) return res.status(404).json({ success: false, message: 'Draft not found', messageAr: 'لم يتم العثور على المسودة', code: 'NOT_FOUND' });
 
-    const finalText = draft.edited_text || draft.draft_text;
+  const finalText = draft.edited_text || draft.draft_text;
 
-    // Find student's parent
-    const { data: parentLink } = await supabaseAdmin
-      .from('student_parents')
-      .select('parents(id, name, phone)')
-      .eq('student_id', draft.student_id)
-      .limit(1);
+  // Find student's parent
+  const { data: parentLink } = await supabaseAdmin
+    .from('student_parents')
+    .select('parents(id, name, phone)')
+    .eq('student_id', draft.student_id)
+    .limit(1);
 
-    if (parentLink && parentLink.length > 0) {
-      const parent = parentLink[0].parents;
+  if (parentLink && parentLink.length > 0) {
+    const parent = parentLink[0].parents;
 
-      // Try to send via WhatsApp
-      try {
-        const whatsappQuery = require('../lib/whatsappQuery');
-        const conversation = await whatsappQuery.findOrCreateConversation(
-          parent.id, teacherId, `report_${draft.id}`
-        );
-        if (conversation) {
-          await whatsappQuery.saveMessage(conversation.id, 'outbound', finalText);
-        }
-      } catch (waError) {
-        logger.warn('WhatsApp send failed for report', { error: waError.message });
+    // Try to send via WhatsApp
+    try {
+      const whatsappQuery = require('../lib/whatsappQuery');
+      const conversation = await whatsappQuery.findOrCreateConversation(
+        parent.id, teacherId, `report_${draft.id}`
+      );
+      if (conversation) {
+        await whatsappQuery.saveMessage(conversation.id, 'outbound', finalText);
       }
+    } catch (waError) {
+      logger.warn('WhatsApp send failed for report', { error: waError.message });
     }
-
-    // Update draft status
-    await supabaseAdmin
-      .from('report_drafts')
-      .update({ status: 'sent', sent_at: new Date().toISOString() })
-      .eq('id', id);
-
-    // Create notification
-    await supabaseAdmin
-      .from('notifications')
-      .insert([{
-        teacher_id: teacherId,
-        type: 'report_ready',
-        title: 'Report Sent',
-        body: `Report comment sent for ${draft.students?.name || 'student'}`,
-        entity_type: 'report',
-        entity_id: draft.id,
-      }]);
-
-    await logAudit({
-      actorId: teacherId, actorType: 'teacher', teacherId,
-      action: 'report_sent', entityType: 'report_draft',
-      entityId: draft.id, ipAddress: req.ip,
-    });
-
-    res.json({ success: true, message: 'Report approved and sent' });
-  } catch (error) {
-    logger.error('Approve draft error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error approving draft', messageAr: 'خطأ في الخادم أثناء الموافقة على المسودة', code: 'INTERNAL_ERROR' });
   }
+
+  // Update draft status
+  await supabaseAdmin
+    .from('report_drafts')
+    .update({ status: 'sent', sent_at: new Date().toISOString() })
+    .eq('id', id);
+
+  // Create notification
+  await supabaseAdmin
+    .from('notifications')
+    .insert([{
+      teacher_id: teacherId,
+      type: 'report_ready',
+      title: 'Report Sent',
+      body: `Report comment sent for ${draft.students?.name || 'student'}`,
+      entity_type: 'report',
+      entity_id: draft.id,
+    }]);
+
+  await logAudit({
+    actorId: teacherId, actorType: 'teacher', teacherId,
+    action: 'report_sent', entityType: 'report_draft',
+    entityId: draft.id, ipAddress: req.ip,
+  });
+
+  res.json({ success: true, message: 'Report approved and sent' });
 };
 
 const rejectDraft = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { id } = req.validated.params;
-    const { error } = await supabaseAdmin
-      .from('report_drafts')
-      .update({ status: 'rejected' })
-      .eq('id', id).eq('teacher_id', teacherId);
-    if (error) throw error;
-    res.json({ success: true, message: 'Draft rejected' });
-  } catch (error) {
-    logger.error('Reject draft error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error rejecting draft', messageAr: 'خطأ في الخادم أثناء رفض المسودة', code: 'INTERNAL_ERROR' });
-  }
+  const teacherId = req.user.teacherId || req.user.id;
+  const { id } = req.validated.params;
+  const { error } = await supabaseAdmin
+    .from('report_drafts')
+    .update({ status: 'rejected' })
+    .eq('id', id).eq('teacher_id', teacherId);
+  if (error) throw error;
+  res.json({ success: true, message: 'Draft rejected' });
 };
 
 const bulkGenerate = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { group_id } = req.body;
+  const teacherId = req.user.teacherId || req.user.id;
+  const { group_id } = req.body;
 
-    const { data: group } = await supabaseAdmin
-      .from('groups')
-      .select('id, offerings!inner(teacher_id)')
-      .eq('id', group_id)
-      .eq('offerings.teacher_id', teacherId)
-      .maybeSingle();
-    if (!group) {
-      return res.status(404).json({ success: false, message: 'Group not found', messageAr: 'لم يتم العثور على المجموعة', code: 'NOT_FOUND' });
-    }
-
-    const jobId = createJob('bulk-report', { teacherId, group_id });
-    res.status(202).json({ success: true, data: { job_id: jobId, status: 'pending' } });
-  } catch (error) {
-    logger.error('Bulk generate error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error in bulk generation', messageAr: 'خطأ في الخادم أثناء الإنشاء الجماعي', code: 'INTERNAL_ERROR' });
+  const { data: group } = await supabaseAdmin
+    .from('groups')
+    .select('id, offerings!inner(teacher_id)')
+    .eq('id', group_id)
+    .eq('offerings.teacher_id', teacherId)
+    .maybeSingle();
+  if (!group) {
+    return res.status(404).json({ success: false, message: 'Group not found', messageAr: 'لم يتم العثور على المجموعة', code: 'NOT_FOUND' });
   }
+
+  const jobId = createJob('bulk-report', { teacherId, group_id });
+  res.status(202).json({ success: true, data: { job_id: jobId, status: 'pending' } });
 };
 
 const getLatestDigest = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { data } = await supabaseAdmin
-      .from('weekly_digests')
-      .select('*')
-      .eq('teacher_id', teacherId)
-      .order('week_start', { ascending: false })
-      .limit(1)
-      .single();
+  const teacherId = req.user.teacherId || req.user.id;
+  const { data } = await supabaseAdmin
+    .from('weekly_digests')
+    .select('*')
+    .eq('teacher_id', teacherId)
+    .order('week_start', { ascending: false })
+    .limit(1)
+    .single();
 
-    res.json({ success: true, data: data || null });
-  } catch (error) {
-    logger.error('Get latest digest error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching digest', messageAr: 'خطأ في الخادم أثناء جلب الملخص', code: 'INTERNAL_ERROR' });
-  }
+  res.json({ success: true, data: data || null });
 };
 
 const getDigestByWeek = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { weekStart } = req.params;
-    const { data } = await supabaseAdmin
-      .from('weekly_digests')
-      .select('*')
-      .eq('teacher_id', teacherId)
-      .eq('week_start', weekStart)
-      .single();
+  const teacherId = req.user.teacherId || req.user.id;
+  const { weekStart } = req.params;
+  const { data } = await supabaseAdmin
+    .from('weekly_digests')
+    .select('*')
+    .eq('teacher_id', teacherId)
+    .eq('week_start', weekStart)
+    .single();
 
-    if (!data) return res.status(404).json({ success: false, message: 'Digest not found for this week', messageAr: 'لم يتم العثور على الملخص لهذا الأسبوع', code: 'NOT_FOUND' });
-    res.json({ success: true, data });
-  } catch (error) {
-    logger.error('Get digest by week error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching digest', messageAr: 'خطأ في الخادم أثناء جلب الملخص', code: 'INTERNAL_ERROR' });
-  }
+  if (!data) return res.status(404).json({ success: false, message: 'Digest not found for this week', messageAr: 'لم يتم العثور على الملخص لهذا الأسبوع', code: 'NOT_FOUND' });
+  res.json({ success: true, data });
 };
 
 /**
@@ -367,7 +328,7 @@ const getDigestByWeek = async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/generate-comment', authenticateToken, validate(generateCommentSchema), generateComment);
+router.post('/generate-comment', authenticateToken, validate(generateCommentSchema), asyncHandler(generateComment));
 /**
  * @openapi
  * /api/reports/drafts:
@@ -435,7 +396,7 @@ router.post('/generate-comment', authenticateToken, validate(generateCommentSche
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/drafts', authenticateToken, getDrafts);
+router.get('/drafts', authenticateToken, asyncHandler(getDrafts));
 /**
  * @openapi
  * /api/reports/drafts/{id}:
@@ -507,7 +468,7 @@ router.get('/drafts', authenticateToken, getDrafts);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/drafts/:id', authenticateToken, validate(updateDraftSchema), updateDraft);
+router.put('/drafts/:id', authenticateToken, validate(updateDraftSchema), asyncHandler(updateDraft));
 /**
  * @openapi
  * /api/reports/drafts/{id}/approve:
@@ -557,7 +518,7 @@ router.put('/drafts/:id', authenticateToken, validate(updateDraftSchema), update
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/drafts/:id/approve', authenticateToken, validate(draftParamsSchema), approveDraft);
+router.post('/drafts/:id/approve', authenticateToken, validate(draftParamsSchema), asyncHandler(approveDraft));
 /**
  * @openapi
  * /api/reports/drafts/{id}/reject:
@@ -601,7 +562,7 @@ router.post('/drafts/:id/approve', authenticateToken, validate(draftParamsSchema
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/drafts/:id/reject', authenticateToken, validate(draftParamsSchema), rejectDraft);
+router.post('/drafts/:id/reject', authenticateToken, validate(draftParamsSchema), asyncHandler(rejectDraft));
 /**
  * @openapi
  * /api/reports/bulk-generate:
@@ -668,7 +629,7 @@ router.post('/drafts/:id/reject', authenticateToken, validate(draftParamsSchema)
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/bulk-generate', authenticateToken, validate(bulkGenerateSchema), bulkGenerate);
+router.post('/bulk-generate', authenticateToken, validate(bulkGenerateSchema), asyncHandler(bulkGenerate));
 /**
  * @openapi
  * /api/reports/weekly-digest:
@@ -705,7 +666,7 @@ router.post('/bulk-generate', authenticateToken, validate(bulkGenerateSchema), b
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/weekly-digest', authenticateToken, getLatestDigest);
+router.get('/weekly-digest', authenticateToken, asyncHandler(getLatestDigest));
 /**
  * @openapi
  * /api/reports/weekly-digest/{weekStart}:
@@ -754,7 +715,7 @@ router.get('/weekly-digest', authenticateToken, getLatestDigest);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/weekly-digest/:weekStart', authenticateToken, getDigestByWeek);
+router.get('/weekly-digest/:weekStart', authenticateToken, asyncHandler(getDigestByWeek));
 
 /**
  * @openapi

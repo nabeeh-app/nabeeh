@@ -4,6 +4,7 @@ const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const logger = require('../lib/logger');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
@@ -23,120 +24,95 @@ const markReadParamsSchema = z.object({
 
 // ── GET / — List notifications (paginated, unread first) ───────
 const getNotifications = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { page, limit, type, unread_only } = req.validated.query;
-    const offset = (page - 1) * limit;
+  const teacherId = req.user.teacherId || req.user.id;
+  const { page, limit, type, unread_only } = req.validated.query;
+  const offset = (page - 1) * limit;
 
-    let query = supabaseAdmin
-      .from('notifications')
-      .select('*', { count: 'exact' })
-      .eq('teacher_id', teacherId);
+  let query = supabaseAdmin
+    .from('notifications')
+    .select('*', { count: 'exact' })
+    .eq('teacher_id', teacherId);
 
-    if (type) query = query.eq('type', type);
-    if (unread_only) query = query.eq('is_read', false);
+  if (type) query = query.eq('type', type);
+  if (unread_only) query = query.eq('is_read', false);
 
-    query = query
-      .order('is_read', { ascending: true })
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+  query = query
+    .order('is_read', { ascending: true })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
-    const { data, error, count } = await query;
-    if (error) throw error;
+  const { data, error, count } = await query;
+  if (error) throw error;
 
-    res.json({
-      success: true,
-      data: data || [],
-      pagination: {
-        page,
-        limit,
-        total: count || 0,
-        pages: Math.ceil((count || 0) / limit),
-      },
-    });
-  } catch (error) {
-    logger.error('Get notifications error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching notifications', messageAr: 'خطأ في الخادم أثناء جلب الإشعارات', code: 'INTERNAL_ERROR' });
-  }
+  res.json({
+    success: true,
+    data: data || [],
+    pagination: {
+      page,
+      limit,
+      total: count || 0,
+      pages: Math.ceil((count || 0) / limit),
+    },
+  });
 };
 
 // ── GET /unread-count ──────────────────────────────────────────
 const getUnreadCount = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { count } = await supabaseAdmin
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('teacher_id', teacherId)
-      .eq('is_read', false);
+  const teacherId = req.user.teacherId || req.user.id;
+  const { count } = await supabaseAdmin
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('teacher_id', teacherId)
+    .eq('is_read', false);
 
-    res.json({ success: true, data: { count: count || 0 } });
-  } catch (error) {
-    logger.error('Get unread count error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching unread count', messageAr: 'خطأ في الخادم أثناء جلب عدد غير المقروءة', code: 'INTERNAL_ERROR' });
-  }
+  res.json({ success: true, data: { count: count || 0 } });
 };
 
 // ── PUT /:id/read — Mark single notification as read ───────────
 const markRead = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { id } = req.validated.params;
+  const teacherId = req.user.teacherId || req.user.id;
+  const { id } = req.validated.params;
 
-    const { error } = await supabaseAdmin
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('id', id)
-      .eq('teacher_id', teacherId);
+  const { error } = await supabaseAdmin
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('id', id)
+    .eq('teacher_id', teacherId);
 
-    if (error) throw error;
+  if (error) throw error;
 
-    res.json({ success: true, message: 'Notification marked as read' });
-  } catch (error) {
-    logger.error('Mark notification read error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error marking notification', messageAr: 'خطأ في الخادم أثناء تحديث حالة الإشعار', code: 'INTERNAL_ERROR' });
-  }
+  res.json({ success: true, message: 'Notification marked as read' });
 };
 
 // ── PUT /read-all — Mark all as read ───────────────────────────
 const markAllRead = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
+  const teacherId = req.user.teacherId || req.user.id;
 
-    const { error } = await supabaseAdmin
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('teacher_id', teacherId)
-      .eq('is_read', false);
+  const { error } = await supabaseAdmin
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('teacher_id', teacherId)
+    .eq('is_read', false);
 
-    if (error) throw error;
+  if (error) throw error;
 
-    res.json({ success: true, message: 'All notifications marked as read' });
-  } catch (error) {
-    logger.error('Mark all notifications read error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error marking notifications', messageAr: 'خطأ في الخادم أثناء تحديث حالة الإشعارات', code: 'INTERNAL_ERROR' });
-  }
+  res.json({ success: true, message: 'All notifications marked as read' });
 };
 
 // ── DELETE /:id — Delete a notification ────────────────────────
 const deleteNotification = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { id } = req.validated.params;
+  const teacherId = req.user.teacherId || req.user.id;
+  const { id } = req.validated.params;
 
-    const { error } = await supabaseAdmin
-      .from('notifications')
-      .delete()
-      .eq('id', id)
-      .eq('teacher_id', teacherId);
+  const { error } = await supabaseAdmin
+    .from('notifications')
+    .delete()
+    .eq('id', id)
+    .eq('teacher_id', teacherId);
 
-    if (error) throw error;
+  if (error) throw error;
 
-    res.json({ success: true, message: 'Notification deleted' });
-  } catch (error) {
-    logger.error('Delete notification error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error deleting notification', messageAr: 'خطأ في الخادم أثناء حذف الإشعار', code: 'INTERNAL_ERROR' });
-  }
+  res.json({ success: true, message: 'Notification deleted' });
 };
 
 // ── Route Definitions ──────────────────────────────────────────
@@ -178,7 +154,7 @@ const deleteNotification = async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/unread-count', authenticateToken, getUnreadCount);
+router.get('/unread-count', authenticateToken, asyncHandler(getUnreadCount));
 /**
  * @openapi
  * /api/notifications/read-all:
@@ -214,7 +190,7 @@ router.get('/unread-count', authenticateToken, getUnreadCount);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/read-all', authenticateToken, markAllRead);
+router.put('/read-all', authenticateToken, asyncHandler(markAllRead));
 /**
  * @openapi
  * /api/notifications:
@@ -287,7 +263,7 @@ router.put('/read-all', authenticateToken, markAllRead);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/', authenticateToken, validate(getNotificationsSchema), getNotifications);
+router.get('/', authenticateToken, validate(getNotificationsSchema), asyncHandler(getNotifications));
 /**
  * @openapi
  * /api/notifications/{id}/read:
@@ -331,7 +307,7 @@ router.get('/', authenticateToken, validate(getNotificationsSchema), getNotifica
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/:id/read', authenticateToken, validate(markReadParamsSchema), markRead);
+router.put('/:id/read', authenticateToken, validate(markReadParamsSchema), asyncHandler(markRead));
 /**
  * @openapi
  * /api/notifications/{id}:
@@ -375,6 +351,6 @@ router.put('/:id/read', authenticateToken, validate(markReadParamsSchema), markR
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.delete('/:id', authenticateToken, validate(markReadParamsSchema), deleteNotification);
+router.delete('/:id', authenticateToken, validate(markReadParamsSchema), asyncHandler(deleteNotification));
 
 module.exports = router;

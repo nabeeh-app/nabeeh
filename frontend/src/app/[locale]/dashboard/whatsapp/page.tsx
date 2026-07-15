@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useWhatsAppStatus } from '@/hooks/useWhatsAppStatus';
 import { sendWhatsAppMessage } from '@/lib/utils';
-import apiClient from '@/lib/client';
+import { apiClient } from '@/lib/client';
 import logger from '@/lib/logger';
 import { AlertCircle } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';

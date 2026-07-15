@@ -107,7 +107,7 @@ export default function GradesPage() {
 
   const { data: offerings = [], isLoading: offeringsLoading } = useOfferings();
 
-  const groups = useMemo(() => offerings.flatMap(o => o.groups ?? []), [offerings]);
+  const groups = offerings.flatMap(o => o.groups ?? []);
 
   useEffect(() => {
     if (groups.length === 0 && !offeringsLoading) {
@@ -115,48 +115,43 @@ export default function GradesPage() {
     }
   }, [groups, offeringsLoading, locale, router]);
 
-  const effectiveSelectedGroupId = useMemo(
-    () => selectedGroupId || groups[0]?.id || '',
-    [selectedGroupId, groups]
-  );
+  const effectiveSelectedGroupId = selectedGroupId || groups[0]?.id || '';
 
-  const currentSubjectName = useMemo(() => {
+  const currentSubjectName = (() => {
     for (const offering of offerings) {
       if (offering.groups.find((g) => g.id === effectiveSelectedGroupId)) {
         return offering.subject.name_en;
       }
     }
     return '';
-  }, [offerings, effectiveSelectedGroupId]);
+  })();
 
-  const studentsParams = useMemo(() => effectiveSelectedGroupId ? {
+  const studentsParams = effectiveSelectedGroupId ? {
     limit: 100,
     status: 'active',
     group_id: effectiveSelectedGroupId,
-  } : undefined, [effectiveSelectedGroupId]);
+  } : undefined;
 
-  const gradesParams = useMemo(() => effectiveSelectedGroupId ? {
+  const gradesParams = effectiveSelectedGroupId ? {
     limit: 500,
     start_date: dateRange.from,
     end_date: dateRange.to,
     subject: currentSubjectName || undefined,
     group_id: effectiveSelectedGroupId,
-  } : undefined, [effectiveSelectedGroupId, dateRange, currentSubjectName]);
+  } : undefined;
 
   const { data: studentsResponse, isLoading: studentsLoading } = useStudents(studentsParams);
-  const students: Student[] = useMemo(() => studentsResponse?.data ?? [], [studentsResponse]);
+  const students: Student[] = studentsResponse?.data ?? [];
 
   const { data: gradesResponse, isLoading: gradesLoading } = useGrades(gradesParams);
-  const grades: GradeWithStudent[] = useMemo(() => {
-    const rawGrades = gradesResponse?.data ?? [];
-    const studentIds = new Set(students.map(s => s.id));
-    return rawGrades
-      .filter((g: Grade) => studentIds.has(g.student_id))
-      .map((grade: Grade) => ({
-        ...grade,
-        student: students.find(s => s.id === grade.student_id) || {} as Student
-      }));
-  }, [gradesResponse, students]);
+  const rawGrades = gradesResponse?.data ?? [];
+  const studentIds = new Set(students.map(s => s.id));
+  const grades: GradeWithStudent[] = rawGrades
+    .filter((g: Grade) => studentIds.has(g.student_id))
+    .map((grade: Grade) => ({
+      ...grade,
+      student: students.find(s => s.id === grade.student_id) || {} as Student
+    }));
 
   const createGrade = useCreateGrade();
   const updateGrade = useUpdateGrade();
@@ -182,41 +177,28 @@ export default function GradesPage() {
     variant?: 'default' | 'destructive';
   }>({ open: false, title: '', description: '', onConfirm: () => {} });
 
-  useEffect(() => {
-    if (!effectiveSelectedGroupId) return;
-    void (async () => {
-      setNewGrade(prev => ({
-        ...prev,
-        group_id: effectiveSelectedGroupId,
-        subject: currentSubjectName || prev.subject
-      }));
-    })();
-  }, [effectiveSelectedGroupId, currentSubjectName]);
-
-  const gradebook: GradebookEntry[] = useMemo(() => {
-    return students.map(student => {
-      const studentGrades = grades.filter(g => g.student_id === student.id);
-      const gradesMap: { [key: string]: { score: number; max_score: number; percentage: number; date: string } } = {};
-      studentGrades.forEach(grade => {
-        gradesMap[grade.assessment_name] = {
-          score: grade.score,
-          max_score: grade.max_score,
-          percentage: grade.percentage,
-          date: grade.date
-        };
-      });
-      const average = studentGrades.length > 0
-        ? studentGrades.reduce((sum, grade) => sum + grade.percentage, 0) / studentGrades.length
-        : 0;
-      return {
-        student_id: student.id,
-        student_name: student.name,
-        grades: gradesMap,
-        average: Math.round(average * 100) / 100,
-        letter_grade: getLetterGrade(average)
+  const gradebook: GradebookEntry[] = useMemo(() => students.map(student => {
+    const studentGrades = grades.filter(g => g.student_id === student.id);
+    const gradesMap: { [key: string]: { score: number; max_score: number; percentage: number; date: string } } = {};
+    studentGrades.forEach(grade => {
+      gradesMap[grade.assessment_name] = {
+        score: grade.score,
+        max_score: grade.max_score,
+        percentage: grade.percentage,
+        date: grade.date
       };
     });
-  }, [students, grades]);
+    const average = studentGrades.length > 0
+      ? studentGrades.reduce((sum, grade) => sum + grade.percentage, 0) / studentGrades.length
+      : 0;
+    return {
+      student_id: student.id,
+      student_name: student.name,
+      grades: gradesMap,
+      average: Math.round(average * 100) / 100,
+      letter_grade: getLetterGrade(average)
+    };
+  }), [students, grades]);
 
   const subjectStats: SubjectStats[] = useMemo(() => {
     const subjects = [...new Set(grades.map(g => g.subject))];
@@ -338,19 +320,17 @@ export default function GradesPage() {
     setFormError('');
   };
 
-  const uniqueSubjects = useMemo(() => [...new Set(grades.map(g => g.subject))], [grades]);
-  const uniqueAssessments = useMemo(() => [...new Set(grades.map(g => g.assessment_name))], [grades]);
+  const uniqueSubjects = [...new Set(grades.map(g => g.subject))];
+  const uniqueAssessments = [...new Set(grades.map(g => g.assessment_name))];
 
-  const filteredGrades = useMemo(() => {
-    return grades.filter(grade => {
-      const matchesSearch = grade.student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        grade.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        grade.assessment_name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesAssessmentType = selectedAssessmentType === 'all' || grade.assessment_type === selectedAssessmentType;
-      const matchesGradeFilter = gradeFilter === 'all' || getLetterGrade(grade.percentage) === gradeFilter;
-      return matchesSearch && matchesAssessmentType && matchesGradeFilter;
-    });
-  }, [grades, searchTerm, selectedAssessmentType, gradeFilter]);
+  const filteredGrades = useMemo(() => grades.filter(grade => {
+    const matchesSearch = grade.student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      grade.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      grade.assessment_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesAssessmentType = selectedAssessmentType === 'all' || grade.assessment_type === selectedAssessmentType;
+    const matchesGradeFilter = gradeFilter === 'all' || getLetterGrade(grade.percentage) === gradeFilter;
+    return matchesSearch && matchesAssessmentType && matchesGradeFilter;
+  }), [grades, searchTerm, selectedAssessmentType, gradeFilter]);
 
   const isLoading = offeringsLoading || studentsLoading || gradesLoading;
 

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link2, Copy, Check, ExternalLink } from 'lucide-react';
-import apiClient from '@/lib/client';
+import { apiClient } from '@/lib/client';
 
 interface SelfRegistrationLinkProps {
   groupId: string;

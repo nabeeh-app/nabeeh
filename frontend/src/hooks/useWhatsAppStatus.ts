@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { checkWhatsAppStatus } from '@/lib/utils';
 
 export interface WhatsAppStatus {
@@ -12,91 +12,41 @@ export interface WhatsAppStatus {
 }
 
 export const useWhatsAppStatus = (phone?: string, autoCheck = true) => {
-  const [whatsappStatus, setWhatsappStatus] = useState<WhatsAppStatus>({
-    status: 'disconnected',
-    message: 'Checking WhatsApp connection...',
-    sessionExists: false,
-    isLoading: false,
-    qr: null,
-    phone: null
+  const { data, refetch } = useQuery({
+    queryKey: ['whatsapp-status', phone],
+    queryFn: () => checkWhatsAppStatus(phone),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status === 'connected') return false;
+      if (status === 'qr_ready' || query.state.data?.pairingCodeMode) return 3000;
+      return 30000;
+    },
+    enabled: autoCheck,
+    staleTime: 5000,
   });
 
-  const checkStatus = useCallback(async () => {
-    // if (!phone && autoCheck) return; // Removed to allow status check without phone
-
-    setWhatsappStatus(prev => ({ ...prev, isLoading: true }));
-
-    try {
-      const result = await checkWhatsAppStatus(phone);
-      setWhatsappStatus({
-        status: result.status,
-        message: result.message,
-        sessionExists: result.status === 'connected',
+  const whatsappStatus: WhatsAppStatus = data
+    ? {
+        status: data.status,
+        message: data.message,
+        sessionExists: data.status === 'connected',
         isLoading: false,
-        qr: result.qr,
-        phone: result.phone,
-        pairingCodeMode: result.pairingCodeMode
-      });
-    } catch {
-      setWhatsappStatus({
-        status: 'error',
-        message: 'Error checking WhatsApp status',
-        sessionExists: false,
-        isLoading: false,
-        qr: null,
-        phone: null
-      });
-    }
-  }, [phone]);
-
-  useEffect(() => {
-    if (!autoCheck) return;
-
-    void (async () => {
-      await checkStatus();
-    })();
-
-    // Don't poll if already connected
-    if (whatsappStatus.status === 'connected') {
-      return;
-    }
-
-    // Adaptive polling: faster when QR/pairing (3s), slower otherwise (30s)
-    const pollInterval = (whatsappStatus.status === 'qr_ready' || whatsappStatus.pairingCodeMode) ? 3000 : 30000;
-
-    const interval = setInterval(async () => {
-      const result = await checkWhatsAppStatus(phone);
-      if (result.status === 'connected') {
-        clearInterval(interval);
-        setWhatsappStatus({
-          status: result.status,
-          message: result.message,
-          sessionExists: true,
-          isLoading: false,
-          qr: result.qr,
-          phone: result.phone,
-          pairingCodeMode: result.pairingCodeMode
-        });
-      } else {
-        setWhatsappStatus(prev => ({
-          ...prev,
-          status: result.status,
-          message: result.message,
-          sessionExists: result.status === 'connected',
-          isLoading: false,
-          qr: result.qr,
-          phone: result.phone,
-          pairingCodeMode: result.pairingCodeMode
-        }));
+        qr: data.qr,
+        phone: data.phone,
+        pairingCodeMode: data.pairingCodeMode,
       }
-    }, pollInterval);
-    
-    return () => clearInterval(interval);
-  }, [checkStatus, whatsappStatus.status, whatsappStatus.pairingCodeMode, autoCheck, phone]);
+    : {
+        status: 'disconnected',
+        message: 'Checking WhatsApp connection...',
+        sessionExists: false,
+        isLoading: true,
+        qr: null,
+        phone: null,
+      };
 
   return {
     whatsappStatus,
-    checkStatus,
-    refreshStatus: checkStatus
+    checkStatus: refetch,
+    refreshStatus: refetch,
   };
 };

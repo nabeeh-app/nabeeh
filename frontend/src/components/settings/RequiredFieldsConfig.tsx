@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Settings, Lock, Save, Loader2 } from 'lucide-react';
-import apiClient from '@/lib/client';
+import { apiClient } from '@/lib/client';
 
 const OPTIONAL_FIELDS = [
   { key: 'phone', label: 'Phone' },

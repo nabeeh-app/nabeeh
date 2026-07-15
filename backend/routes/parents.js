@@ -1,8 +1,10 @@
 const express = require('express');
-const supabase = require('../config/database').supabaseAdmin;
+const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate, createParentSchema, updateParentSchema } = require('../middleware/validate');
+const { verifyStudentAccess, getTeacherEnrollmentIds } = require('../lib/enrollmentChain');
 const logger = require('../lib/logger');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
@@ -10,326 +12,246 @@ const router = express.Router();
 // @route   GET /api/parents
 // @access  Private
 const getParents = async (req, res) => {
-  try {
-    const { student_id, search } = req.query;
-    const teacher_id = req.user.id;
+  const { student_id, search } = req.query;
+  const teacher_id = req.user.id;
 
-    // Step 1: Get Teacher's Student IDs via direct teacher_id filter
-    const { data: teacherStudents, error: studentError } = await supabase
-      .from('enrollments')
-      .select('student_id')
-      .eq('teacher_id', teacher_id)
-      .not('student_id', 'is', null);
+  const enrollments = await getTeacherEnrollmentIds(teacher_id);
+  const studentIds = new Set(enrollments.map(e => e.student_id));
 
-    const studentIds = new Set(teacherStudents?.map(e => e.student_id) || []);
+  if (studentIds.size === 0) {
+    return res.status(200).json({ success: true, data: [] });
+  }
 
-    if (studentIds.size === 0) {
-      return res.status(200).json({ success: true, data: [] });
+  let parentQuery = supabaseAdmin
+    .from('parents')
+    .select(`
+          *,
+          student:students (id, name, student_id)
+      `)
+    .in('student_id', Array.from(studentIds));
+
+  if (student_id) {
+    if (!studentIds.has(student_id)) {
+      return res.status(403).json({ success: false, message: 'Unauthorized access to student', messageAr: 'غير مصرح بالوصول إلى هذا الطالب', code: 'FORBIDDEN' });
     }
+    parentQuery = parentQuery.eq('student_id', student_id);
+  }
 
-    // Step 2: Fetch Parents
-    let parentQuery = supabase
-      .from('parents')
-      .select(`
-            *,
-            student:students (id, name, student_id)
-        `)
-      .in('student_id', Array.from(studentIds));
+  if (search) {
+    parentQuery = parentQuery.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
+  }
 
-    if (student_id) {
-      if (!studentIds.has(student_id)) {
-        return res.status(403).json({ success: false, message: 'Unauthorized access to student', messageAr: 'غير مصرح بالوصول إلى هذا الطالب', code: 'FORBIDDEN' });
-      }
-      parentQuery = parentQuery.eq('student_id', student_id);
-    }
+  const { data: parents, error } = await parentQuery;
 
-    if (search) {
-      parentQuery = parentQuery.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
-    }
-
-    const { data: parents, error } = await parentQuery;
-
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: error.message
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: parents
-    });
-  } catch (error) {
-    logger.error('Get parents error', { error: error.message });
-    res.status(500).json({
+  if (error) {
+    return res.status(400).json({
       success: false,
-      message: 'Server error fetching parents',
-      messageAr: 'خطأ في الخادم أثناء جلب أولياء الأمور',
-      code: 'INTERNAL_ERROR'
+      message: error.message,
+      messageAr: 'فشل في جلب أولياء الأمور',
+      code: 'DATABASE_ERROR'
     });
   }
+
+  res.status(200).json({
+    success: true,
+    data: parents
+  });
 };
 
 // @desc    Get single parent by ID
 // @route   GET /api/parents/:id
 // @access  Private
 const getParent = async (req, res) => {
-  try {
-    const { data: parent, error } = await supabase
-      .from('parents')
-      .select(`
-        *,
-        student:students (id, name, student_id)
-      `)
-      .eq('id', req.params.id)
-      .single();
+  const { data: parent, error } = await supabaseAdmin
+    .from('parents')
+    .select(`
+      *,
+      student:students (id, name, student_id)
+    `)
+    .eq('id', req.params.id)
+    .single();
 
-    if (error || !parent) {
-      return res.status(404).json({ success: false, message: 'Parent not found', messageAr: 'لم يتم العثور على ولي الأمر', code: 'NOT_FOUND' });
-    }
-
-    // Verify ownership via enrollment
-    const { data: enrollment } = await supabase
-      .from('enrollments')
-      .select('id')
-      .eq('student_id', parent.student_id)
-      .eq('teacher_id', req.user.id)
-      .limit(1);
-
-    if (!enrollment || enrollment.length === 0) {
-      return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
-    }
-
-    res.status(200).json({ success: true, data: parent });
-  } catch (error) {
-    logger.error('Get parent error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching parent', messageAr: 'خطأ في الخادم أثناء جلب ولي الأمر', code: 'INTERNAL_ERROR' });
+  if (error || !parent) {
+    return res.status(404).json({ success: false, message: 'Parent not found', messageAr: 'لم يتم العثور على ولي الأمر', code: 'NOT_FOUND' });
   }
+
+  const enrollment = await verifyStudentAccess(parent.student_id, req.user.id);
+  if (!enrollment) {
+    return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
+  }
+
+  res.status(200).json({ success: true, data: parent });
 };
 
 // @desc    Create new parent
 // @route   POST /api/parents
 // @access  Private
 const createParent = async (req, res) => {
-  try {
-    const {
+  const {
+    student_id,
+    name,
+    phone,
+    email,
+    relationship,
+    is_primary = false,
+    preferred_language = 'ar'
+  } = req.body;
+
+  if (!student_id || !name || !phone || !relationship) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields: student_id, name, phone, relationship',
+      messageAr: 'حقول مطلوبة مفقودة: معرّف الطالب، الاسم، الهاتف، العلاقة',
+      code: 'VALIDATION_ERROR'
+    });
+  }
+
+  const enrollment = await verifyStudentAccess(student_id, req.user.id);
+  if (!enrollment) {
+    return res.status(404).json({
+      success: false,
+      message: 'Student not found or not enrolled in your classes',
+      messageAr: 'لم يتم العثور على الطالب أو غير مسجّل في فصولك',
+      code: 'NOT_FOUND'
+    });
+  }
+
+  const { data: parent, error } = await supabaseAdmin
+    .from('parents')
+    .insert([{
       student_id,
       name,
       phone,
       email,
       relationship,
-      is_primary = false,
-      preferred_language = 'ar'
-    } = req.body;
+      is_primary,
+      preferred_language
+    }])
+    .select(`
+      *,
+      student:students (name, student_id)
+    `)
+    .single();
 
-    // Validate required fields
-    if (!student_id || !name || !phone || !relationship) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: student_id, name, phone, relationship',
-        messageAr: 'حقول مطلوبة مفقودة: معرّف الطالب، الاسم، الهاتف، العلاقة',
-        code: 'VALIDATION_ERROR'
-      });
-    }
-
-    // Verify student belongs to teacher (Enrollment Check)
-    const { data: enrollments, error: enrollError } = await supabase
-      .from('enrollments')
-      .select('id')
-      .eq('student_id', student_id)
-      .eq('teacher_id', req.user.id)
-      .limit(1);
-
-    if (enrollError || !enrollments || enrollments.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Student not found or not enrolled in your classes',
-        messageAr: 'لم يتم العثور على الطالب أو غير مسجّل في فصولك',
-        code: 'NOT_FOUND'
-      });
-    }
-
-    const { data: parent, error } = await supabase
-      .from('parents')
-      .insert([{
-        student_id,
-        name,
-        phone,
-        email,
-        relationship,
-        is_primary,
-        preferred_language
-      }])
-      .select(`
-        *,
-        student:students (name, student_id)
-      `)
-      .single();
-
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-        messageAr: 'فشل في إنشاء ولي الأمر',
-        code: 'VALIDATION_ERROR'
-      });
-    }
-
-    res.status(201).json({
-      success: true,
-      data: parent
-    });
-  } catch (error) {
-    logger.error('Create parent error', { error: error.message });
-    res.status(500).json({
+  if (error) {
+    return res.status(400).json({
       success: false,
-      message: 'Server error creating parent',
-      messageAr: 'خطأ في الخادم أثناء إنشاء ولي الأمر',
-      code: 'INTERNAL_ERROR'
+      message: error.message,
+      messageAr: 'فشل في إنشاء ولي الأمر',
+      code: 'VALIDATION_ERROR'
     });
   }
+
+  res.status(201).json({
+    success: true,
+    data: parent
+  });
 };
 
 // @desc    Update parent
 // @route   PUT /api/parents/:id
 // @access  Private
 const updateParent = async (req, res) => {
-  try {
-    const allowedFields = [
-      'name', 'phone', 'email', 'relationship',
-      'is_primary', 'preferred_language', 'telegram_username',
-      'communication_preferences'
-    ];
+  const allowedFields = [
+    'name', 'phone', 'email', 'relationship',
+    'is_primary', 'preferred_language', 'telegram_username',
+    'communication_preferences'
+  ];
 
-    const updates = {};
-    Object.keys(req.body).forEach(key => {
-      if (allowedFields.includes(key)) {
-        updates[key] = req.body[key];
-      }
-    });
-
-    // Verify Authorization: Check if parent belongs to a student enrolled with this teacher
-    const { data: accessCheck } = await supabase
-      .from('parents')
-      .select('student_id')
-      .eq('id', req.params.id)
-      .single();
-
-    if (!accessCheck) {
-      return res.status(404).json({ success: false, message: 'Parent not found', messageAr: 'لم يتم العثور على ولي الأمر', code: 'NOT_FOUND' });
+  const updates = {};
+  Object.keys(req.body).forEach(key => {
+    if (allowedFields.includes(key)) {
+      updates[key] = req.body[key];
     }
+  });
 
-    const { data: enrollment } = await supabase
-      .from('enrollments')
-      .select('id')
-      .eq('student_id', accessCheck.student_id)
-      .eq('teacher_id', req.user.id)
-      .limit(1);
+  const { data: accessCheck } = await supabaseAdmin
+    .from('parents')
+    .select('student_id')
+    .eq('id', req.params.id)
+    .single();
 
-    if (!enrollment || enrollment.length === 0) {
-      return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
-    }
+  if (!accessCheck) {
+    return res.status(404).json({ success: false, message: 'Parent not found', messageAr: 'لم يتم العثور على ولي الأمر', code: 'NOT_FOUND' });
+  }
 
-    const { data: parent, error } = await supabase
-      .from('parents')
-      .update(updates)
-      .eq('id', req.params.id)
-      .select(`
-        *,
-        student:students (name, student_id)
-      `)
-      .single();
+  const enrollment = await verifyStudentAccess(accessCheck.student_id, req.user.id);
+  if (!enrollment) {
+    return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
+  }
 
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-        messageAr: 'فشل في تحديث ولي الأمر',
-        code: 'VALIDATION_ERROR'
-      });
-    }
+  const { data: parent, error } = await supabaseAdmin
+    .from('parents')
+    .update(updates)
+    .eq('id', req.params.id)
+    .select(`
+      *,
+      student:students (name, student_id)
+    `)
+    .single();
 
-    res.status(200).json({
-      success: true,
-      data: parent
-    });
-  } catch (error) {
-    logger.error('Update parent error', { error: error.message });
-    res.status(500).json({
+  if (error) {
+    return res.status(400).json({
       success: false,
-      message: 'Server error updating parent',
-      messageAr: 'خطأ في الخادم أثناء تحديث ولي الأمر',
-      code: 'INTERNAL_ERROR'
+      message: error.message,
+      messageAr: 'فشل في تحديث ولي الأمر',
+      code: 'VALIDATION_ERROR'
     });
   }
+
+  res.status(200).json({
+    success: true,
+    data: parent
+  });
 };
 
 // @desc    Delete parent
 // @route   DELETE /api/parents/:id
 // @access  Private
 const deleteParent = async (req, res) => {
-  try {
-    // First verify the parent belongs to teacher's student
-    const { data: parent } = await supabase
-      .from('parents')
-      .select('student_id')
-      .eq('id', req.params.id)
-      .single();
+  const { data: parent } = await supabaseAdmin
+    .from('parents')
+    .select('student_id')
+    .eq('id', req.params.id)
+    .single();
 
-    if (!parent) {
-      return res.status(404).json({
-        success: false,
-        message: 'Parent not found',
-        messageAr: 'لم يتم العثور على ولي الأمر',
-        code: 'NOT_FOUND'
-      });
-    }
-
-    // Check auth via enrollment
-    const { data: enrollment } = await supabase
-      .from('enrollments')
-      .select('id')
-      .eq('student_id', parent.student_id)
-      .eq('teacher_id', req.user.id)
-      .limit(1);
-
-    if (!enrollment || enrollment.length === 0) {
-      return res.status(403).json({
-        success: false,
-        message: 'Unauthorized',
-        messageAr: 'غير مصرح',
-        code: 'FORBIDDEN'
-      });
-    }
-
-    const { error } = await supabase
-      .from('parents')
-      .delete()
-      .eq('id', req.params.id);
-
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-        messageAr: 'فشل في حذف ولي الأمر',
-        code: 'VALIDATION_ERROR'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Parent deleted successfully'
-    });
-  } catch (error) {
-    logger.error('Delete parent error', { error: error.message });
-    res.status(500).json({
+  if (!parent) {
+    return res.status(404).json({
       success: false,
-      message: 'Server error deleting parent',
-      messageAr: 'خطأ في الخادم أثناء حذف ولي الأمر',
-      code: 'INTERNAL_ERROR'
+      message: 'Parent not found',
+      messageAr: 'لم يتم العثور على ولي الأمر',
+      code: 'NOT_FOUND'
     });
   }
+
+  const enrollment = await verifyStudentAccess(parent.student_id, req.user.id);
+  if (!enrollment) {
+    return res.status(403).json({
+      success: false,
+      message: 'Unauthorized',
+      messageAr: 'غير مصرح',
+      code: 'FORBIDDEN'
+    });
+  }
+
+  const { error } = await supabaseAdmin
+    .from('parents')
+    .delete()
+    .eq('id', req.params.id);
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+      messageAr: 'فشل في حذف ولي الأمر',
+      code: 'VALIDATION_ERROR'
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Parent deleted successfully'
+  });
 };
 
 /**
@@ -382,7 +304,7 @@ const deleteParent = async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/', authenticateToken, getParents);
+router.get('/', authenticateToken, asyncHandler(getParents));
 
 /**
  * @openapi
@@ -438,7 +360,7 @@ router.get('/', authenticateToken, getParents);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/:id', authenticateToken, getParent);
+router.get('/:id', authenticateToken, asyncHandler(getParent));
 
 /**
  * @openapi
@@ -518,7 +440,7 @@ router.get('/:id', authenticateToken, getParent);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/', authenticateToken, validate(createParentSchema), createParent);
+router.post('/', authenticateToken, validate(createParentSchema), asyncHandler(createParent));
 
 /**
  * @openapi
@@ -613,7 +535,7 @@ router.post('/', authenticateToken, validate(createParentSchema), createParent);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/:id', authenticateToken, validate(updateParentSchema), updateParent);
+router.put('/:id', authenticateToken, validate(updateParentSchema), asyncHandler(updateParent));
 
 /**
  * @openapi
@@ -669,6 +591,6 @@ router.put('/:id', authenticateToken, validate(updateParentSchema), updateParent
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.delete('/:id', authenticateToken, deleteParent);
+router.delete('/:id', authenticateToken, asyncHandler(deleteParent));
 
 module.exports = router;

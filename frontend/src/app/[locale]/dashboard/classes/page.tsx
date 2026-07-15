@@ -13,7 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useEffect, useState } from 'react';
-import apiClient from '@/lib/client';
+import { apiClient } from '@/lib/client';
 import logger from '@/lib/logger';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Offering } from '@/types';

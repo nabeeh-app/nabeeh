@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const asyncHandler = require('../middleware/asyncHandler');
 const { logAudit } = require('../lib/auditLog');
 const { getAssistantInviteTemplate } = require('../lib/emailTemplates');
 const { sendEmail } = require('../lib/email');
@@ -94,534 +95,489 @@ async function countPendingInvites(teacherId) {
 
 // POST /api/assistants/invite — Send invite to assistant by email/WhatsApp
 const inviteAssistant = async (req, res) => {
-  try {
-    const teacherId = req.user.id;
-    const { email, phone, deliveryMethod = 'email', permissions } = req.body;
+  const teacherId = req.user.id;
+  const { email, phone, deliveryMethod = 'email', permissions } = req.body;
 
-    // Run independent checks in parallel
-    const [tier, pendingCount, existingInvite, existingUser] = await Promise.all([
-      getTeacherTier(teacherId),
-      countPendingInvites(teacherId),
-      email ? supabaseAdmin
-        .from('assistant_invites')
-        .select('id')
-        .eq('teacher_id', teacherId)
-        .eq('email', email.toLowerCase())
-        .eq('status', 'pending')
-        .maybeSingle()
-        .then(r => r.data) : null,
-      email ? supabaseAdmin
-        .from('teachers')
-        .select('id')
-        .eq('email', email.toLowerCase())
-        .maybeSingle()
-        .then(r => r.data) : null,
-    ]);
-
-    // Tier-dependent checks (must wait for tier)
-    const limit = INVITE_LIMITS[tier] || 0;
-    if (limit === 0) {
-      return res.status(403).json({
-        success: false,
-        message: `Your ${tier} plan does not support assistants. Please upgrade.`,
-        messageAr: 'خطتك الحالية لا تدعم المساعدين. يرجى الترقية.',
-        code: 'TIER_LIMIT'
-      });
-    }
-
-    if (pendingCount >= limit) {
-      return res.status(403).json({
-        success: false,
-        message: `You have reached the maximum of ${limit} pending invites for your ${tier} plan.`,
-        messageAr: `لقد وصلت إلى الحد الأقصى من ${limit} دعوات معلقة لخطتك ${tier}.`,
-        code: 'INVITE_LIMIT'
-      });
-    }
-
-    // Check duplicate invite
-    if (existingInvite) {
-      return res.status(409).json({ success: false, message: 'A pending invite already exists for this email.', messageAr: 'توجد دعوة معلقة بالفعل لهذا البريد الإلكتروني.', code: 'INVITE_EXISTS' });
-    }
-
-    // Check existing user → already assistant?
-    if (existingUser) {
-      const { data: existingLink } = await supabaseAdmin
-        .from('teacher_assistants')
-        .select('id')
-        .eq('teacher_id', teacherId)
-        .eq('assistant_id', existingUser.id)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (existingLink) {
-        return res.status(409).json({ success: false, message: 'This user is already your assistant.', messageAr: 'هذا المستخدم مساعدك بالفعل.', code: 'ALREADY_ASSISTANT' });
-      }
-    }
-
-    // Create invite
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
-
-    const { data: invite, error: inviteError } = await supabaseAdmin
+  // Run independent checks in parallel
+  const [tier, pendingCount, existingInvite, existingUser] = await Promise.all([
+    getTeacherTier(teacherId),
+    countPendingInvites(teacherId),
+    email ? supabaseAdmin
       .from('assistant_invites')
-      .insert([{
-        teacher_id: teacherId,
-        email: email?.toLowerCase() || null,
-        phone: phone || null,
-        token,
-        permissions: permissions || DEFAULT_PERMISSIONS,
-        status: 'pending',
-        expires_at: expiresAt
-      }])
-      .select()
-      .single();
-
-    if (inviteError) throw inviteError;
-
-    // Get teacher name for messages
-    const { data: teacher } = await supabaseAdmin
-      .from('teachers')
-      .select('name')
-      .eq('id', teacherId)
-      .single();
-
-    const teacherName = teacher?.name || 'Your teacher';
-    const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invite/${token}`;
-
-    // Send email
-    if ((deliveryMethod === 'email' || deliveryMethod === 'both') && email) {
-      try {
-        const template = getAssistantInviteTemplate({ teacherName, inviteLink, language: 'en' });
-        const result = await sendEmail({
-          to: email,
-          from: 'Nabeeh <noreply@nabeeh.app>',
-          subject: template.subject,
-          html: template.html,
-          idempotencyKey: `invite-${invite.id}-email`,
-        });
-        if (!result.success) {
-          logger.error('Failed to send invite email', { email, error: result.error });
-        }
-      } catch (emailError) {
-        logger.error('Failed to send invite email', { error: emailError.message });
-      }
-    }
-
-    // Send WhatsApp
-    if ((deliveryMethod === 'whatsapp' || deliveryMethod === 'both') && phone) {
-      try {
-        const client = sessionManager.getSession(teacherId);
-        if (client) {
-          const waMessage = `🎓 *Nabeeh*\n\n${teacherName} has invited you to join their team as a teaching assistant.\n\nAccept here: ${inviteLink}\n\nThis link expires in 48 hours.`;
-          await client.sendMessage(phone, waMessage);
-        } else {
-          logger.warn('No WhatsApp session for teacher, skipping invite', { teacherId });
-        }
-      } catch (waError) {
-        logger.error('Failed to send WhatsApp invite', { phone, error: waError.message });
-      }
-    }
-
-    await logAudit({
-      actorId: teacherId,
-      actorType: 'teacher',
-      teacherId,
-      action: 'assistant_invited',
-      entityType: 'assistant',
-      entityId: invite.id,
-      metadata: { email: email?.toLowerCase(), phone, deliveryMethod },
-      ipAddress: req.ip
-    });
-
-    res.status(201).json({
-      success: true,
-      data: { id: invite.id, email: invite.email, phone: invite.phone, expires_at: invite.expires_at },
-      message: 'Invitation sent successfully'
-    });
-  } catch (error) {
-    logger.error('Invite assistant error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error sending invitation', messageAr: 'خطأ في الخادم أثناء إرسال الدعوة', code: 'INTERNAL_ERROR' });
-  }
-};
-
-// GET /api/assistants/invites — List pending invites
-const listInvites = async (req, res) => {
-  try {
-    const teacherId = req.user.id;
-
-    const { data: invites, error } = await supabaseAdmin
-      .from('assistant_invites')
-      .select('id, email, permissions, status, created_at, expires_at')
+      .select('id')
       .eq('teacher_id', teacherId)
+      .eq('email', email.toLowerCase())
       .eq('status', 'pending')
-      .order('created_at', { ascending: false });
+      .maybeSingle()
+      .then(r => r.data) : null,
+    email ? supabaseAdmin
+      .from('teachers')
+      .select('id')
+      .eq('email', email.toLowerCase())
+      .maybeSingle()
+      .then(r => r.data) : null,
+  ]);
 
-    if (error) throw error;
-
-    res.json({ success: true, data: invites });
-  } catch (error) {
-    logger.error('List invites error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching invites', messageAr: 'خطأ في الخادم أثناء جلب الدعوات', code: 'INTERNAL_ERROR' });
+  // Tier-dependent checks (must wait for tier)
+  const limit = INVITE_LIMITS[tier] || 0;
+  if (limit === 0) {
+    return res.status(403).json({
+      success: false,
+      message: `Your ${tier} plan does not support assistants. Please upgrade.`,
+      messageAr: 'خطتك الحالية لا تدعم المساعدين. يرجى الترقية.',
+      code: 'TIER_LIMIT'
+    });
   }
-};
 
-// POST /api/assistants/accept — Accept invite (by token)
-const acceptInvite = async (req, res) => {
-  try {
-    const { token } = req.body;
-    const assistantId = req.user.id;
+  if (pendingCount >= limit) {
+    return res.status(403).json({
+      success: false,
+      message: `You have reached the maximum of ${limit} pending invites for your ${tier} plan.`,
+      messageAr: `لقد وصلت إلى الحد الأقصى من ${limit} دعوات معلقة لخطتك ${tier}.`,
+      code: 'INVITE_LIMIT'
+    });
+  }
 
-    // Find valid invite
-    const { data: invite, error: inviteError } = await supabaseAdmin
-      .from('assistant_invites')
-      .select('*')
-      .eq('token', token)
-      .eq('status', 'pending')
-      .maybeSingle();
+  // Check duplicate invite
+  if (existingInvite) {
+    return res.status(409).json({ success: false, message: 'A pending invite already exists for this email.', messageAr: 'توجد دعوة معلقة بالفعل لهذا البريد الإلكتروني.', code: 'INVITE_EXISTS' });
+  }
 
-    if (inviteError || !invite) {
-      return res.status(404).json({ success: false, message: 'Invalid or expired invitation.', messageAr: 'دعوة غير صالحة أو منتهية الصلاحية.', code: 'INVALID_INVITE' });
-    }
-
-    // Check expiry
-    if (new Date(invite.expires_at) < new Date()) {
-      await supabaseAdmin
-        .from('assistant_invites')
-        .update({ status: 'expired' })
-        .eq('id', invite.id);
-
-      return res.status(410).json({ success: false, message: 'Invitation has expired.', messageAr: 'انتهت صلاحية الدعوة.', code: 'INVITE_EXPIRED' });
-    }
-
-    // Check if already an active assistant for this teacher
+  // Check existing user → already assistant?
+  if (existingUser) {
     const { data: existingLink } = await supabaseAdmin
       .from('teacher_assistants')
       .select('id')
-      .eq('teacher_id', invite.teacher_id)
-      .eq('assistant_id', assistantId)
+      .eq('teacher_id', teacherId)
+      .eq('assistant_id', existingUser.id)
       .eq('status', 'active')
       .maybeSingle();
 
     if (existingLink) {
-      return res.status(409).json({ success: false, message: 'You are already an assistant for this teacher.', messageAr: 'أنت مساعد لهذا المعلم بالفعل.', code: 'ALREADY_ASSISTANT' });
+      return res.status(409).json({ success: false, message: 'This user is already your assistant.', messageAr: 'هذا المستخدم مساعدك بالفعل.', code: 'ALREADY_ASSISTANT' });
     }
+  }
 
-    // Create the assistant link
-    const { data: link, error: linkError } = await supabaseAdmin
-      .from('teacher_assistants')
-      .insert([{
-        teacher_id: invite.teacher_id,
-        assistant_id: assistantId,
-        permissions: invite.permissions,
-        status: 'active'
-      }])
-      .select()
-      .single();
+  // Create invite
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
-    if (linkError) throw linkError;
+  const { data: invite, error: inviteError } = await supabaseAdmin
+    .from('assistant_invites')
+    .insert([{
+      teacher_id: teacherId,
+      email: email?.toLowerCase() || null,
+      phone: phone || null,
+      token,
+      permissions: permissions || DEFAULT_PERMISSIONS,
+      status: 'pending',
+      expires_at: expiresAt
+    }])
+    .select()
+    .single();
 
-    // Mark invite as accepted
+  if (inviteError) throw inviteError;
+
+  // Get teacher name for messages
+  const { data: teacher } = await supabaseAdmin
+    .from('teachers')
+    .select('name')
+    .eq('id', teacherId)
+    .single();
+
+  const teacherName = teacher?.name || 'Your teacher';
+  const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invite/${token}`;
+
+  // Send email
+  if ((deliveryMethod === 'email' || deliveryMethod === 'both') && email) {
+    try {
+      const template = getAssistantInviteTemplate({ teacherName, inviteLink, language: 'en' });
+      const result = await sendEmail({
+        to: email,
+        from: 'Nabeeh <noreply@nabeeh.app>',
+        subject: template.subject,
+        html: template.html,
+        idempotencyKey: `invite-${invite.id}-email`,
+      });
+      if (!result.success) {
+        logger.error('Failed to send invite email', { email, error: result.error });
+      }
+    } catch (emailError) {
+      logger.error('Failed to send invite email', { error: emailError.message });
+    }
+  }
+
+  // Send WhatsApp
+  if ((deliveryMethod === 'whatsapp' || deliveryMethod === 'both') && phone) {
+    try {
+      const client = sessionManager.getSession(teacherId);
+      if (client) {
+        const waMessage = `🎓 *Nabeeh*\n\n${teacherName} has invited you to join their team as a teaching assistant.\n\nAccept here: ${inviteLink}\n\nThis link expires in 48 hours.`;
+        await client.sendMessage(phone, waMessage);
+      } else {
+        logger.warn('No WhatsApp session for teacher, skipping invite', { teacherId });
+      }
+    } catch (waError) {
+      logger.error('Failed to send WhatsApp invite', { phone, error: waError.message });
+    }
+  }
+
+  await logAudit({
+    actorId: teacherId,
+    actorType: 'teacher',
+    teacherId,
+    action: 'assistant_invited',
+    entityType: 'assistant',
+    entityId: invite.id,
+    metadata: { email: email?.toLowerCase(), phone, deliveryMethod },
+    ipAddress: req.ip
+  });
+
+  res.status(201).json({
+    success: true,
+    data: { id: invite.id, email: invite.email, phone: invite.phone, expires_at: invite.expires_at },
+    message: 'Invitation sent successfully'
+  });
+};
+
+// GET /api/assistants/invites — List pending invites
+const listInvites = async (req, res) => {
+  const teacherId = req.user.id;
+
+  const { data: invites, error } = await supabaseAdmin
+    .from('assistant_invites')
+    .select('id, email, permissions, status, created_at, expires_at')
+    .eq('teacher_id', teacherId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  res.json({ success: true, data: invites });
+};
+
+// POST /api/assistants/accept — Accept invite (by token)
+const acceptInvite = async (req, res) => {
+  const { token } = req.body;
+  const assistantId = req.user.id;
+
+  // Find valid invite
+  const { data: invite, error: inviteError } = await supabaseAdmin
+    .from('assistant_invites')
+    .select('*')
+    .eq('token', token)
+    .eq('status', 'pending')
+    .maybeSingle();
+
+  if (inviteError || !invite) {
+    return res.status(404).json({ success: false, message: 'Invalid or expired invitation.', messageAr: 'دعوة غير صالحة أو منتهية الصلاحية.', code: 'INVALID_INVITE' });
+  }
+
+  // Check expiry
+  if (new Date(invite.expires_at) < new Date()) {
     await supabaseAdmin
       .from('assistant_invites')
-      .update({ status: 'accepted' })
+      .update({ status: 'expired' })
       .eq('id', invite.id);
 
-    await logAudit({
-      actorId: assistantId,
-      actorType: 'assistant',
-      teacherId: invite.teacher_id,
-      action: 'assistant_activated',
-      entityType: 'assistant',
-      entityId: link.id,
-      metadata: { email: invite.email },
-      ipAddress: req.ip
-    });
-
-    res.status(201).json({
-      success: true,
-      data: { id: link.id, teacher_id: link.teacher_id, permissions: link.permissions },
-      message: 'You are now an assistant. Welcome!'
-    });
-  } catch (error) {
-    logger.error('Accept invite error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error accepting invitation', messageAr: 'خطأ في الخادم أثناء قبول الدعوة', code: 'INTERNAL_ERROR' });
+    return res.status(410).json({ success: false, message: 'Invitation has expired.', messageAr: 'انتهت صلاحية الدعوة.', code: 'INVITE_EXPIRED' });
   }
+
+  // Check if already an active assistant for this teacher
+  const { data: existingLink } = await supabaseAdmin
+    .from('teacher_assistants')
+    .select('id')
+    .eq('teacher_id', invite.teacher_id)
+    .eq('assistant_id', assistantId)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (existingLink) {
+    return res.status(409).json({ success: false, message: 'You are already an assistant for this teacher.', messageAr: 'أنت مساعد لهذا المعلم بالفعل.', code: 'ALREADY_ASSISTANT' });
+  }
+
+  // Create the assistant link
+  const { data: link, error: linkError } = await supabaseAdmin
+    .from('teacher_assistants')
+    .insert([{
+      teacher_id: invite.teacher_id,
+      assistant_id: assistantId,
+      permissions: invite.permissions,
+      status: 'active'
+    }])
+    .select()
+    .single();
+
+  if (linkError) throw linkError;
+
+  // Mark invite as accepted
+  await supabaseAdmin
+    .from('assistant_invites')
+    .update({ status: 'accepted' })
+    .eq('id', invite.id);
+
+  await logAudit({
+    actorId: assistantId,
+    actorType: 'assistant',
+    teacherId: invite.teacher_id,
+    action: 'assistant_activated',
+    entityType: 'assistant',
+    entityId: link.id,
+    metadata: { email: invite.email },
+    ipAddress: req.ip
+  });
+
+  res.status(201).json({
+    success: true,
+    data: { id: link.id, teacher_id: link.teacher_id, permissions: link.permissions },
+    message: 'You are now an assistant. Welcome!'
+  });
 };
 
 // GET /api/assistants — List all assistants for this teacher
 const listAssistants = async (req, res) => {
-  try {
-    const teacherId = req.user.id;
+  const teacherId = req.user.id;
 
-    const { data: assistants, error } = await supabaseAdmin
-      .from('teacher_assistants')
-      .select('id, status, permissions, assistant_id, created_at, updated_at')
-      .eq('teacher_id', teacherId)
-      .order('created_at', { ascending: false });
+  const { data: assistants, error } = await supabaseAdmin
+    .from('teacher_assistants')
+    .select('id, status, permissions, assistant_id, created_at, updated_at')
+    .eq('teacher_id', teacherId)
+    .order('created_at', { ascending: false });
 
-    if (error) throw error;
+  if (error) throw error;
 
-    const assistantIds = assistants.map(a => a.assistant_id);
-    let teacherMap = {};
-    if (assistantIds.length > 0) {
-      const { data: teachers } = await supabaseAdmin
-        .from('teachers')
-        .select('id, name, email')
-        .in('id', assistantIds);
-      teacherMap = Object.fromEntries((teachers || []).map(t => [t.id, t]));
-    }
-
-    const result = assistants.map(a => ({
-      id: a.id,
-      name: teacherMap[a.assistant_id]?.name || 'Unknown',
-      email: teacherMap[a.assistant_id]?.email || 'Unknown',
-      status: a.status,
-      permissions: a.permissions,
-      created_at: a.created_at,
-      updated_at: a.updated_at
-    }));
-
-    res.json({ success: true, data: result });
-  } catch (error) {
-    logger.error('List assistants error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching assistants', messageAr: 'خطأ في الخادم أثناء جلب المساعدين', code: 'INTERNAL_ERROR' });
+  const assistantIds = assistants.map(a => a.assistant_id);
+  let teacherMap = {};
+  if (assistantIds.length > 0) {
+    const { data: teachers } = await supabaseAdmin
+      .from('teachers')
+      .select('id, name, email')
+      .in('id', assistantIds);
+    teacherMap = Object.fromEntries((teachers || []).map(t => [t.id, t]));
   }
+
+  const result = assistants.map(a => ({
+    id: a.id,
+    name: teacherMap[a.assistant_id]?.name || 'Unknown',
+    email: teacherMap[a.assistant_id]?.email || 'Unknown',
+    status: a.status,
+    permissions: a.permissions,
+    created_at: a.created_at,
+    updated_at: a.updated_at
+  }));
+
+  res.json({ success: true, data: result });
 };
 
 // PUT /api/assistants/:id/permissions — Update assistant permissions
 const updatePermissions = async (req, res) => {
-  try {
-    const teacherId = req.user.id;
-    const { id } = req.params;
-    const { permissions } = req.body;
+  const teacherId = req.user.id;
+  const { id } = req.params;
+  const { permissions } = req.body;
 
-    // Filter to only valid permission keys
-    const filteredPermissions = {};
-    for (const key of VALID_PERMISSIONS) {
-      if (key in permissions) {
-        filteredPermissions[key] = Boolean(permissions[key]);
-      }
+  // Filter to only valid permission keys
+  const filteredPermissions = {};
+  for (const key of VALID_PERMISSIONS) {
+    if (key in permissions) {
+      filteredPermissions[key] = Boolean(permissions[key]);
     }
-
-    // Verify ownership
-    const { data: link, error: fetchError } = await supabaseAdmin
-      .from('teacher_assistants')
-      .select('id, teacher_id, assistant:teachers!assistant_id(name, email)')
-      .eq('id', id)
-      .eq('teacher_id', teacherId)
-      .maybeSingle();
-
-    if (fetchError || !link) {
-      return res.status(404).json({ success: false, message: 'Assistant not found', messageAr: 'لم يتم العثور على المساعد', code: 'NOT_FOUND' });
-    }
-
-    const { error: updateError } = await supabaseAdmin
-      .from('teacher_assistants')
-      .update({ permissions: filteredPermissions, updated_at: new Date().toISOString() })
-      .eq('id', id);
-
-    if (updateError) throw updateError;
-
-    await logAudit({
-      actorId: teacherId,
-      actorType: 'teacher',
-      teacherId,
-      action: 'assistant_permissions_updated',
-      entityType: 'assistant',
-      entityId: id,
-      metadata: { permissions: filteredPermissions },
-      ipAddress: req.ip
-    });
-
-    res.json({ success: true, data: { id, permissions: filteredPermissions }, message: 'Permissions updated' });
-  } catch (error) {
-    logger.error('Update permissions error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error updating permissions', messageAr: 'خطأ في الخادم أثناء تحديث الصلاحيات', code: 'INTERNAL_ERROR' });
   }
+
+  // Verify ownership
+  const { data: link, error: fetchError } = await supabaseAdmin
+    .from('teacher_assistants')
+    .select('id, teacher_id, assistant:teachers!assistant_id(name, email)')
+    .eq('id', id)
+    .eq('teacher_id', teacherId)
+    .maybeSingle();
+
+  if (fetchError || !link) {
+    return res.status(404).json({ success: false, message: 'Assistant not found', messageAr: 'لم يتم العثور على المساعد', code: 'NOT_FOUND' });
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from('teacher_assistants')
+    .update({ permissions: filteredPermissions, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (updateError) throw updateError;
+
+  await logAudit({
+    actorId: teacherId,
+    actorType: 'teacher',
+    teacherId,
+    action: 'assistant_permissions_updated',
+    entityType: 'assistant',
+    entityId: id,
+    metadata: { permissions: filteredPermissions },
+    ipAddress: req.ip
+  });
+
+  res.json({ success: true, data: { id, permissions: filteredPermissions }, message: 'Permissions updated' });
 };
 
 // PUT /api/assistants/:id/status — Activate/deactivate assistant
 const updateStatus = async (req, res) => {
-  try {
-    const teacherId = req.user.id;
-    const { id } = req.params;
-    const { status } = req.body;
+  const teacherId = req.user.id;
+  const { id } = req.params;
+  const { status } = req.body;
 
-    const { data: link, error: fetchError } = await supabaseAdmin
-      .from('teacher_assistants')
-      .select('id, teacher_id')
-      .eq('id', id)
-      .eq('teacher_id', teacherId)
-      .maybeSingle();
+  const { data: link, error: fetchError } = await supabaseAdmin
+    .from('teacher_assistants')
+    .select('id, teacher_id')
+    .eq('id', id)
+    .eq('teacher_id', teacherId)
+    .maybeSingle();
 
-    if (fetchError || !link) {
-      return res.status(404).json({ success: false, message: 'Assistant not found', messageAr: 'لم يتم العثور على المساعد', code: 'NOT_FOUND' });
-    }
-
-    const { error: updateError } = await supabaseAdmin
-      .from('teacher_assistants')
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq('id', id);
-
-    if (updateError) throw updateError;
-
-    const action = status === 'active' ? 'assistant_activated' : 'assistant_deactivated';
-
-    await logAudit({
-      actorId: teacherId,
-      actorType: 'teacher',
-      teacherId,
-      action,
-      entityType: 'assistant',
-      entityId: id,
-      metadata: { status },
-      ipAddress: req.ip
-    });
-
-    res.json({ success: true, data: { id, status }, message: `Assistant ${status}` });
-  } catch (error) {
-    logger.error('Update status error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error updating status', messageAr: 'خطأ في الخادم أثناء تحديث الحالة', code: 'INTERNAL_ERROR' });
+  if (fetchError || !link) {
+    return res.status(404).json({ success: false, message: 'Assistant not found', messageAr: 'لم يتم العثور على المساعد', code: 'NOT_FOUND' });
   }
+
+  const { error: updateError } = await supabaseAdmin
+    .from('teacher_assistants')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (updateError) throw updateError;
+
+  const action = status === 'active' ? 'assistant_activated' : 'assistant_deactivated';
+
+  await logAudit({
+    actorId: teacherId,
+    actorType: 'teacher',
+    teacherId,
+    action,
+    entityType: 'assistant',
+    entityId: id,
+    metadata: { status },
+    ipAddress: req.ip
+  });
+
+  res.json({ success: true, data: { id, status }, message: `Assistant ${status}` });
 };
 
 // DELETE /api/assistants/:id — Remove assistant (soft delete)
 const removeAssistant = async (req, res) => {
-  try {
-    const teacherId = req.user.id;
-    const { id } = req.params;
+  const teacherId = req.user.id;
+  const { id } = req.params;
 
-    const { data: link, error: fetchError } = await supabaseAdmin
-      .from('teacher_assistants')
-      .select('id, teacher_id')
-      .eq('id', id)
-      .eq('teacher_id', teacherId)
-      .maybeSingle();
+  const { data: link, error: fetchError } = await supabaseAdmin
+    .from('teacher_assistants')
+    .select('id, teacher_id')
+    .eq('id', id)
+    .eq('teacher_id', teacherId)
+    .maybeSingle();
 
-    if (fetchError || !link) {
-      return res.status(404).json({ success: false, message: 'Assistant not found', messageAr: 'لم يتم العثور على المساعد', code: 'NOT_FOUND' });
-    }
-
-    // Soft delete — set status to 'removed'
-    const { error: deleteError } = await supabaseAdmin
-      .from('teacher_assistants')
-      .update({ status: 'removed', updated_at: new Date().toISOString() })
-      .eq('id', id);
-
-    if (deleteError) throw deleteError;
-
-    await logAudit({
-      actorId: teacherId,
-      actorType: 'teacher',
-      teacherId,
-      action: 'assistant_removed',
-      entityType: 'assistant',
-      entityId: id,
-      ipAddress: req.ip
-    });
-
-    res.json({ success: true, message: 'Assistant removed' });
-  } catch (error) {
-    logger.error('Remove assistant error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error removing assistant', messageAr: 'خطأ في الخادم أثناء إزالة المساعد', code: 'INTERNAL_ERROR' });
+  if (fetchError || !link) {
+    return res.status(404).json({ success: false, message: 'Assistant not found', messageAr: 'لم يتم العثور على المساعد', code: 'NOT_FOUND' });
   }
+
+  // Soft delete — set status to 'removed'
+  const { error: deleteError } = await supabaseAdmin
+    .from('teacher_assistants')
+    .update({ status: 'removed', updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (deleteError) throw deleteError;
+
+  await logAudit({
+    actorId: teacherId,
+    actorType: 'teacher',
+    teacherId,
+    action: 'assistant_removed',
+    entityType: 'assistant',
+    entityId: id,
+    ipAddress: req.ip
+  });
+
+  res.json({ success: true, message: 'Assistant removed' });
 };
 
 // POST /api/assistants/leave — Assistant leaves a teacher
 const leaveTeacher = async (req, res) => {
-  try {
-    const parsed = leaveTeacherSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ success: false, message: parsed.error.issues[0].message, messageAr: 'إدخال غير صالح', code: 'VALIDATION_ERROR' });
-    }
-    const { teacher_id } = parsed.data;
-
-    const assistantId = req.user.id;
-
-    const { data: link, error: fetchError } = await supabaseAdmin
-      .from('teacher_assistants')
-      .select('id, assistant_id')
-      .eq('teacher_id', teacher_id)
-      .eq('assistant_id', assistantId)
-      .eq('status', 'active')
-      .maybeSingle();
-
-    if (fetchError || !link) {
-      return res.status(404).json({ success: false, message: 'Active assistant link not found', messageAr: 'لم يتم العثور على رابط المساعد النشط', code: 'NOT_FOUND' });
-    }
-
-    if (req.user.id !== link.assistant_id) {
-      return res.status(403).json({ success: false, message: 'Not authorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
-    }
-
-    const { error: updateError } = await supabaseAdmin
-      .from('teacher_assistants')
-      .update({ status: 'removed', updated_at: new Date().toISOString() })
-      .eq('id', link.id);
-
-    if (updateError) throw updateError;
-
-    await logAudit({
-      actorId: assistantId,
-      actorType: 'assistant',
-      teacherId: teacher_id,
-      action: 'assistant_removed',
-      entityType: 'assistant',
-      entityId: link.id,
-      metadata: { reason: 'self_leave' },
-      ipAddress: req.ip
-    });
-
-    res.json({ success: true, message: 'You have left this teacher\'s team' });
-  } catch (error) {
-    logger.error('Leave teacher error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error leaving teacher', messageAr: 'خطأ في الخادم أثناء مغادرة المعلم', code: 'INTERNAL_ERROR' });
+  const parsed = leaveTeacherSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ success: false, message: parsed.error.issues[0].message, messageAr: 'إدخال غير صالح', code: 'VALIDATION_ERROR' });
   }
+  const { teacher_id } = parsed.data;
+
+  const assistantId = req.user.id;
+
+  const { data: link, error: fetchError } = await supabaseAdmin
+    .from('teacher_assistants')
+    .select('id, assistant_id')
+    .eq('teacher_id', teacher_id)
+    .eq('assistant_id', assistantId)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (fetchError || !link) {
+    return res.status(404).json({ success: false, message: 'Active assistant link not found', messageAr: 'لم يتم العثور على رابط المساعد النشط', code: 'NOT_FOUND' });
+  }
+
+  if (req.user.id !== link.assistant_id) {
+    return res.status(403).json({ success: false, message: 'Not authorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from('teacher_assistants')
+    .update({ status: 'removed', updated_at: new Date().toISOString() })
+    .eq('id', link.id);
+
+  if (updateError) throw updateError;
+
+  await logAudit({
+    actorId: assistantId,
+    actorType: 'assistant',
+    teacherId: teacher_id,
+    action: 'assistant_removed',
+    entityType: 'assistant',
+    entityId: link.id,
+    metadata: { reason: 'self_leave' },
+    ipAddress: req.ip
+  });
+
+  res.json({ success: true, message: 'You have left this teacher\'s team' });
 };
 
 // GET /api/assistants/invites/:token — Public: get invite details by token
 const getInviteByToken = async (req, res) => {
-  try {
-    const { token } = req.params;
+  const { token } = req.params;
 
-    const { data: invite, error } = await supabaseAdmin
-      .from('assistant_invites')
-      .select('id, email, phone, permissions, status, expires_at, created_at')
-      .eq('token', token)
-      .single();
+  const { data: invite, error } = await supabaseAdmin
+    .from('assistant_invites')
+    .select('id, email, phone, permissions, status, expires_at, created_at')
+    .eq('token', token)
+    .single();
 
-    if (error || !invite) {
-      return res.status(404).json({ success: false, message: 'Invalid or expired invitation.', messageAr: 'دعوة غير صالحة أو منتهية الصلاحية.', code: 'INVALID_INVITE' });
-    }
-
-    if (invite.status !== 'pending') {
-      return res.status(410).json({ success: false, message: 'This invitation has already been used.', messageAr: 'تم استخدام هذه الدعوة بالفعل.', code: 'INVITE_USED' });
-    }
-
-    if (new Date(invite.expires_at) < new Date()) {
-      return res.status(410).json({ success: false, message: 'This invitation has expired.', messageAr: 'انتهت صلاحية هذه الدعوة.', code: 'INVITE_EXPIRED' });
-    }
-
-    // Get teacher name
-    const { data: teacher } = await supabaseAdmin
-      .from('teachers')
-      .select('name')
-      .eq('id', invite.teacher_id)
-      .single();
-
-    res.json({
-      success: true,
-      data: {
-        id: invite.id,
-        teacherName: teacher?.name || 'A teacher',
-        permissions: invite.permissions,
-        expires_at: invite.expires_at,
-      }
-    });
-  } catch (error) {
-    logger.error('Get invite by token error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error', messageAr: 'خطأ في الخادم', code: 'INTERNAL_ERROR' });
+  if (error || !invite) {
+    return res.status(404).json({ success: false, message: 'Invalid or expired invitation.', messageAr: 'دعوة غير صالحة أو منتهية الصلاحية.', code: 'INVALID_INVITE' });
   }
+
+  if (invite.status !== 'pending') {
+    return res.status(410).json({ success: false, message: 'This invitation has already been used.', messageAr: 'تم استخدام هذه الدعوة بالفعل.', code: 'INVITE_USED' });
+  }
+
+  if (new Date(invite.expires_at) < new Date()) {
+    return res.status(410).json({ success: false, message: 'This invitation has expired.', messageAr: 'انتهت صلاحية هذه الدعوة.', code: 'INVITE_EXPIRED' });
+  }
+
+  // Get teacher name
+  const { data: teacher } = await supabaseAdmin
+    .from('teachers')
+    .select('name')
+    .eq('id', invite.teacher_id)
+    .single();
+
+  res.json({
+    success: true,
+    data: {
+      id: invite.id,
+      teacherName: teacher?.name || 'A teacher',
+      permissions: invite.permissions,
+      expires_at: invite.expires_at,
+    }
+  });
 };
 
 // --- Route Definitions ---
@@ -713,7 +669,7 @@ const getInviteByToken = async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/invite', authenticateToken, validate(inviteSchema), inviteAssistant);
+router.post('/invite', authenticateToken, validate(inviteSchema), asyncHandler(inviteAssistant));
 /**
  * @openapi
  * /api/assistants/invites:
@@ -751,7 +707,7 @@ router.post('/invite', authenticateToken, validate(inviteSchema), inviteAssistan
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/invites', authenticateToken, listInvites);
+router.get('/invites', authenticateToken, asyncHandler(listInvites));
 /**
  * @openapi
  * /api/assistants/invites/{token}:
@@ -807,7 +763,7 @@ router.get('/invites', authenticateToken, listInvites);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/invites/:token', getInviteByToken);
+router.get('/invites/:token', asyncHandler(getInviteByToken));
 /**
  * @openapi
  * /api/assistants/accept:
@@ -887,7 +843,7 @@ router.get('/invites/:token', getInviteByToken);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/accept', authenticateToken, validate(acceptSchema), acceptInvite);
+router.post('/accept', authenticateToken, validate(acceptSchema), asyncHandler(acceptInvite));
 /**
  * @openapi
  * /api/assistants:
@@ -925,7 +881,7 @@ router.post('/accept', authenticateToken, validate(acceptSchema), acceptInvite);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/', authenticateToken, listAssistants);
+router.get('/', authenticateToken, asyncHandler(listAssistants));
 /**
  * @openapi
  * /api/assistants/{id}/permissions:
@@ -1001,7 +957,7 @@ router.get('/', authenticateToken, listAssistants);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/:id/permissions', authenticateToken, validate(updatePermissionsSchema), updatePermissions);
+router.put('/:id/permissions', authenticateToken, validate(updatePermissionsSchema), asyncHandler(updatePermissions));
 /**
  * @openapi
  * /api/assistants/{id}/status:
@@ -1076,7 +1032,7 @@ router.put('/:id/permissions', authenticateToken, validate(updatePermissionsSche
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/:id/status', authenticateToken, validate(updateStatusSchema), updateStatus);
+router.put('/:id/status', authenticateToken, validate(updateStatusSchema), asyncHandler(updateStatus));
 /**
  * @openapi
  * /api/assistants/{id}:
@@ -1126,7 +1082,7 @@ router.put('/:id/status', authenticateToken, validate(updateStatusSchema), updat
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.delete('/:id', authenticateToken, validate(removeParamsSchema), removeAssistant);
+router.delete('/:id', authenticateToken, validate(removeParamsSchema), asyncHandler(removeAssistant));
 /**
  * @openapi
  * /api/assistants/leave:
@@ -1186,6 +1142,6 @@ router.delete('/:id', authenticateToken, validate(removeParamsSchema), removeAss
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/leave', authenticateToken, leaveTeacher);
+router.post('/leave', authenticateToken, asyncHandler(leaveTeacher));
 
 module.exports = router;

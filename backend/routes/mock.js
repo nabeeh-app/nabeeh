@@ -598,7 +598,7 @@ router.get('/parents', (req, res) => {
  */
 // WhatsApp routes
 router.get('/whatsapp/status', (req, res) => {
-  res.json({ connected: false, status: 'disconnected', message: 'WhatsApp not connected', sessionExists: false });
+  res.json({ success: true, data: { connected: false, status: 'disconnected', message: 'WhatsApp not connected', sessionExists: false } });
 });
 
 /**

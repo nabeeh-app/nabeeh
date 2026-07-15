@@ -777,7 +777,5 @@ class ApiClient {
   }
 }
 
-// Export class and singleton instance
+// Export class only — singleton lives in @/lib/client
 export { ApiClient };
-export const apiClient = new ApiClient();
-export default apiClient;

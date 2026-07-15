@@ -3,8 +3,9 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const Papa = require('papaparse');
 const { v4: uuidv4 } = require('uuid');
-const supabase = require('../config/database').supabaseAdmin;
+const { supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
+const asyncHandler = require('../middleware/asyncHandler');
 const { detectColumnType, validateImportData, HEADER_MAPPINGS } = require('../lib/importValidation');
 const { seedDemoData, removeDemoData } = require('../scripts/seed_demo_data');
 const { logAudit } = require('../lib/auditLog');
@@ -147,48 +148,43 @@ function autoDetectMapping(headers) {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/preview', authenticateToken, requirePermission('manage_students'), upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded', messageAr: 'لم يتم رفع أي ملف', code: 'VALIDATION_ERROR' });
-    }
-
-    const { headers, rows, errors: parseErrors } = parseFile(req.file.buffer, req.file.originalname);
-
-    if (parseErrors.length > 0) {
-      logger.warn('File parse errors', { errors: parseErrors, teacherId: req.user.id });
-    }
-
-    if (rows.length === 0) {
-      return res.status(400).json({ success: false, message: 'File is empty or has no data rows', messageAr: 'الملف فارغ أو لا يحتوي على صفوف بيانات', code: 'VALIDATION_ERROR' });
-    }
-
-    const { mapping, unmapped } = autoDetectMapping(headers);
-
-    const previewRows = rows.slice(0, 5).map(row => {
-      const result = {};
-      for (const [header, value] of Object.entries(row)) {
-        result[header] = value;
-      }
-      return result;
-    });
-
-    res.json({
-      success: true,
-      data: {
-        fileName: req.file.originalname,
-        totalRows: rows.length,
-        headers,
-        autoMapping: mapping,
-        unmappedColumns: unmapped,
-        preview: previewRows
-      }
-    });
-  } catch (error) {
-    logger.error('Import preview error', { error: error.message, teacherId: req.user.id });
-    res.status(500).json({ success: false, message: 'Failed to parse file', messageAr: 'فشل في تحليل الملف', code: 'INTERNAL_ERROR' });
+router.post('/preview', authenticateToken, requirePermission('manage_students'), upload.single('file'), asyncHandler(async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No file uploaded', messageAr: 'لم يتم رفع أي ملف', code: 'VALIDATION_ERROR' });
   }
-});
+
+  const { headers, rows, errors: parseErrors } = parseFile(req.file.buffer, req.file.originalname);
+
+  if (parseErrors.length > 0) {
+    logger.warn('File parse errors', { errors: parseErrors, teacherId: req.user.id });
+  }
+
+  if (rows.length === 0) {
+    return res.status(400).json({ success: false, message: 'File is empty or has no data rows', messageAr: 'الملف فارغ أو لا يحتوي على صفوف بيانات', code: 'VALIDATION_ERROR' });
+  }
+
+  const { mapping, unmapped } = autoDetectMapping(headers);
+
+  const previewRows = rows.slice(0, 5).map(row => {
+    const result = {};
+    for (const [header, value] of Object.entries(row)) {
+      result[header] = value;
+    }
+    return result;
+  });
+
+  res.json({
+    success: true,
+    data: {
+      fileName: req.file.originalname,
+      totalRows: rows.length,
+      headers,
+      autoMapping: mapping,
+      unmappedColumns: unmapped,
+      preview: previewRows
+    }
+  });
+}));
 
 /**
  * @openapi
@@ -258,52 +254,47 @@ router.post('/preview', authenticateToken, requirePermission('manage_students'),
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/validate', authenticateToken, requirePermission('manage_students'), upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded', messageAr: 'لم يتم رفع أي ملف', code: 'VALIDATION_ERROR' });
-    }
-
-    let fieldMapping;
-    try {
-      fieldMapping = JSON.parse(req.body.mapping || '{}');
-    } catch {
-      fieldMapping = {};
-    }
-
-    let requiredFields;
-    try {
-      requiredFields = JSON.parse(req.body.requiredFields || 'null');
-    } catch {
-      requiredFields = null;
-    }
-
-    const { headers, rows } = parseFile(req.file.buffer, req.file.originalname);
-
-    if (rows.length === 0) {
-      return res.status(400).json({ success: false, message: 'File is empty', messageAr: 'الملف فارغ', code: 'VALIDATION_ERROR' });
-    }
-
-    if (Object.keys(fieldMapping).length === 0) {
-      const auto = autoDetectMapping(headers);
-      fieldMapping = auto.mapping;
-    }
-
-    const { rows: validatedRows, stats } = validateImportData(rows, fieldMapping, requiredFields);
-
-    res.json({
-      success: true,
-      data: {
-        fieldMapping,
-        rows: validatedRows,
-        stats
-      }
-    });
-  } catch (error) {
-    logger.error('Import validate error', { error: error.message, teacherId: req.user.id });
-    res.status(500).json({ success: false, message: 'Validation failed', messageAr: 'فشلت التحقق', code: 'INTERNAL_ERROR' });
+router.post('/validate', authenticateToken, requirePermission('manage_students'), upload.single('file'), asyncHandler(async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No file uploaded', messageAr: 'لم يتم رفع أي ملف', code: 'VALIDATION_ERROR' });
   }
-});
+
+  let fieldMapping;
+  try {
+    fieldMapping = JSON.parse(req.body.mapping || '{}');
+  } catch {
+    fieldMapping = {};
+  }
+
+  let requiredFields;
+  try {
+    requiredFields = JSON.parse(req.body.requiredFields || 'null');
+  } catch {
+    requiredFields = null;
+  }
+
+  const { headers, rows } = parseFile(req.file.buffer, req.file.originalname);
+
+  if (rows.length === 0) {
+    return res.status(400).json({ success: false, message: 'File is empty', messageAr: 'الملف فارغ', code: 'VALIDATION_ERROR' });
+  }
+
+  if (Object.keys(fieldMapping).length === 0) {
+    const auto = autoDetectMapping(headers);
+    fieldMapping = auto.mapping;
+  }
+
+  const { rows: validatedRows, stats } = validateImportData(rows, fieldMapping, requiredFields);
+
+  res.json({
+    success: true,
+    data: {
+      fieldMapping,
+      rows: validatedRows,
+      stats
+    }
+  });
+}));
 
 /**
  * @openapi
@@ -387,110 +378,105 @@ router.post('/validate', authenticateToken, requirePermission('manage_students')
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/execute', authenticateToken, requirePermission('manage_students'), async (req, res) => {
-  try {
-    const { fieldMapping, rows, groupId, skipErrors = true } = req.body;
+router.post('/execute', authenticateToken, requirePermission('manage_students'), asyncHandler(async (req, res) => {
+  const { fieldMapping, rows, groupId, skipErrors = true } = req.body;
 
-    if (!fieldMapping || !rows || !Array.isArray(rows) || rows.length === 0) {
-      return res.status(400).json({ success: false, message: 'Invalid import data', messageAr: 'بيانات الاستيراد غير صالحة', code: 'VALIDATION_ERROR' });
-    }
-
-    if (!groupId) {
-      return res.status(400).json({ success: false, message: 'Target group is required', messageAr: 'المجموعة الهدف مطلوبة', code: 'VALIDATION_ERROR' });
-    }
-
-    const { data: groupCheck } = await supabase
-      .from('groups')
-      .select('id, offering:offerings(teacher_id, id)')
-      .eq('id', groupId)
-      .single();
-
-    if (!groupCheck || groupCheck.offering.teacher_id !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Unauthorized for this group', messageAr: 'غير مصرح لهذه المجموعة', code: 'FORBIDDEN' });
-    }
-
-    const { rows: validatedRows, stats } = validateImportData(
-      rows.map(r => r.data || r),
-      fieldMapping
-    );
-
-    const toImport = validatedRows.filter(r => r.status === 'ready' || r.status === 'warning');
-    const skipped = validatedRows.filter(r => r.status === 'error' && !skipErrors);
-
-    const results = { imported: 0, skipped: skipped.length, errors: [] };
-
-    for (const row of toImport) {
-      try {
-        const studentData = {
-          teacher_id: req.user.id,
-          student_code: row.data.student_code || `ST-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          name: row.data.name,
-          phone: row.data.phone || null,
-          is_demo: false
-        };
-
-        const { data: student, error: studentError } = await supabase
-          .from('students')
-          .insert([studentData])
-          .select()
-          .single();
-
-        if (studentError) {
-          results.errors.push({ row: row.data, error: studentError.message });
-          continue;
-        }
-
-        const { error: enrollError } = await supabase
-          .from('enrollments')
-          .insert({
-            student_id: student.id,
-            group_id: groupId,
-            teacher_id: req.user.id,
-            status: 'active'
-          });
-
-        if (enrollError) {
-          results.errors.push({ row: row.data, error: enrollError.message });
-          continue;
-        }
-
-        if (row.data.parent_phone || row.data.parent_name) {
-          await supabase.from('parents').insert([{
-            student_id: student.id,
-            name: row.data.parent_name || `Parent of ${row.data.name}`,
-            phone: row.data.parent_phone,
-            relationship: 'guardian',
-            is_primary: true,
-            preferred_language: 'ar'
-          }]);
-        }
-
-        results.imported++;
-      } catch (rowError) {
-        results.errors.push({ row: row.data, error: rowError.message });
-      }
-    }
-
-    await logAudit({
-      actorId: req.user.id,
-      actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
-      teacherId: req.user.teacherId || req.user.id,
-      action: 'students_imported',
-      entityType: 'student',
-      metadata: { groupId, imported: results.imported, skipped: results.skipped, errorCount: results.errors.length },
-      ipAddress: req.ip
-    });
-
-    res.json({
-      success: true,
-      data: results,
-      message: `Import complete: ${results.imported} students added, ${results.skipped} skipped`
-    });
-  } catch (error) {
-    logger.error('Import execute error', { error: error.message, teacherId: req.user.id });
-    res.status(500).json({ success: false, message: 'Import failed', messageAr: 'فشل الاستيراد', code: 'INTERNAL_ERROR' });
+  if (!fieldMapping || !rows || !Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({ success: false, message: 'Invalid import data', messageAr: 'بيانات الاستيراد غير صالحة', code: 'VALIDATION_ERROR' });
   }
-});
+
+  if (!groupId) {
+    return res.status(400).json({ success: false, message: 'Target group is required', messageAr: 'المجموعة الهدف مطلوبة', code: 'VALIDATION_ERROR' });
+  }
+
+  const { data: groupCheck } = await supabaseAdmin
+    .from('groups')
+    .select('id, offering:offerings(teacher_id, id)')
+    .eq('id', groupId)
+    .single();
+
+  if (!groupCheck || groupCheck.offering.teacher_id !== req.user.id) {
+    return res.status(403).json({ success: false, message: 'Unauthorized for this group', messageAr: 'غير مصرح لهذه المجموعة', code: 'FORBIDDEN' });
+  }
+
+  const { rows: validatedRows, stats } = validateImportData(
+    rows.map(r => r.data || r),
+    fieldMapping
+  );
+
+  const toImport = validatedRows.filter(r => r.status === 'ready' || r.status === 'warning');
+  const skipped = validatedRows.filter(r => r.status === 'error' && !skipErrors);
+
+  const results = { imported: 0, skipped: skipped.length, errors: [] };
+
+  for (const row of toImport) {
+    try {
+      const studentData = {
+        teacher_id: req.user.id,
+        student_code: row.data.student_code || `ST-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: row.data.name,
+        phone: row.data.phone || null,
+        is_demo: false
+      };
+
+      const { data: student, error: studentError } = await supabaseAdmin
+        .from('students')
+        .insert([studentData])
+        .select()
+        .single();
+
+      if (studentError) {
+        results.errors.push({ row: row.data, error: studentError.message });
+        continue;
+      }
+
+      const { error: enrollError } = await supabaseAdmin
+        .from('enrollments')
+        .insert({
+          student_id: student.id,
+          group_id: groupId,
+          teacher_id: req.user.id,
+          status: 'active'
+        });
+
+      if (enrollError) {
+        results.errors.push({ row: row.data, error: enrollError.message });
+        continue;
+      }
+
+      if (row.data.parent_phone || row.data.parent_name) {
+        await supabaseAdmin.from('parents').insert([{
+          student_id: student.id,
+          name: row.data.parent_name || `Parent of ${row.data.name}`,
+          phone: row.data.parent_phone,
+          relationship: 'guardian',
+          is_primary: true,
+          preferred_language: 'ar'
+        }]);
+      }
+
+      results.imported++;
+    } catch (rowError) {
+      results.errors.push({ row: row.data, error: rowError.message });
+    }
+  }
+
+  await logAudit({
+    actorId: req.user.id,
+    actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
+    teacherId: req.user.teacherId || req.user.id,
+    action: 'students_imported',
+    entityType: 'student',
+    metadata: { groupId, imported: results.imported, skipped: results.skipped, errorCount: results.errors.length },
+    ipAddress: req.ip
+  });
+
+  res.json({
+    success: true,
+    data: results,
+    message: `Import complete: ${results.imported} students added, ${results.skipped} skipped`
+  });
+}));
 
 /**
  * @openapi
@@ -565,43 +551,38 @@ router.post('/execute', authenticateToken, requirePermission('manage_students'),
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/paste', authenticateToken, requirePermission('manage_students'), async (req, res) => {
-  try {
-    const { text } = req.body;
+router.post('/paste', authenticateToken, requirePermission('manage_students'), asyncHandler(async (req, res) => {
+  const { text } = req.body;
 
-    if (!text || typeof text !== 'string') {
-      return res.status(400).json({ success: false, message: 'No text provided', messageAr: 'لم يتم توفير نص', code: 'VALIDATION_ERROR' });
-    }
-
-    const result = Papa.parse(text.trim(), {
-      header: true,
-      skipEmptyLines: true,
-      delimiter: '\t'
-    });
-
-    if (result.data.length === 0) {
-      return res.status(400).json({ success: false, message: 'No data rows found in pasted content', messageAr: 'لم يتم العثور على صفوف بيانات في المحتوى الملصق', code: 'VALIDATION_ERROR' });
-    }
-
-    const headers = result.meta.fields || [];
-    const { mapping, unmapped } = autoDetectMapping(headers);
-
-    res.json({
-      success: true,
-      data: {
-        headers,
-        autoMapping: mapping,
-        unmappedColumns: unmapped,
-        totalRows: result.data.length,
-        preview: result.data.slice(0, 5),
-        allRows: result.data
-      }
-    });
-  } catch (error) {
-    logger.error('Paste parse error', { error: error.message, teacherId: req.user.id });
-    res.status(500).json({ success: false, message: 'Failed to parse pasted data', messageAr: 'فشل في تحليل البيانات الملصقة', code: 'INTERNAL_ERROR' });
+  if (!text || typeof text !== 'string') {
+    return res.status(400).json({ success: false, message: 'No text provided', messageAr: 'لم يتم توفير نص', code: 'VALIDATION_ERROR' });
   }
-});
+
+  const result = Papa.parse(text.trim(), {
+    header: true,
+    skipEmptyLines: true,
+    delimiter: '\t'
+  });
+
+  if (result.data.length === 0) {
+    return res.status(400).json({ success: false, message: 'No data rows found in pasted content', messageAr: 'لم يتم العثور على صفوف بيانات في المحتوى الملصق', code: 'VALIDATION_ERROR' });
+  }
+
+  const headers = result.meta.fields || [];
+  const { mapping, unmapped } = autoDetectMapping(headers);
+
+  res.json({
+    success: true,
+    data: {
+      headers,
+      autoMapping: mapping,
+      unmappedColumns: unmapped,
+      totalRows: result.data.length,
+      preview: result.data.slice(0, 5),
+      allRows: result.data
+    }
+  });
+}));
 
 /**
  * @openapi
@@ -638,15 +619,10 @@ router.post('/paste', authenticateToken, requirePermission('manage_students'), a
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/demo/seed', authenticateToken, requirePermission('manage_students'), async (req, res) => {
-  try {
-    const result = await seedDemoData(req.user.id);
-    res.json({ success: true, data: result });
-  } catch (error) {
-    logger.error('Seed demo data error', { error: error.message, teacherId: req.user.id });
-    res.status(500).json({ success: false, message: 'Failed to seed demo data', messageAr: 'فشل في إنشاء بيانات التجربة', code: 'INTERNAL_ERROR' });
-  }
-});
+router.post('/demo/seed', authenticateToken, requirePermission('manage_students'), asyncHandler(async (req, res) => {
+  const result = await seedDemoData(req.user.id);
+  res.json({ success: true, data: result });
+}));
 
 /**
  * @openapi
@@ -683,14 +659,9 @@ router.post('/demo/seed', authenticateToken, requirePermission('manage_students'
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/demo/remove', authenticateToken, requirePermission('manage_students'), async (req, res) => {
-  try {
-    const result = await removeDemoData(req.user.id);
-    res.json({ success: true, data: result });
-  } catch (error) {
-    logger.error('Remove demo data error', { error: error.message, teacherId: req.user.id });
-    res.status(500).json({ success: false, message: 'Failed to remove demo data', messageAr: 'فشل في حذف بيانات التجربة', code: 'INTERNAL_ERROR' });
-  }
-});
+router.post('/demo/remove', authenticateToken, requirePermission('manage_students'), asyncHandler(async (req, res) => {
+  const result = await removeDemoData(req.user.id);
+  res.json({ success: true, data: result });
+}));
 
 module.exports = router;

@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -74,7 +74,7 @@ export default function AttendancePage() {
 
   const { data: offerings = [], isLoading: offeringsLoading } = useOfferings();
 
-  const groups = useMemo(() => offerings.flatMap(o => o.groups ?? []), [offerings]);
+  const groups = offerings.flatMap(o => o.groups ?? []);
 
   useEffect(() => {
     if (groups.length === 0 && !offeringsLoading) {
@@ -82,35 +82,32 @@ export default function AttendancePage() {
     }
   }, [groups, offeringsLoading, locale, router]);
 
-  const effectiveSelectedGroupId = useMemo(
-    () => selectedGroupId || groups[0]?.id || '',
-    [selectedGroupId, groups]
-  );
+  const effectiveSelectedGroupId = selectedGroupId || groups[0]?.id || '';
 
-  const studentsParams = useMemo(() => effectiveSelectedGroupId ? {
+  const studentsParams = effectiveSelectedGroupId ? {
     limit: 100,
     status: 'active',
     group_id: effectiveSelectedGroupId,
-  } : undefined, [effectiveSelectedGroupId]);
+  } : undefined;
 
   const { data: studentsResponse } = useStudents(studentsParams);
-  const students: Student[] = useMemo(() => studentsResponse?.data ?? [], [studentsResponse]);
+  const students: Student[] = studentsResponse?.data ?? [];
 
-  const attendanceParams = useMemo(() => effectiveSelectedGroupId ? {
+  const attendanceParams = effectiveSelectedGroupId ? {
     limit: 100,
     start_date: dateRange.from,
     end_date: dateRange.to,
     group_id: effectiveSelectedGroupId,
-  } : undefined, [effectiveSelectedGroupId, dateRange]);
+  } : undefined;
 
   const { data: attendanceResponse } = useAttendanceRecords(attendanceParams);
-  const attendanceRecords = useMemo(() => attendanceResponse?.data ?? [], [attendanceResponse]);
+  const attendanceRecords = attendanceResponse?.data ?? [];
 
-  const summaryParams = useMemo(() => effectiveSelectedGroupId ? {
+  const summaryParams = effectiveSelectedGroupId ? {
     start_date: dateRange.from,
     end_date: dateRange.to,
     group_id: effectiveSelectedGroupId,
-  } : undefined, [effectiveSelectedGroupId, dateRange]);
+  } : undefined;
 
   const { data: attendanceStats } = useAttendanceSummary(summaryParams);
   const createAttendance = useCreateAttendance();
@@ -222,17 +219,15 @@ export default function AttendancePage() {
     });
   };
 
-  const filteredRecords = useMemo(() => {
-    return attendanceRecords.filter((record: Attendance) => {
-      const matchesStatus = statusFilter === 'all' || record.status === statusFilter;
-      const matchesStudent = !studentFilter || record.student?.name?.toLowerCase().includes(studentFilter.toLowerCase());
-      const recordDate = new Date(record.date);
-      const fromDate = new Date(dateRange.from);
-      const toDate = new Date(dateRange.to);
-      const matchesDate = recordDate >= fromDate && recordDate <= toDate;
-      return matchesStatus && matchesStudent && matchesDate;
-    });
-  }, [attendanceRecords, statusFilter, studentFilter, dateRange]);
+  const filteredRecords = attendanceRecords.filter((record: Attendance) => {
+    const matchesStatus = statusFilter === 'all' || record.status === statusFilter;
+    const matchesStudent = !studentFilter || record.student?.name?.toLowerCase().includes(studentFilter.toLowerCase());
+    const recordDate = new Date(record.date);
+    const fromDate = new Date(dateRange.from);
+    const toDate = new Date(dateRange.to);
+    const matchesDate = recordDate >= fromDate && recordDate <= toDate;
+    return matchesStatus && matchesStudent && matchesDate;
+  });
 
   if (offeringsLoading || !effectiveSelectedGroupId) {
     return <LoadingSpinner message={t('loading')} />;

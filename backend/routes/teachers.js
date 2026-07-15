@@ -4,6 +4,7 @@ const { authenticateToken } = require('../middleware/auth');
 const { z } = require('zod');
 const { validate, updateProfileSchema, updateSettingsSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
@@ -11,194 +12,150 @@ const router = express.Router();
 // @route   GET /api/teachers/profile
 // @access  Private
 const getProfile = async (req, res) => {
-  try {
-    const { data: teacher, error } = await supabase
-      .from('teachers')
-      .select('id, email, name, phone, business_name, bio, subjects, address, city, country, timezone, whatsapp_number, telegram_username, preferred_language, role, is_active, created_at, updated_at')
-      .eq('id', req.user.id)
-      .single();
+  const { data: teacher, error } = await supabase
+    .from('teachers')
+    .select('id, email, name, phone, business_name, bio, subjects, address, city, country, timezone, whatsapp_number, telegram_username, preferred_language, role, is_active, created_at, updated_at')
+    .eq('id', req.user.id)
+    .single();
 
-    if (error) throw error;
+  if (error) throw error;
 
-    // Get student count via RPC (single query instead of enrollment tree traversal)
-    const { data: studentCount } = await supabase
-      .rpc('teacher_student_count', { p_teacher_id: req.user.id });
+  const { data: studentCount } = await supabase
+    .rpc('teacher_student_count', { p_teacher_id: req.user.id });
 
-    const teacherProfile = {
-      ...teacher,
-      students: { count: studentCount || 0 }
-    };
+  const teacherProfile = {
+    ...teacher,
+    students: { count: studentCount || 0 }
+  };
 
-    res.status(200).json({
-      success: true,
-      data: teacherProfile
-    });
-  } catch (error) {
-    logger.error('Get profile error', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Server error fetching profile',
-      messageAr: 'خطأ في الخادم أثناء جلب الملف الشخصي',
-      code: 'INTERNAL_ERROR'
-    });
-  }
+  res.status(200).json({
+    success: true,
+    data: teacherProfile
+  });
 };
 
 // @desc    Get teacher dashboard stats
 // @route   GET /api/teachers/dashboard
 // @access  Private
 const getDashboardStats = async (req, res) => {
-  try {
-    const teacherId = req.user.id;
+  const teacherId = req.user.id;
 
-    // Single RPC call replaces 5 separate queries (enrollment tree, parents, attendance, messages, grades)
-    const { data: statsJson, error: rpcError } = await supabase
-      .rpc('dashboard_stats', { p_teacher_id: teacherId });
+  const { data: statsJson, error: rpcError } = await supabase
+    .rpc('dashboard_stats', { p_teacher_id: teacherId });
 
-    if (rpcError) throw rpcError;
+  if (rpcError) throw rpcError;
 
-    const stats = typeof statsJson === 'string' ? JSON.parse(statsJson) : statsJson;
+  const stats = typeof statsJson === 'string' ? JSON.parse(statsJson) : statsJson;
 
-    // Recent grades (still needs separate query for detailed data)
-    const { data: recentGrades } = await supabase
-      .from('grades')
-      .select(`
-        score,
-        assessment:assessments!inner(
-            name,
-            date,
-            offering:offerings!inner(teacher_id)
-        ),
-        enrollment:enrollments!inner(
-            student:students(name, student_id)
-        )
-      `)
-      .eq('assessments.offerings.teacher_id', teacherId)
-      .order('assessments.date', { ascending: false })
-      .limit(5);
+  const { data: recentGrades } = await supabase
+    .from('grades')
+    .select(`
+      score,
+      assessment:assessments!inner(
+          name,
+          date,
+          offering:offerings!inner(teacher_id)
+      ),
+      enrollment:enrollments!inner(
+          student:students(name, student_id)
+      )
+    `)
+    .eq('assessments.offerings.teacher_id', teacherId)
+    .order('assessments.date', { ascending: false })
+    .limit(5);
 
-    // Recent messages (still needs separate query for detailed data)
-    const { data: recentMessages } = await supabase
-      .from('messages')
-      .select(`
-        *,
-        conversations!inner (
-          teacher_id,
-          parents (name)
-        )
-      `)
-      .eq('conversations.teacher_id', teacherId)
-      .order('created_at', { ascending: false })
-      .limit(5);
+  const { data: recentMessages } = await supabase
+    .from('messages')
+    .select(`
+      *,
+      conversations!inner (
+        teacher_id,
+        parents (name)
+      )
+    `)
+    .eq('conversations.teacher_id', teacherId)
+    .order('created_at', { ascending: false })
+    .limit(5);
 
-    const formattedGrades = recentGrades?.map(g => ({
-      score: g.score,
-      assessment_name: g.assessment.name,
-      student_name: g.enrollment.student.name,
-      date: g.assessment.date
-    })) || [];
+  const formattedGrades = recentGrades?.map(g => ({
+    score: g.score,
+    assessment_name: g.assessment.name,
+    student_name: g.enrollment.student.name,
+    date: g.assessment.date
+  })) || [];
 
-    res.status(200).json({
-      success: true,
-      data: {
-        stats: {
-          total_students: stats.student_count || 0,
-          total_parents: stats.parent_count || 0,
-          today_attendance: stats.today_attendance || 0,
-          weekly_messages: stats.weekly_messages || 0
-        },
-        recent_grades: formattedGrades,
-        recent_messages: recentMessages || []
-      }
-    });
-  } catch (error) {
-    logger.error('Get dashboard stats error', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Server error fetching dashboard stats',
-      messageAr: 'خطأ في الخادم أثناء جلب إحصائيات لوحة التحكم',
-      code: 'INTERNAL_ERROR'
-    });
-  }
+  res.status(200).json({
+    success: true,
+    data: {
+      stats: {
+        total_students: stats.student_count || 0,
+        total_parents: stats.parent_count || 0,
+        today_attendance: stats.today_attendance || 0,
+        weekly_messages: stats.weekly_messages || 0
+      },
+      recent_grades: formattedGrades,
+      recent_messages: recentMessages || []
+    }
+  });
 };
 
 // @desc    Get teacher settings
 // @route   GET /api/teachers/settings
 // @access  Private
 const getSettings = async (req, res) => {
-  try {
-    const { data: settings, error } = await supabase
-      .from('teacher_settings')
-      .select('notifications, theme, language')
-      .eq('teacher_id', req.user.id)
-      .single();
+  const { data: settings, error } = await supabase
+    .from('teacher_settings')
+    .select('notifications, theme, language')
+    .eq('teacher_id', req.user.id)
+    .single();
 
-    if (error || !settings) {
-      return res.status(200).json({
-        success: true,
-        data: { notifications: { attendance: true, grades: true, messages: true }, theme: 'system', language: 'en' }
-      });
-    }
-
-    res.status(200).json({
+  if (error || !settings) {
+    return res.status(200).json({
       success: true,
-      data: settings
-    });
-  } catch (error) {
-    logger.error('Get settings error', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Server error fetching settings',
-      messageAr: 'خطأ في الخادم أثناء جلب الإعدادات',
-      code: 'INTERNAL_ERROR'
+      data: { notifications: { attendance: true, grades: true, messages: true }, theme: 'system', language: 'en' }
     });
   }
+
+  res.status(200).json({
+    success: true,
+    data: settings
+  });
 };
 
 // @desc    Update teacher settings
 // @route   PUT /api/teachers/settings
 // @access  Private
 const updateSettings = async (req, res) => {
-  try {
-    const { notifications, theme, language } = req.body;
-    const teacherId = req.user.id;
+  const { notifications, theme, language } = req.body;
+  const teacherId = req.user.id;
 
-    const updates = {};
-    if (notifications !== undefined) updates.notifications = notifications;
-    if (theme !== undefined) updates.theme = theme;
-    if (language !== undefined) updates.language = language;
+  const updates = {};
+  if (notifications !== undefined) updates.notifications = notifications;
+  if (theme !== undefined) updates.theme = theme;
+  if (language !== undefined) updates.language = language;
 
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ success: false, message: 'No settings provided', messageAr: 'لم يتم تقديم إعدادات', code: 'VALIDATION_ERROR' });
-    }
-
-    const { data: updatedSettings, error } = await supabase
-      .from('teacher_settings')
-      .upsert({
-        teacher_id: teacherId,
-        ...updates
-      }, { onConflict: 'teacher_id' })
-      .select('notifications, theme, language')
-      .single();
-
-    if (error) {
-      return res.status(400).json({ success: false, message: error.message, messageAr: 'فشل في تحديث الإعدادات', code: 'INTERNAL_ERROR' });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: updatedSettings,
-      message: 'Settings updated successfully'
-    });
-  } catch (error) {
-    logger.error('Update settings error', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Server error updating settings',
-      messageAr: 'خطأ في الخادم أثناء تحديث الإعدادات',
-      code: 'INTERNAL_ERROR'
-    });
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ success: false, message: 'No settings provided', messageAr: 'لم يتم تقديم إعدادات', code: 'VALIDATION_ERROR' });
   }
+
+  const { data: updatedSettings, error } = await supabase
+    .from('teacher_settings')
+    .upsert({
+      teacher_id: teacherId,
+      ...updates
+    }, { onConflict: 'teacher_id' })
+    .select('notifications, theme, language')
+    .single();
+
+  if (error) {
+    return res.status(400).json({ success: false, message: error.message, messageAr: 'فشل في تحديث الإعدادات', code: 'INTERNAL_ERROR' });
+  }
+
+  res.status(200).json({
+    success: true,
+    data: updatedSettings,
+    message: 'Settings updated successfully'
+  });
 };
 
 const notificationPreferencesSchema = z.object({
@@ -219,45 +176,34 @@ const notificationPreferencesSchema = z.object({
 // @route   PUT /api/teachers/notification-preferences
 // @access  Private
 const updateNotificationPreferences = async (req, res) => {
-  try {
-    const teacherId = req.user.id;
-    const prefs = req.body;
+  const teacherId = req.user.id;
+  const prefs = req.body;
 
-    // Fetch existing preferences
-    const { data: existing } = await supabase
-      .from('teacher_settings')
-      .select('notification_preferences')
-      .eq('teacher_id', teacherId)
-      .single();
+  const { data: existing } = await supabase
+    .from('teacher_settings')
+    .select('notification_preferences')
+    .eq('teacher_id', teacherId)
+    .single();
 
-    const currentPrefs = existing?.notification_preferences || {};
-    const updatedPrefs = { ...currentPrefs, ...prefs };
+  const currentPrefs = existing?.notification_preferences || {};
+  const updatedPrefs = { ...currentPrefs, ...prefs };
 
-    const { data, error } = await supabase
-      .from('teacher_settings')
-      .upsert({
-        teacher_id: teacherId,
-        notification_preferences: updatedPrefs,
-      }, { onConflict: 'teacher_id' })
-      .select('notification_preferences')
-      .single();
+  const { data, error } = await supabase
+    .from('teacher_settings')
+    .upsert({
+      teacher_id: teacherId,
+      notification_preferences: updatedPrefs,
+    }, { onConflict: 'teacher_id' })
+    .select('notification_preferences')
+    .single();
 
-    if (error) throw error;
+  if (error) throw error;
 
-    res.status(200).json({
-      success: true,
-      data: data.notification_preferences,
-      message: 'Notification preferences updated successfully',
-    });
-  } catch (error) {
-    logger.error('Update notification preferences error', { error: error.message });
-    res.status(500).json({
-      success: false,
-      message: 'Server error updating notification preferences',
-      messageAr: 'خطأ في الخادم أثناء تحديث تفضيلات الإشعارات',
-      code: 'INTERNAL_ERROR'
-    });
-  }
+  res.status(200).json({
+    success: true,
+    data: data.notification_preferences,
+    message: 'Notification preferences updated successfully',
+  });
 };
 
 /**
@@ -294,7 +240,7 @@ const updateNotificationPreferences = async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/profile', authenticateToken, getProfile);
+router.get('/profile', authenticateToken, asyncHandler(getProfile));
 
 /**
  * @openapi
@@ -350,7 +296,7 @@ router.get('/profile', authenticateToken, getProfile);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/dashboard', authenticateToken, getDashboardStats);
+router.get('/dashboard', authenticateToken, asyncHandler(getDashboardStats));
 
 /**
  * @openapi
@@ -393,7 +339,7 @@ router.get('/dashboard', authenticateToken, getDashboardStats);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/settings', authenticateToken, getSettings);
+router.get('/settings', authenticateToken, asyncHandler(getSettings));
 
 /**
  * @openapi
@@ -462,7 +408,7 @@ router.get('/settings', authenticateToken, getSettings);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/settings', authenticateToken, validate(updateSettingsSchema), updateSettings);
+router.put('/settings', authenticateToken, validate(updateSettingsSchema), asyncHandler(updateSettings));
 
 /**
  * @openapi
@@ -544,6 +490,6 @@ router.put('/settings', authenticateToken, validate(updateSettingsSchema), updat
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/notification-preferences', authenticateToken, validate(notificationPreferencesSchema), updateNotificationPreferences);
+router.put('/notification-preferences', authenticateToken, validate(notificationPreferencesSchema), asyncHandler(updateNotificationPreferences));
 
 module.exports = router;

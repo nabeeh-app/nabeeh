@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, ArrowRight, Check, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import FileUploadZone from './FileUploadZone';
 import ColumnMapper from './ColumnMapper';
 import ImportPreviewTable from './ImportPreviewTable';
-import apiClient from '@/lib/client';
+import { apiClient } from '@/lib/client';
 import { useOfferings } from '@/hooks/useOfferings';
 
 interface ImportRow {
@@ -45,7 +45,7 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
     o.groups?.map((g) => ({ ...g, offeringSubject: o.subject?.name_en || o.subject?.name_ar })) || []
   ) || [];
 
-  const reset = useCallback(() => {
+  const reset = () => {
     setStep('upload');
     setFile(null);
     setHeaders([]);
@@ -55,14 +55,14 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
     setSelectedGroupId('');
     setImportResult(null);
     setError(null);
-  }, []);
+  };
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     reset();
     onClose();
-  }, [reset, onClose]);
+  };
 
-  const handleFileSelected = useCallback(async (selectedFile: File) => {
+  const handleFileSelected = async (selectedFile: File) => {
     setFile(selectedFile);
     setLoading(true);
     setError(null);
@@ -76,9 +76,9 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const handlePasteData = useCallback(async (text: string) => {
+  const handlePasteData = async (text: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -91,9 +91,9 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const handleValidate = useCallback(async () => {
+  const handleValidate = async () => {
     if (!file) return;
     setLoading(true);
     setError(null);
@@ -111,9 +111,9 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
     } finally {
       setLoading(false);
     }
-  }, [file, autoMapping]);
+  };
 
-  const handleImport = useCallback(async () => {
+  const handleImport = async () => {
     if (!selectedGroupId) return;
     setLoading(true);
     setError(null);
@@ -132,9 +132,9 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
     } finally {
       setLoading(false);
     }
-  }, [autoMapping, rows, selectedGroupId, onComplete]);
+  };
 
-  const handleEditRow = useCallback((index: number, field: string, value: string) => {
+  const handleEditRow = (index: number, field: string, value: string) => {
     setRows((prev) => {
       const updated = [...prev];
       updated[index] = {
@@ -143,7 +143,7 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
       };
       return updated;
     });
-  }, []);
+  };
 
   const steps: { key: Step; label: string }[] = [
     { key: 'upload', label: t('upload.title') },

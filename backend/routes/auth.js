@@ -6,6 +6,7 @@ const { validate, registerSchema, loginSchema, requestResetSchema, resetPassword
 const rateLimit = require('express-rate-limit');
 const logger = require('../lib/logger');
 const { sendEmail } = require('../lib/email');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
@@ -326,42 +327,41 @@ async function provisionTeacherAccount(payload) {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/register', registerLimiter, validate(registerSchema), async (req, res) => {
-    try {
-        const teacher = await provisionTeacherAccount(req.body);
+router.post('/register', registerLimiter, validate(registerSchema), asyncHandler(async (req, res) => {
+    const teacher = await provisionTeacherAccount(req.body);
 
-        const token = authService.tokenService.generateToken(teacher);
+    const token = authService.tokenService.generateToken(teacher);
 
-        await logAuthEvent(
-            teacher.id,
-            'register',
-            true,
-            req.ip || req.connection.remoteAddress,
-            req.get('User-Agent'),
-            { email: teacher.email }
-        );
+    await logAuthEvent(
+        teacher.id,
+        'register',
+        true,
+        req.ip || req.connection.remoteAddress,
+        req.get('User-Agent'),
+        { email: teacher.email }
+    );
 
-        setAuthCookie(res, token);
+    setAuthCookie(res, token);
 
-        res.status(201).json({
-            success: true,
-            data: {
-                teacher: formatTeacherResponse(teacher),
-                token
-            },
-            message: 'Registration successful',
-            messageAr: 'تم إنشاء الحساب بنجاح'
-        });
+    res.status(201).json({
+        success: true,
+        data: {
+            teacher: formatTeacherResponse(teacher),
+            token
+        },
+        message: 'Registration successful',
+        messageAr: 'تم إنشاء الحساب بنجاح'
+    });
 
-        // Welcome email to the new user — async, don't block the response
-        const lang = teacher.preferred_language || 'ar';
-        const isAr = lang === 'ar';
-        const dir = isAr ? 'rtl' : 'ltr';
-        const align = isAr ? 'right' : 'left';
-        const font = isAr ? "'Segoe UI', Tahoma, Arial, sans-serif" : "Arial, 'Helvetica Neue', Helvetica, sans-serif";
-        const welcomeEmail = {
-            subject: isAr ? 'مرحباً بك في نبيه!' : 'Welcome to Nabeeh!',
-            html: `
+    // Welcome email to the new user — async, don't block the response
+    const lang = teacher.preferred_language || 'ar';
+    const isAr = lang === 'ar';
+    const dir = isAr ? 'rtl' : 'ltr';
+    const align = isAr ? 'right' : 'left';
+    const font = isAr ? "'Segoe UI', Tahoma, Arial, sans-serif" : "Arial, 'Helvetica Neue', Helvetica, sans-serif";
+    const welcomeEmail = {
+        subject: isAr ? 'مرحباً بك في نبيه!' : 'Welcome to Nabeeh!',
+        html: `
 <!DOCTYPE html>
 <html lang="${lang}" dir="${dir}">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -427,24 +427,15 @@ router.post('/register', registerLimiter, validate(registerSchema), async (req, 
 </table>
 </body>
 </html>`,
-        };
+    };
 
-        sendEmail({
-            to: teacher.email,
-            from: 'Mustafa <mustafa@nabeeh.app>',
-            subject: welcomeEmail.subject,
-            html: welcomeEmail.html,
-        }).catch(() => {});
-    } catch (error) {
-        const statusCode = error.status || 500;
-        logger.error('Registration error', { error: error.message });
-        res.status(statusCode).json({
-            success: false,
-            message: statusCode === 409 ? 'Email is already registered' : 'Internal server error',
-            messageAr: statusCode === 409 ? 'البريد الإلكتروني مسجل بالفعل' : 'خطأ في الخادم الداخلي'
-        });
-    }
-});
+    sendEmail({
+        to: teacher.email,
+        from: 'Mustafa <mustafa@nabeeh.app>',
+        subject: welcomeEmail.subject,
+        html: welcomeEmail.html,
+    }).catch(() => {});
+}));
 
 /**
  * @openapi
@@ -531,23 +522,14 @@ router.post('/register', registerLimiter, validate(registerSchema), async (req, 
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/admin/create-teacher', authenticateToken, requireRole('admin'), validate(createTeacherSchema), async (req, res) => {
-    try {
-        const teacher = await provisionTeacherAccount(req.body);
-        res.status(201).json({
-            success: true,
-            data: formatTeacherResponse(teacher),
-            message: 'Teacher account created successfully'
-        });
-    } catch (error) {
-        const statusCode = error.status || 500;
-        logger.error('Admin create teacher error', { error: error.message });
-        res.status(statusCode).json({
-            success: false,
-            message: statusCode === 409 ? 'Email is already registered' : 'Failed to create teacher account'
-        });
-    }
-});
+router.post('/admin/create-teacher', authenticateToken, requireRole('admin'), validate(createTeacherSchema), asyncHandler(async (req, res) => {
+    const teacher = await provisionTeacherAccount(req.body);
+    res.status(201).json({
+        success: true,
+        data: formatTeacherResponse(teacher),
+        message: 'Teacher account created successfully'
+    });
+}));
 
 /**
  * @openapi
@@ -618,81 +600,71 @@ router.post('/admin/create-teacher', authenticateToken, requireRole('admin'), va
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/login', loginLimiter, validate(loginSchema), async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const normalizedEmail = email?.toLowerCase().trim();
-        logger.info('Login attempt', { email: normalizedEmail });
+router.post('/login', loginLimiter, validate(loginSchema), asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
+    const normalizedEmail = email?.toLowerCase().trim();
+    logger.info('Login attempt', { email: normalizedEmail });
 
-        // Validate input
-        if (!normalizedEmail || !password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email and password are required',
-                messageAr: 'البريد الإلكتروني وكلمة المرور مطلوبان'
-            });
-        }
-
-        // Authenticate user with Supabase Auth
-        const result = await authService.authenticateUser(normalizedEmail, password, supabase);
-
-        if (result.success) {
-            // Get teacher profile from database
-            const { data: teacherProfile } = await supabaseAdmin
-                .from('teachers')
-                .select(teacherSelectFields)
-                .eq('id', result.user.id)
-                .single();
-
-            await updateLastLogin(result.user.id);
-
-            // Log authentication attempt
-            await logAuthEvent(
-                result.user.id,
-                'login',
-                true,
-                req.ip || req.connection.remoteAddress,
-                req.get('User-Agent'),
-                { email: normalizedEmail }
-            );
-
-            setAuthCookie(res, result.token);
-
-            res.json({
-                success: true,
-                data: {
-                    teacher: formatTeacherResponse(teacherProfile) || result.user,
-                    token: result.token
-                },
-                message: result.message,
-                messageAr: result.messageAr
-            });
-        } else {
-            // Log failed attempt
-            await logAuthEvent(
-                null,
-                'login',
-                false,
-                req.ip || req.connection.remoteAddress,
-                req.get('User-Agent'),
-                { email: normalizedEmail }
-            );
-            res.status(401).json({
-                success: false,
-                message: result.message || 'Invalid credentials',
-                messageAr: result.messageAr || 'بيانات الدخول غير صحيحة'
-            });
-        }
-
-    } catch (error) {
-        logger.error('Login error', { error: error.message });
-        res.status(500).json({
+    // Validate input
+    if (!normalizedEmail || !password) {
+        return res.status(400).json({
             success: false,
-            message: 'Internal server error',
-            messageAr: 'خطأ في الخادم الداخلي'
+            message: 'Email and password are required',
+            messageAr: 'البريد الإلكتروني وكلمة المرور مطلوبان'
         });
     }
-});
+
+    // Authenticate user with Supabase Auth
+    const result = await authService.authenticateUser(normalizedEmail, password, supabase);
+
+    if (result.success) {
+        // Get teacher profile from database
+        const { data: teacherProfile } = await supabaseAdmin
+            .from('teachers')
+            .select(teacherSelectFields)
+            .eq('id', result.user.id)
+            .single();
+
+        await updateLastLogin(result.user.id);
+
+        // Log authentication attempt
+        await logAuthEvent(
+            result.user.id,
+            'login',
+            true,
+            req.ip || req.connection.remoteAddress,
+            req.get('User-Agent'),
+            { email: normalizedEmail }
+        );
+
+        setAuthCookie(res, result.token);
+
+        res.json({
+            success: true,
+            data: {
+                teacher: formatTeacherResponse(teacherProfile) || result.user,
+                token: result.token
+            },
+            message: result.message,
+            messageAr: result.messageAr
+        });
+    } else {
+        // Log failed attempt
+        await logAuthEvent(
+            null,
+            'login',
+            false,
+            req.ip || req.connection.remoteAddress,
+            req.get('User-Agent'),
+            { email: normalizedEmail }
+        );
+        res.status(401).json({
+            success: false,
+            message: result.message || 'Invalid credentials',
+            messageAr: result.messageAr || 'بيانات الدخول غير صحيحة'
+        });
+    }
+}));
 
 /**
  * @openapi
@@ -731,45 +703,36 @@ router.post('/login', loginLimiter, validate(loginSchema), async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/logout', authenticateToken, async (req, res) => {
-    try {
-        const token = req.headers.authorization?.replace('Bearer ', '');
-        const ipAddress = req.ip || req.connection.remoteAddress;
-        const userAgent = req.get('User-Agent');
+router.post('/logout', authenticateToken, asyncHandler(async (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
 
-        if (token) {
-            try {
-                // Revoke the token
-                await authService.tokenService.revokeToken(token);
+    if (token) {
+        try {
+            // Revoke the token
+            await authService.tokenService.revokeToken(token);
 
-                const decoded = authService.tokenService.verifyToken(token);
-                await logAuthEvent(
-                    decoded.user_id,
-                    'logout',
-                    true,
-                    ipAddress,
-                    userAgent
-                );
-            } catch (error) {
-                logger.info('Token revocation failed during logout', { error: error.message });
-            }
+            const decoded = authService.tokenService.verifyToken(token);
+            await logAuthEvent(
+                decoded.user_id,
+                'logout',
+                true,
+                ipAddress,
+                userAgent
+            );
+        } catch (error) {
+            logger.info('Token revocation failed during logout', { error: error.message });
         }
-
-        res.clearCookie('nabeeh_token', { path: '/' });
-        res.json({
-            success: true,
-            message: 'Logged out successfully',
-            messageAr: 'تم تسجيل الخروج بنجاح'
-        });
-    } catch (error) {
-        logger.error('Logout error', { error: error.message });
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-            messageAr: 'خطأ في الخادم الداخلي'
-        });
     }
-});
+
+    res.clearCookie('nabeeh_token', { path: '/' });
+    res.json({
+        success: true,
+        message: 'Logged out successfully',
+        messageAr: 'تم تسجيل الخروج بنجاح'
+    });
+}));
 
 /**
  * @openapi
@@ -829,60 +792,50 @@ router.post('/logout', authenticateToken, async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/verify-token', async (req, res) => {
-    try {
-        const token = req.headers.authorization?.replace('Bearer ', '');
+router.get('/verify-token', asyncHandler(async (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
 
-        if (!token) {
-            return res.status(401).json({
-                success: false,
-                message: 'Token is required',
-                messageAr: 'الرمز المميز مطلوب'
-            });
-        }
-
-        const decoded = authService.tokenService.verifyToken(token);
-
-        // Check if token has been revoked
-        if (decoded.jti && await authService.tokenService.isTokenRevoked(decoded.jti)) {
-            return res.status(401).json({
-                success: false,
-                message: 'Token has been revoked',
-                messageAr: 'تم إلغاء الرمز'
-            });
-        }
-
-        // Get fresh user data to ensure user still exists
-        const user = await getUserByEmail(decoded.email);
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: 'User not found',
-                messageAr: 'المستخدم غير موجود'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                role: 'teacher'
-            },
-            message: 'Token is valid',
-            messageAr: 'الرمز المميز صالح'
-        });
-
-    } catch (error) {
-        logger.error('Token verification error', { error: error.message });
-        res.status(401).json({
+    if (!token) {
+        return res.status(401).json({
             success: false,
-            message: 'Invalid or expired token',
-            messageAr: 'رمز مميز غير صالح أو منتهي الصلاحية'
+            message: 'Token is required',
+            messageAr: 'الرمز المميز مطلوب'
         });
     }
-});
+
+    const decoded = authService.tokenService.verifyToken(token);
+
+    // Check if token has been revoked
+    if (decoded.jti && await authService.tokenService.isTokenRevoked(decoded.jti)) {
+        return res.status(401).json({
+            success: false,
+            message: 'Token has been revoked',
+            messageAr: 'تم إلغاء الرمز'
+        });
+    }
+
+    // Get fresh user data to ensure user still exists
+    const user = await getUserByEmail(decoded.email);
+    if (!user) {
+        return res.status(401).json({
+            success: false,
+            message: 'User not found',
+            messageAr: 'المستخدم غير موجود'
+        });
+    }
+
+    res.json({
+        success: true,
+        data: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: 'teacher'
+        },
+        message: 'Token is valid',
+        messageAr: 'الرمز المميز صالح'
+    });
+}));
 
 /**
  * @openapi
@@ -925,38 +878,29 @@ router.get('/verify-token', async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/me', authenticateToken, async (req, res) => {
-    try {
-        // Use supabaseAdmin: the user already passed authenticateToken,
-        // and the teachers RLS policy uses auth.uid() which is not set
-        // for backend-JWT-authenticated requests.
-        const { data: teacher, error } = await supabaseAdmin
-            .from('teachers')
-            .select(teacherSelectFields)
-            .eq('id', req.user.id)
-            .single();
+router.get('/me', authenticateToken, asyncHandler(async (req, res) => {
+    // Use supabaseAdmin: the user already passed authenticateToken,
+    // and the teachers RLS policy uses auth.uid() which is not set
+    // for backend-JWT-authenticated requests.
+    const { data: teacher, error } = await supabaseAdmin
+        .from('teachers')
+        .select(teacherSelectFields)
+        .eq('id', req.user.id)
+        .single();
 
-        if (error || !teacher) {
-            return res.status(404).json({
-                success: false,
-                message: 'Teacher not found',
-                messageAr: 'المعلم غير موجود'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: formatTeacherResponse(teacher)
-        });
-    } catch (error) {
-        logger.error('Get profile error', { error: error.message });
-        res.status(500).json({
+    if (error || !teacher) {
+        return res.status(404).json({
             success: false,
-            message: 'Internal server error',
-            messageAr: 'خطأ في الخادم الداخلي'
+            message: 'Teacher not found',
+            messageAr: 'المعلم غير موجود'
         });
     }
-});
+
+    res.json({
+        success: true,
+        data: formatTeacherResponse(teacher)
+    });
+}));
 
 /**
  * @openapi
@@ -1036,69 +980,60 @@ router.get('/me', authenticateToken, async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/profile', authenticateToken, validate(updateProfileSchema), async (req, res) => {
-    try {
-        const allowedFields = [
-            'name',
-            'phone',
-            'business_name',
-            'bio',
-            'subjects',
-            'address',
-            'city',
-            'country',
-            'timezone',
-            'whatsapp_number',
-            'telegram_username'
-        ];
+router.put('/profile', authenticateToken, validate(updateProfileSchema), asyncHandler(async (req, res) => {
+    const allowedFields = [
+        'name',
+        'phone',
+        'business_name',
+        'bio',
+        'subjects',
+        'address',
+        'city',
+        'country',
+        'timezone',
+        'whatsapp_number',
+        'telegram_username'
+    ];
 
-        const updates = {};
-        allowedFields.forEach((field) => {
-            if (req.body[field] !== undefined) {
-                updates[field] = req.body[field];
-            }
-        });
-
-        if (Object.keys(updates).length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'No profile fields provided',
-                messageAr: 'لم يتم توفير أي بيانات للتحديث'
-            });
+    const updates = {};
+    allowedFields.forEach((field) => {
+        if (req.body[field] !== undefined) {
+            updates[field] = req.body[field];
         }
+    });
 
-        updates.updated_at = new Date().toISOString();
-
-        const { data: teacher, error } = await supabaseAdmin
-            .from('teachers')
-            .update(updates)
-            .eq('id', req.user.id)
-            .select(teacherSelectFields)
-            .single();
-
-        if (error || !teacher) {
-            return res.status(400).json({
-                success: false,
-                message: error?.message || 'Failed to update profile',
-                messageAr: 'فشل تحديث الملف الشخصي'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: formatTeacherResponse(teacher),
-            message: 'Profile updated successfully',
-            messageAr: 'تم تحديث الملف الشخصي بنجاح'
-        });
-    } catch (error) {
-        logger.error('Update profile error', { error: error.message });
-        res.status(500).json({
+    if (Object.keys(updates).length === 0) {
+        return res.status(400).json({
             success: false,
-            message: 'Internal server error',
-            messageAr: 'خطأ في الخادم الداخلي'
+            message: 'No profile fields provided',
+            messageAr: 'لم يتم توفير أي بيانات للتحديث'
         });
     }
-});
+
+    updates.updated_at = new Date().toISOString();
+
+    const { data: teacher, error } = await supabaseAdmin
+        .from('teachers')
+        .update(updates)
+        .eq('id', req.user.id)
+        .select(teacherSelectFields)
+        .single();
+
+    if (error || !teacher) {
+        return res.status(400).json({
+            success: false,
+            message: error?.message || 'Failed to update profile',
+            messageAr: 'فشل تحديث الملف الشخصي'
+        });
+    }
+
+    res.json({
+        success: true,
+        data: formatTeacherResponse(teacher),
+        message: 'Profile updated successfully',
+        messageAr: 'تم تحديث الملف الشخصي بنجاح'
+    });
+}));
 
 /**
  * @openapi
@@ -1153,85 +1088,75 @@ router.put('/profile', authenticateToken, validate(updateProfileSchema), async (
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/request-reset', resetLimiter, validate(requestResetSchema), async (req, res) => {
-    try {
-        const { email } = req.body;
-        const ipAddress = req.ip || req.connection.remoteAddress;
-        const userAgent = req.get('User-Agent');
+router.post('/request-reset', resetLimiter, validate(requestResetSchema), asyncHandler(async (req, res) => {
+    const { email } = req.body;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
 
-        if (!email) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email is required',
-                messageAr: 'البريد الإلكتروني مطلوب'
-            });
-        }
-
-        // Check if user exists
-        const user = await getUserByEmail(email);
-
-        // Always return success to prevent email enumeration
-        const response = {
-            success: true,
-            message: 'If an account with this email exists, a password reset link has been sent',
-            messageAr: 'إذا كان هناك حساب بهذا البريد الإلكتروني، فقد تم إرسال رابط إعادة تعيين كلمة المرور'
-        };
-
-        if (user) {
-            // Generate reset token
-            const resetTokenPlain = authService.tokenService.generateResetToken();
-            const resetToken = authService.tokenService.hashToken(resetTokenPlain);
-            const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-            // Store hashed reset token in database
-            const { error } = await supabaseAdmin
-                .from('password_reset_tokens')
-                .insert({
-                    teacher_id: user.id,
-                    token: resetToken,
-                    expires_at: expiresAt.toISOString()
-                });
-
-            if (!error) {
-                // Send password reset email
-                const frontendUrl = process.env.FRONTEND_URL || 'https://nabeeh.app';
-                const resetLink = `${frontendUrl}/reset-password?token=${resetTokenPlain}`;
-                const lang = user.preferred_language || 'ar';
-                const { getPasswordResetTemplate } = require('../lib/emailTemplates');
-                const resetEmail = getPasswordResetTemplate({ name: user.name, resetLink, language: lang });
-
-                sendEmail({
-                    to: user.email,
-                    from: 'Nabeeh <noreply@nabeeh.app>',
-                    subject: resetEmail.subject,
-                    html: resetEmail.html,
-                }).catch(() => {});
-
-                logger.info('Password reset requested', { email });
-
-                // Log password reset request
-                await logAuthEvent(
-                    user.id,
-                    'password_reset_request',
-                    true,
-                    ipAddress,
-                    userAgent,
-                    { email }
-                );
-            }
-        }
-
-        res.json(response);
-
-    } catch (error) {
-        logger.error('Password reset request error', { error: error.message });
-        res.status(500).json({
+    if (!email) {
+        return res.status(400).json({
             success: false,
-            message: 'Internal server error',
-            messageAr: 'خطأ في الخادم الداخلي'
+            message: 'Email is required',
+            messageAr: 'البريد الإلكتروني مطلوب'
         });
     }
-});
+
+    // Check if user exists
+    const user = await getUserByEmail(email);
+
+    // Always return success to prevent email enumeration
+    const response = {
+        success: true,
+        message: 'If an account with this email exists, a password reset link has been sent',
+        messageAr: 'إذا كان هناك حساب بهذا البريد الإلكتروني، فقد تم إرسال رابط إعادة تعيين كلمة المرور'
+    };
+
+    if (user) {
+        // Generate reset token
+        const resetTokenPlain = authService.tokenService.generateResetToken();
+        const resetToken = authService.tokenService.hashToken(resetTokenPlain);
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+        // Store hashed reset token in database
+        const { error } = await supabaseAdmin
+            .from('password_reset_tokens')
+            .insert({
+                teacher_id: user.id,
+                token: resetToken,
+                expires_at: expiresAt.toISOString()
+            });
+
+        if (!error) {
+            // Send password reset email
+            const frontendUrl = process.env.FRONTEND_URL || 'https://nabeeh.app';
+            const resetLink = `${frontendUrl}/reset-password?token=${resetTokenPlain}`;
+            const lang = user.preferred_language || 'ar';
+            const { getPasswordResetTemplate } = require('../lib/emailTemplates');
+            const resetEmail = getPasswordResetTemplate({ name: user.name, resetLink, language: lang });
+
+            sendEmail({
+                to: user.email,
+                from: 'Nabeeh <noreply@nabeeh.app>',
+                subject: resetEmail.subject,
+                html: resetEmail.html,
+            }).catch(() => {});
+
+            logger.info('Password reset requested', { email });
+
+            // Log password reset request
+            await logAuthEvent(
+                user.id,
+                'password_reset_request',
+                true,
+                ipAddress,
+                userAgent,
+                { email }
+            );
+        }
+    }
+
+    res.json(response);
+}));
 
 /**
  * @openapi
@@ -1273,57 +1198,47 @@ router.post('/request-reset', resetLimiter, validate(requestResetSchema), async 
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/reset/:token', async (req, res) => {
-    try {
-        const { token } = req.params;
+router.get('/reset/:token', asyncHandler(async (req, res) => {
+    const { token } = req.params;
 
-        // Check if token exists and is not expired
-        const hashedToken = authService.tokenService.hashToken(token);
-        const { data: resetToken, error } = await supabaseAdmin
-            .from('password_reset_tokens')
-            .select('id, teacher_id, expires_at, used')
-            .eq('token', hashedToken)
-            .single();
+    // Check if token exists and is not expired
+    const hashedToken = authService.tokenService.hashToken(token);
+    const { data: resetToken, error } = await supabaseAdmin
+        .from('password_reset_tokens')
+        .select('id, teacher_id, expires_at, used')
+        .eq('token', hashedToken)
+        .single();
 
-        if (error || !resetToken) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid reset token',
-                messageAr: 'رمز إعادة التعيين غير صالح'
-            });
-        }
-
-        if (resetToken.used) {
-            return res.status(400).json({
-                success: false,
-                message: 'Reset token has already been used',
-                messageAr: 'تم استخدام رمز إعادة التعيين بالفعل'
-            });
-        }
-
-        if (new Date() > new Date(resetToken.expires_at)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Reset token has expired',
-                messageAr: 'انتهت صلاحية رمز إعادة التعيين'
-            });
-        }
-
-        res.json({
-            success: true,
-            message: 'Reset token is valid',
-            messageAr: 'رمز إعادة التعيين صالح'
-        });
-
-    } catch (error) {
-        logger.error('Reset token validation error', { error: error.message });
-        res.status(500).json({
+    if (error || !resetToken) {
+        return res.status(400).json({
             success: false,
-            message: 'Internal server error',
-            messageAr: 'خطأ في الخادم الداخلي'
+            message: 'Invalid reset token',
+            messageAr: 'رمز إعادة التعيين غير صالح'
         });
     }
-});
+
+    if (resetToken.used) {
+        return res.status(400).json({
+            success: false,
+            message: 'Reset token has already been used',
+            messageAr: 'تم استخدام رمز إعادة التعيين بالفعل'
+        });
+    }
+
+    if (new Date() > new Date(resetToken.expires_at)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Reset token has expired',
+            messageAr: 'انتهت صلاحية رمز إعادة التعيين'
+        });
+    }
+
+    res.json({
+        success: true,
+        message: 'Reset token is valid',
+        messageAr: 'رمز إعادة التعيين صالح'
+    });
+}));
 
 /**
  * @openapi
@@ -1375,86 +1290,76 @@ router.get('/reset/:token', async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/reset-password', validate(resetPasswordSchema), async (req, res) => {
-    try {
-        const { token, newPassword } = req.body;
-        const ipAddress = req.ip || req.connection.remoteAddress;
-        const userAgent = req.get('User-Agent');
+router.post('/reset-password', validate(resetPasswordSchema), asyncHandler(async (req, res) => {
+    const { token, newPassword } = req.body;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
 
-        if (!token || !newPassword) {
-            return res.status(400).json({
-                success: false,
-                message: 'Token and new password are required',
-                messageAr: 'الرمز المميز وكلمة المرور الجديدة مطلوبان'
-            });
-        }
-
-        // Validate password strength
-        const passwordValidation = authService.passwordService.validatePasswordStrength(newPassword);
-        if (!passwordValidation.isValid) {
-            return res.status(400).json({
-                success: false,
-                message: passwordValidation.errors.join(', '),
-                messageAr: 'كلمة المرور لا تلبي متطلبات الأمان'
-            });
-        }
-
-        // Validate reset token (same logic as GET /reset/:token)
-        const hashedToken = authService.tokenService.hashToken(token);
-        const { data: resetToken, error } = await supabaseAdmin
-            .from('password_reset_tokens')
-            .select('id, teacher_id, expires_at, used')
-            .eq('token', hashedToken)
-            .single();
-
-        if (error || !resetToken || resetToken.used || new Date() > new Date(resetToken.expires_at)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid or expired reset token',
-                messageAr: 'رمز إعادة التعيين غير صالح أو منتهي الصلاحية'
-            });
-        }
-
-        // Update user password via Supabase Auth
-        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-            resetToken.teacher_id,
-            { password: newPassword }
-        );
-
-        if (updateError) {
-            throw updateError;
-        }
-
-        // Mark reset token as used
-        await supabaseAdmin
-            .from('password_reset_tokens')
-            .update({ used: true })
-            .eq('id', resetToken.id);
-
-        // Log password reset completion
-        await logAuthEvent(
-            resetToken.teacher_id,
-            'password_reset_complete',
-            true,
-            ipAddress,
-            userAgent
-        );
-
-        res.json({
-            success: true,
-            message: 'Password has been reset successfully',
-            messageAr: 'تم إعادة تعيين كلمة المرور بنجاح'
-        });
-
-    } catch (error) {
-        logger.error('Password reset error', { error: error.message });
-        res.status(500).json({
+    if (!token || !newPassword) {
+        return res.status(400).json({
             success: false,
-            message: 'Internal server error',
-            messageAr: 'خطأ في الخادم الداخلي'
+            message: 'Token and new password are required',
+            messageAr: 'الرمز المميز وكلمة المرور الجديدة مطلوبان'
         });
     }
-});
+
+    // Validate password strength
+    const passwordValidation = authService.passwordService.validatePasswordStrength(newPassword);
+    if (!passwordValidation.isValid) {
+        return res.status(400).json({
+            success: false,
+            message: passwordValidation.errors.join(', '),
+            messageAr: 'كلمة المرور لا تلبي متطلبات الأمان'
+        });
+    }
+
+    // Validate reset token (same logic as GET /reset/:token)
+    const hashedToken = authService.tokenService.hashToken(token);
+    const { data: resetToken, error } = await supabaseAdmin
+        .from('password_reset_tokens')
+        .select('id, teacher_id, expires_at, used')
+        .eq('token', hashedToken)
+        .single();
+
+    if (error || !resetToken || resetToken.used || new Date() > new Date(resetToken.expires_at)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid or expired reset token',
+            messageAr: 'رمز إعادة التعيين غير صالح أو منتهي الصلاحية'
+        });
+    }
+
+    // Update user password via Supabase Auth
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        resetToken.teacher_id,
+        { password: newPassword }
+    );
+
+    if (updateError) {
+        throw updateError;
+    }
+
+    // Mark reset token as used
+    await supabaseAdmin
+        .from('password_reset_tokens')
+        .update({ used: true })
+        .eq('id', resetToken.id);
+
+    // Log password reset completion
+    await logAuthEvent(
+        resetToken.teacher_id,
+        'password_reset_complete',
+        true,
+        ipAddress,
+        userAgent
+    );
+
+    res.json({
+        success: true,
+        message: 'Password has been reset successfully',
+        messageAr: 'تم إعادة تعيين كلمة المرور بنجاح'
+    });
+}));
 
 /**
  * @openapi
@@ -1522,64 +1427,54 @@ router.post('/reset-password', validate(resetPasswordSchema), async (req, res) =
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/oauth/check-profile', authenticateToken, validate(checkProfileSchema), async (req, res) => {
-    try {
-        const { user_id, email } = req.validated.body;
+router.post('/oauth/check-profile', authenticateToken, validate(checkProfileSchema), asyncHandler(async (req, res) => {
+    const { user_id, email } = req.validated.body;
 
-        let teacher = null;
+    let teacher = null;
 
-        // Check by user_id first
-        if (user_id) {
-            const { data } = await supabaseAdmin
-                .from('teachers')
-                .select('id, name, email')
-                .eq('id', user_id)
-                .single();
-            teacher = data;
-        }
-
-        // If not found by user_id, check by email
-        if (!teacher && email) {
-            const { data } = await supabaseAdmin
-                .from('teachers')
-                .select('id, name, email')
-                .eq('email', email.toLowerCase().trim())
-                .single();
-            teacher = data;
-        }
-
-        // Also check if user is an assistant
-        let isAssistant = false;
-        if (user_id) {
-            const { data: assistantLink } = await supabaseAdmin
-                .from('teacher_assistants')
-                .select('id')
-                .eq('assistant_id', user_id)
-                .eq('status', 'active')
-                .single();
-            isAssistant = !!assistantLink;
-        }
-
-        const hasProfile = !!teacher || isAssistant;
-
-        res.json({
-            success: true,
-            data: {
-                hasProfile,
-                isAssistant,
-                teacher: teacher ? { id: teacher.id, name: teacher.name, email: teacher.email } : null
-            }
-        });
-
-    } catch (error) {
-        logger.error('Check profile error', { error: error.message });
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-            messageAr: 'خطأ في الخادم الداخلي'
-        });
+    // Check by user_id first
+    if (user_id) {
+        const { data } = await supabaseAdmin
+            .from('teachers')
+            .select('id, name, email')
+            .eq('id', user_id)
+            .single();
+        teacher = data;
     }
-});
+
+    // If not found by user_id, check by email
+    if (!teacher && email) {
+        const { data } = await supabaseAdmin
+            .from('teachers')
+            .select('id, name, email')
+            .eq('email', email.toLowerCase().trim())
+            .single();
+        teacher = data;
+    }
+
+    // Also check if user is an assistant
+    let isAssistant = false;
+    if (user_id) {
+        const { data: assistantLink } = await supabaseAdmin
+            .from('teacher_assistants')
+            .select('id')
+            .eq('assistant_id', user_id)
+            .eq('status', 'active')
+            .single();
+        isAssistant = !!assistantLink;
+    }
+
+    const hasProfile = !!teacher || isAssistant;
+
+    res.json({
+        success: true,
+        data: {
+            hasProfile,
+            isAssistant,
+            teacher: teacher ? { id: teacher.id, name: teacher.name, email: teacher.email } : null
+        }
+    });
+}));
 
 /**
  * @openapi
@@ -1671,46 +1566,231 @@ router.post('/oauth/check-profile', authenticateToken, validate(checkProfileSche
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/oauth/callback', validate(oauthCallbackSchema), async (req, res) => {
-    try {
-        const { access_token, provider } = req.validated.body;
+router.post('/oauth/callback', validate(oauthCallbackSchema), asyncHandler(async (req, res) => {
+    const { access_token, provider } = req.validated.body;
 
-        // Exchange access token for user info via Supabase
-        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(access_token);
+    // Exchange access token for user info via Supabase
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(access_token);
 
-        if (authError || !user) {
-            return res.status(401).json({
+    if (authError || !user) {
+        return res.status(401).json({
+            success: false,
+            message: 'Failed to verify OAuth token',
+            messageAr: 'فشل التحقق من رمز OAuth'
+        });
+    }
+
+    const email = user.email?.toLowerCase().trim();
+    const name = user.user_metadata?.full_name || user.user_metadata?.name || '';
+    const avatarUrl = user.user_metadata?.avatar_url || null;
+
+    if (!email) {
+        return res.status(400).json({
+            success: false,
+            message: 'Email not provided by OAuth provider',
+            messageAr: 'لم يتم توفير البريد الإلكتروني من مزود تسجيل الدخول'
+        });
+    }
+
+    // Step 1: Check if this auth user is already linked to a teacher
+    const { data: linkedTeacher } = await supabaseAdmin
+        .from('teachers')
+        .select('id, email, name')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (linkedTeacher) {
+        // Already linked — generate token and return
+        const token = authService.tokenService.generateToken(linkedTeacher);
+
+        await logAuthEvent(
+            linkedTeacher.id,
+            'oauth_login',
+            true,
+            req.ip || req.connection.remoteAddress,
+            req.get('User-Agent'),
+            { provider, email }
+        );
+
+        setAuthCookie(res, token);
+
+        return res.json({
+            success: true,
+            data: {
+                teacher: formatTeacherResponse(linkedTeacher),
+                token,
+                isNewUser: false
+            },
+            message: 'Login successful',
+            messageAr: 'تم تسجيل الدخول بنجاح'
+        });
+    }
+
+    // Step 2: Check if a teacher exists with this email (registered via email/password)
+    const { data: existingTeacher } = await supabaseAdmin
+        .from('teachers')
+        .select('id, email, name, auth_id')
+        .eq('email', email)
+        .single();
+
+    if (existingTeacher) {
+        if (existingTeacher.auth_id && existingTeacher.auth_id !== user.id) {
+            // Another auth user is already linked to this teacher — conflict
+            logger.warn('OAuth account linking conflict', {
+                teacherId: existingTeacher.id,
+                existingAuthId: existingTeacher.auth_id,
+                newAuthId: user.id,
+                email
+            });
+            return res.status(409).json({
                 success: false,
-                message: 'Failed to verify OAuth token',
-                messageAr: 'فشل التحقق من رمز OAuth'
+                message: 'This email is already linked to another account',
+                messageAr: 'هذا البريد الإلكتروني مرتبط بحساب آخر'
             });
         }
 
-        const email = user.email?.toLowerCase().trim();
-        const name = user.user_metadata?.full_name || user.user_metadata?.name || '';
-        const avatarUrl = user.user_metadata?.avatar_url || null;
-
-        if (!email) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email not provided by OAuth provider',
-                messageAr: 'لم يتم توفير البريد الإلكتروني من مزود تسجيل الدخول'
-            });
-        }
-
-        // Step 1: Check if this auth user is already linked to a teacher
-        const { data: linkedTeacher } = await supabaseAdmin
+        // Link: set auth_id to the Google auth user ID
+        const { error: linkError } = await supabaseAdmin
             .from('teachers')
-            .select('id, email, name')
-            .eq('auth_id', user.id)
-            .single();
+            .update({
+                auth_id: user.id,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', existingTeacher.id);
 
-        if (linkedTeacher) {
-            // Already linked — generate token and return
-            const token = authService.tokenService.generateToken(linkedTeacher);
+        if (linkError) {
+            logger.error('Failed to link OAuth account', { error: linkError.message, teacherId: existingTeacher.id });
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to link account',
+                messageAr: 'فشل ربط الحساب'
+            });
+        }
+
+        const token = authService.tokenService.generateToken(existingTeacher);
+
+        await logAuthEvent(
+            existingTeacher.id,
+            'oauth_account_linked',
+            true,
+            req.ip || req.connection.remoteAddress,
+            req.get('User-Agent'),
+            { provider, email }
+        );
+
+        setAuthCookie(res, token);
+
+        return res.json({
+            success: true,
+            data: {
+                teacher: formatTeacherResponse(existingTeacher),
+                token,
+                isNewUser: false
+            },
+            message: 'Account linked and login successful',
+            messageAr: 'تم ربط الحساب وتسجيل الدخول بنجاح'
+        });
+    }
+
+    // No existing teacher found - check if this is an assistant invite
+    const { data: invite } = await supabaseAdmin
+        .from('assistant_invites')
+        .select('id, teacher_id, permissions, expires_at')
+        .eq('email', email)
+        .is('accepted_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .single();
+
+    if (invite) {
+        // This is an invited assistant - create the teacher_assistants link
+        const { error: inviteError } = await supabaseAdmin
+            .from('teacher_assistants')
+            .insert({
+                teacher_id: invite.teacher_id,
+                assistant_id: user.id,
+                permissions: invite.permissions,
+                status: 'active',
+                accepted_at: new Date().toISOString()
+            });
+
+        if (!inviteError) {
+            // Mark invite as accepted
+            await supabaseAdmin
+                .from('assistant_invites')
+                .update({ accepted_at: new Date().toISOString() })
+                .eq('id', invite.id);
+
+            // Get teacher info for token
+            const { data: ownerTeacher } = await supabaseAdmin
+                .from('teachers')
+                .select('id, email, name')
+                .eq('id', invite.teacher_id)
+                .single();
+
+            const token = authService.tokenService.generateToken({
+                id: user.id,
+                email: ownerTeacher?.email || email,
+                name: name || ownerTeacher?.name || ''
+            });
 
             await logAuthEvent(
-                linkedTeacher.id,
+                user.id,
+                'oauth_assistant_accepted',
+                true,
+                req.ip || req.connection.remoteAddress,
+                req.get('User-Agent'),
+                { provider, email, teacherId: invite.teacher_id }
+            );
+
+            setAuthCookie(res, token);
+
+            return res.json({
+                success: true,
+                data: {
+                    teacher: {
+                        id: user.id,
+                        email: ownerTeacher?.email || email,
+                        name: name || ownerTeacher?.name || '',
+                        role: 'assistant'
+                    },
+                    token,
+                    isNewUser: true,
+                    isAssistant: true
+                },
+                message: 'Assistant account activated',
+                messageAr: 'تم تفعيل حساب المساعد'
+            });
+        }
+    }
+
+    // No existing teacher or invite - this is a new user
+    // Create a new teacher account from Google profile data
+    const { data: newTeacher, error: createError } = await supabaseAdmin
+        .from('teachers')
+        .insert({
+            id: user.id,
+            auth_id: user.id,
+            name: name,
+            email: email,
+            updated_at: new Date().toISOString()
+        })
+        .select(teacherSelectFields)
+        .single();
+
+    if (createError) {
+        // If teacher creation fails (e.g., duplicate key), the user might already exist
+        // Try to get the existing teacher
+        const { data: fallbackTeacher } = await supabaseAdmin
+            .from('teachers')
+            .select(teacherSelectFields)
+            .eq('id', user.id)
+            .single();
+
+        if (fallbackTeacher) {
+            const token = authService.tokenService.generateToken(fallbackTeacher);
+
+            await logAuthEvent(
+                fallbackTeacher.id,
                 'oauth_login',
                 true,
                 req.ip || req.connection.remoteAddress,
@@ -1723,7 +1803,7 @@ router.post('/oauth/callback', validate(oauthCallbackSchema), async (req, res) =
             return res.json({
                 success: true,
                 data: {
-                    teacher: formatTeacherResponse(linkedTeacher),
+                    teacher: formatTeacherResponse(fallbackTeacher),
                     token,
                     isNewUser: false
                 },
@@ -1732,228 +1812,33 @@ router.post('/oauth/callback', validate(oauthCallbackSchema), async (req, res) =
             });
         }
 
-        // Step 2: Check if a teacher exists with this email (registered via email/password)
-        const { data: existingTeacher } = await supabaseAdmin
-            .from('teachers')
-            .select('id, email, name, auth_id')
-            .eq('email', email)
-            .single();
-
-        if (existingTeacher) {
-            if (existingTeacher.auth_id && existingTeacher.auth_id !== user.id) {
-                // Another auth user is already linked to this teacher — conflict
-                logger.warn('OAuth account linking conflict', {
-                    teacherId: existingTeacher.id,
-                    existingAuthId: existingTeacher.auth_id,
-                    newAuthId: user.id,
-                    email
-                });
-                return res.status(409).json({
-                    success: false,
-                    message: 'This email is already linked to another account',
-                    messageAr: 'هذا البريد الإلكتروني مرتبط بحساب آخر'
-                });
-            }
-
-            // Link: set auth_id to the Google auth user ID
-            const { error: linkError } = await supabaseAdmin
-                .from('teachers')
-                .update({
-                    auth_id: user.id,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', existingTeacher.id);
-
-            if (linkError) {
-                logger.error('Failed to link OAuth account', { error: linkError.message, teacherId: existingTeacher.id });
-                return res.status(500).json({
-                    success: false,
-                    message: 'Failed to link account',
-                    messageAr: 'فشل ربط الحساب'
-                });
-            }
-
-            const token = authService.tokenService.generateToken(existingTeacher);
-
-            await logAuthEvent(
-                existingTeacher.id,
-                'oauth_account_linked',
-                true,
-                req.ip || req.connection.remoteAddress,
-                req.get('User-Agent'),
-                { provider, email }
-            );
-
-            setAuthCookie(res, token);
-
-            return res.json({
-                success: true,
-                data: {
-                    teacher: formatTeacherResponse(existingTeacher),
-                    token,
-                    isNewUser: false
-                },
-                message: 'Account linked and login successful',
-                messageAr: 'تم ربط الحساب وتسجيل الدخول بنجاح'
-            });
-        }
-
-        // No existing teacher found - check if this is an assistant invite
-        const { data: invite } = await supabaseAdmin
-            .from('assistant_invites')
-            .select('id, teacher_id, permissions, expires_at')
-            .eq('email', email)
-            .is('accepted_at', null)
-            .gt('expires_at', new Date().toISOString())
-            .single();
-
-        if (invite) {
-            // This is an invited assistant - create the teacher_assistants link
-            const { error: inviteError } = await supabaseAdmin
-                .from('teacher_assistants')
-                .insert({
-                    teacher_id: invite.teacher_id,
-                    assistant_id: user.id,
-                    permissions: invite.permissions,
-                    status: 'active',
-                    accepted_at: new Date().toISOString()
-                });
-
-            if (!inviteError) {
-                // Mark invite as accepted
-                await supabaseAdmin
-                    .from('assistant_invites')
-                    .update({ accepted_at: new Date().toISOString() })
-                    .eq('id', invite.id);
-
-                // Get teacher info for token
-                const { data: ownerTeacher } = await supabaseAdmin
-                    .from('teachers')
-                    .select('id, email, name')
-                    .eq('id', invite.teacher_id)
-                    .single();
-
-                const token = authService.tokenService.generateToken({
-                    id: user.id,
-                    email: ownerTeacher?.email || email,
-                    name: name || ownerTeacher?.name || ''
-                });
-
-                await logAuthEvent(
-                    user.id,
-                    'oauth_assistant_accepted',
-                    true,
-                    req.ip || req.connection.remoteAddress,
-                    req.get('User-Agent'),
-                    { provider, email, teacherId: invite.teacher_id }
-                );
-
-                setAuthCookie(res, token);
-
-                return res.json({
-                    success: true,
-                    data: {
-                        teacher: {
-                            id: user.id,
-                            email: ownerTeacher?.email || email,
-                            name: name || ownerTeacher?.name || '',
-                            role: 'assistant'
-                        },
-                        token,
-                        isNewUser: true,
-                        isAssistant: true
-                    },
-                    message: 'Assistant account activated',
-                    messageAr: 'تم تفعيل حساب المساعد'
-                });
-            }
-        }
-
-        // No existing teacher or invite - this is a new user
-        // Create a new teacher account from Google profile data
-        const { data: newTeacher, error: createError } = await supabaseAdmin
-            .from('teachers')
-            .insert({
-                id: user.id,
-                auth_id: user.id,
-                name: name,
-                email: email,
-                updated_at: new Date().toISOString()
-            })
-            .select(teacherSelectFields)
-            .single();
-
-        if (createError) {
-            // If teacher creation fails (e.g., duplicate key), the user might already exist
-            // Try to get the existing teacher
-            const { data: fallbackTeacher } = await supabaseAdmin
-                .from('teachers')
-                .select(teacherSelectFields)
-                .eq('id', user.id)
-                .single();
-
-            if (fallbackTeacher) {
-                const token = authService.tokenService.generateToken(fallbackTeacher);
-
-                await logAuthEvent(
-                    fallbackTeacher.id,
-                    'oauth_login',
-                    true,
-                    req.ip || req.connection.remoteAddress,
-                    req.get('User-Agent'),
-                    { provider, email }
-                );
-
-                setAuthCookie(res, token);
-
-                return res.json({
-                    success: true,
-                    data: {
-                        teacher: formatTeacherResponse(fallbackTeacher),
-                        token,
-                        isNewUser: false
-                    },
-                    message: 'Login successful',
-                    messageAr: 'تم تسجيل الدخول بنجاح'
-                });
-            }
-
-            throw createError;
-        }
-
-        const token = authService.tokenService.generateToken(newTeacher);
-
-        await logAuthEvent(
-            newTeacher.id,
-            'oauth_register',
-            true,
-            req.ip || req.connection.remoteAddress,
-            req.get('User-Agent'),
-            { provider, email }
-        );
-
-        setAuthCookie(res, token);
-
-        res.status(201).json({
-            success: true,
-            data: {
-                teacher: formatTeacherResponse(newTeacher),
-                token,
-                isNewUser: true
-            },
-            message: 'Registration successful',
-            messageAr: 'تم إنشاء الحساب بنجاح'
-        });
-
-    } catch (error) {
-        logger.error('OAuth callback error', { error: error.message });
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-            messageAr: 'خطأ في الخادم الداخلي'
-        });
+        throw createError;
     }
-});
+
+    const token = authService.tokenService.generateToken(newTeacher);
+
+    await logAuthEvent(
+        newTeacher.id,
+        'oauth_register',
+        true,
+        req.ip || req.connection.remoteAddress,
+        req.get('User-Agent'),
+        { provider, email }
+    );
+
+    setAuthCookie(res, token);
+
+    res.status(201).json({
+        success: true,
+        data: {
+            teacher: formatTeacherResponse(newTeacher),
+            token,
+            isNewUser: true
+        },
+        message: 'Registration successful',
+        messageAr: 'تم إنشاء الحساب بنجاح'
+    });
+}));
 
 /**
  * @openapi

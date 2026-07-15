@@ -3,6 +3,7 @@ const { z } = require('zod');
 const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const asyncHandler = require('../middleware/asyncHandler');
 const logger = require('../lib/logger');
 
 const router = express.Router();
@@ -39,153 +40,113 @@ const getAlertsSchema = z.object({
 });
 
 const getRules = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { data, error } = await supabaseAdmin
-      .from('alert_rules')
-      .select('*')
-      .eq('teacher_id', teacherId)
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    res.json({ success: true, data: data || [] });
-  } catch (error) {
-    logger.error('Get alert rules error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching alert rules', messageAr: 'خطأ في الخادم أثناء جلب قواعد التنبيه', code: 'INTERNAL_ERROR' });
-  }
+  const teacherId = req.user.teacherId || req.user.id;
+  const { data, error } = await supabaseAdmin
+    .from('alert_rules')
+    .select('*')
+    .eq('teacher_id', teacherId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  res.json({ success: true, data: data || [] });
 };
 
 const createRule = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { alert_type, threshold_value, comparison, notification_method } = req.validated.body;
-    const { data, error } = await supabaseAdmin
-      .from('alert_rules')
-      .insert([{ teacher_id: teacherId, alert_type, threshold_value, comparison, notification_method }])
-      .select().single();
-    if (error) throw error;
-    res.status(201).json({ success: true, data });
-  } catch (error) {
-    logger.error('Create alert rule error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error creating alert rule', messageAr: 'خطأ في الخادم أثناء إنشاء قاعدة التنبيه', code: 'INTERNAL_ERROR' });
-  }
+  const teacherId = req.user.teacherId || req.user.id;
+  const { alert_type, threshold_value, comparison, notification_method } = req.validated.body;
+  const { data, error } = await supabaseAdmin
+    .from('alert_rules')
+    .insert([{ teacher_id: teacherId, alert_type, threshold_value, comparison, notification_method }])
+    .select().single();
+  if (error) throw error;
+  res.status(201).json({ success: true, data });
 };
 
 const updateRule = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { id } = req.validated.params;
-    const updates = {};
-    for (const key of ['alert_type', 'threshold_value', 'comparison', 'notification_method']) {
-      if (req.validated.body[key] !== undefined) updates[key] = req.validated.body[key];
-    }
-    const { data, error } = await supabaseAdmin
-      .from('alert_rules')
-      .update(updates)
-      .eq('id', id).eq('teacher_id', teacherId)
-      .select().single();
-    if (error) throw error;
-    if (!data) return res.status(404).json({ success: false, message: 'Alert rule not found', messageAr: 'لم يتم العثور على قاعدة التنبيه', code: 'NOT_FOUND' });
-    res.json({ success: true, data });
-  } catch (error) {
-    logger.error('Update alert rule error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error updating alert rule', messageAr: 'خطأ في الخادم أثناء تحديث قاعدة التنبيه', code: 'INTERNAL_ERROR' });
+  const teacherId = req.user.teacherId || req.user.id;
+  const { id } = req.validated.params;
+  const updates = {};
+  for (const key of ['alert_type', 'threshold_value', 'comparison', 'notification_method']) {
+    if (req.validated.body[key] !== undefined) updates[key] = req.validated.body[key];
   }
+  const { data, error } = await supabaseAdmin
+    .from('alert_rules')
+    .update(updates)
+    .eq('id', id).eq('teacher_id', teacherId)
+    .select().single();
+  if (error) throw error;
+  if (!data) return res.status(404).json({ success: false, message: 'Alert rule not found', messageAr: 'لم يتم العثور على قاعدة التنبيه', code: 'NOT_FOUND' });
+  res.json({ success: true, data });
 };
 
 const deleteRule = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { id } = req.validated.params;
-    const { error } = await supabaseAdmin
-      .from('alert_rules')
-      .delete()
-      .eq('id', id).eq('teacher_id', teacherId);
-    if (error) throw error;
-    res.json({ success: true, message: 'Alert rule deleted' });
-  } catch (error) {
-    logger.error('Delete alert rule error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error deleting alert rule', messageAr: 'خطأ في الخادم أثناء حذف قاعدة التنبيه', code: 'INTERNAL_ERROR' });
-  }
+  const teacherId = req.user.teacherId || req.user.id;
+  const { id } = req.validated.params;
+  const { error } = await supabaseAdmin
+    .from('alert_rules')
+    .delete()
+    .eq('id', id).eq('teacher_id', teacherId);
+  if (error) throw error;
+  res.json({ success: true, message: 'Alert rule deleted' });
 };
 
 const toggleRule = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { id } = req.validated.params;
-    const { data: rule } = await supabaseAdmin
-      .from('alert_rules').select('is_enabled')
-      .eq('id', id).eq('teacher_id', teacherId).single();
-    if (!rule) return res.status(404).json({ success: false, message: 'Alert rule not found', messageAr: 'لم يتم العثور على قاعدة التنبيه', code: 'NOT_FOUND' });
-    const { data, error } = await supabaseAdmin
-      .from('alert_rules')
-      .update({ is_enabled: !rule.is_enabled })
-      .eq('id', id).select().single();
-    if (error) throw error;
-    res.json({ success: true, data, message: `Alert rule ${data.is_enabled ? 'enabled' : 'disabled'}` });
-  } catch (error) {
-    logger.error('Toggle alert rule error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error toggling alert rule', messageAr: 'خطأ في الخادم أثناء تبديل حالة قاعدة التنبيه', code: 'INTERNAL_ERROR' });
-  }
+  const teacherId = req.user.teacherId || req.user.id;
+  const { id } = req.validated.params;
+  const { data: rule } = await supabaseAdmin
+    .from('alert_rules').select('is_enabled')
+    .eq('id', id).eq('teacher_id', teacherId).single();
+  if (!rule) return res.status(404).json({ success: false, message: 'Alert rule not found', messageAr: 'لم يتم العثور على قاعدة التنبيه', code: 'NOT_FOUND' });
+  const { data, error } = await supabaseAdmin
+    .from('alert_rules')
+    .update({ is_enabled: !rule.is_enabled })
+    .eq('id', id).select().single();
+  if (error) throw error;
+  res.json({ success: true, data, message: `Alert rule ${data.is_enabled ? 'enabled' : 'disabled'}` });
 };
 
 const getAlerts = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { page, limit, severity, alert_type, unread_only } = req.validated.query;
-    const offset = (page - 1) * limit;
-    let query = supabaseAdmin
-      .from('alerts')
-      .select('*, students(name, student_id)', { count: 'exact' })
-      .eq('teacher_id', teacherId);
-    if (severity) query = query.eq('severity', severity);
-    if (alert_type) query = query.eq('alert_type', alert_type);
-    if (unread_only) query = query.eq('is_read', false);
-    query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
-    const { data, error, count } = await query;
-    if (error) throw error;
-    res.json({
-      success: true,
-      data: (data || []).map(a => ({
-        ...a,
-        student_name: a.students?.name || null,
-        student_code: a.students?.student_id || null,
-        students: undefined,
-      })),
-      pagination: { page, limit, total: count || 0, pages: Math.ceil((count || 0) / limit) },
-    });
-  } catch (error) {
-    logger.error('Get alerts error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching alerts', messageAr: 'خطأ في الخادم أثناء جلب التنبيهات', code: 'INTERNAL_ERROR' });
-  }
+  const teacherId = req.user.teacherId || req.user.id;
+  const { page, limit, severity, alert_type, unread_only } = req.validated.query;
+  const offset = (page - 1) * limit;
+  let query = supabaseAdmin
+    .from('alerts')
+    .select('*, students(name, student_id)', { count: 'exact' })
+    .eq('teacher_id', teacherId);
+  if (severity) query = query.eq('severity', severity);
+  if (alert_type) query = query.eq('alert_type', alert_type);
+  if (unread_only) query = query.eq('is_read', false);
+  query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+  const { data, error, count } = await query;
+  if (error) throw error;
+  res.json({
+    success: true,
+    data: (data || []).map(a => ({
+      ...a,
+      student_name: a.students?.name || null,
+      student_code: a.students?.student_id || null,
+      students: undefined,
+    })),
+    pagination: { page, limit, total: count || 0, pages: Math.ceil((count || 0) / limit) },
+  });
 };
 
 const markAlertRead = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { id } = req.validated.params;
-    const { error } = await supabaseAdmin
-      .from('alerts').update({ is_read: true })
-      .eq('id', id).eq('teacher_id', teacherId);
-    if (error) throw error;
-    res.json({ success: true, message: 'Alert marked as read' });
-  } catch (error) {
-    logger.error('Mark alert read error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error marking alert', messageAr: 'خطأ في الخادم أثناء تحديث حالة التنبيه', code: 'INTERNAL_ERROR' });
-  }
+  const teacherId = req.user.teacherId || req.user.id;
+  const { id } = req.validated.params;
+  const { error } = await supabaseAdmin
+    .from('alerts').update({ is_read: true })
+    .eq('id', id).eq('teacher_id', teacherId);
+  if (error) throw error;
+  res.json({ success: true, message: 'Alert marked as read' });
 };
 
 const markAllAlertsRead = async (req, res) => {
-  try {
-    const teacherId = req.user.teacherId || req.user.id;
-    const { error } = await supabaseAdmin
-      .from('alerts').update({ is_read: true })
-      .eq('teacher_id', teacherId).eq('is_read', false);
-    if (error) throw error;
-    res.json({ success: true, message: 'All alerts marked as read' });
-  } catch (error) {
-    logger.error('Mark all alerts read error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error marking alerts', messageAr: 'خطأ في الخادم أثناء تحديث حالة التنبيهات', code: 'INTERNAL_ERROR' });
-  }
+  const teacherId = req.user.teacherId || req.user.id;
+  const { error } = await supabaseAdmin
+    .from('alerts').update({ is_read: true })
+    .eq('teacher_id', teacherId).eq('is_read', false);
+  if (error) throw error;
+  res.json({ success: true, message: 'All alerts marked as read' });
 };
 
 /**
@@ -225,7 +186,7 @@ const markAllAlertsRead = async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/rules', authenticateToken, getRules);
+router.get('/rules', authenticateToken, asyncHandler(getRules));
 /**
  * @openapi
  * /api/alerts/rules:
@@ -291,7 +252,7 @@ router.get('/rules', authenticateToken, getRules);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/rules', authenticateToken, validate(createRuleSchema), createRule);
+router.post('/rules', authenticateToken, validate(createRuleSchema), asyncHandler(createRule));
 /**
  * @openapi
  * /api/alerts/rules/{id}:
@@ -365,7 +326,7 @@ router.post('/rules', authenticateToken, validate(createRuleSchema), createRule)
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/rules/:id', authenticateToken, validate(updateRuleSchema), updateRule);
+router.put('/rules/:id', authenticateToken, validate(updateRuleSchema), asyncHandler(updateRule));
 /**
  * @openapi
  * /api/alerts/rules/{id}:
@@ -409,7 +370,7 @@ router.put('/rules/:id', authenticateToken, validate(updateRuleSchema), updateRu
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.delete('/rules/:id', authenticateToken, validate(paramsSchema), deleteRule);
+router.delete('/rules/:id', authenticateToken, validate(paramsSchema), asyncHandler(deleteRule));
 /**
  * @openapi
  * /api/alerts/rules/{id}/toggle:
@@ -461,7 +422,7 @@ router.delete('/rules/:id', authenticateToken, validate(paramsSchema), deleteRul
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/rules/:id/toggle', authenticateToken, validate(paramsSchema), toggleRule);
+router.put('/rules/:id/toggle', authenticateToken, validate(paramsSchema), asyncHandler(toggleRule));
 /**
  * @openapi
  * /api/alerts:
@@ -539,7 +500,7 @@ router.put('/rules/:id/toggle', authenticateToken, validate(paramsSchema), toggl
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/', authenticateToken, validate(getAlertsSchema), getAlerts);
+router.get('/', authenticateToken, validate(getAlertsSchema), asyncHandler(getAlerts));
 /**
  * @openapi
  * /api/alerts/{id}/read:
@@ -583,7 +544,7 @@ router.get('/', authenticateToken, validate(getAlertsSchema), getAlerts);
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/:id/read', authenticateToken, validate(paramsSchema), markAlertRead);
+router.put('/:id/read', authenticateToken, validate(paramsSchema), asyncHandler(markAlertRead));
 /**
  * @openapi
  * /api/alerts/read-all:
@@ -619,6 +580,6 @@ router.put('/:id/read', authenticateToken, validate(paramsSchema), markAlertRead
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/read-all', authenticateToken, markAllAlertsRead);
+router.put('/read-all', authenticateToken, asyncHandler(markAllAlertsRead));
 
 module.exports = router;
