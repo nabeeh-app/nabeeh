@@ -12,7 +12,7 @@
     "@langchain/core": "^1.1.48",
     "@langchain/google-genai": "^2.1.31",
     "@supabase/supabase-js": "^2.90.1",
-    "@whiskeysockets/baileys": "^7.0.0-rc13",
+    "@whiskeysockets/baileys": "^7.0.0-rc13", // TODO: upgrade to stable 7.x when released (latest stable is 6.7.23)
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
