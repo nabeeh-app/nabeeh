@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 import { SEVERITY_CONFIG } from '@/lib/severityConfig';
 
 interface Anomaly {

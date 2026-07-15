@@ -29,8 +29,6 @@ const getProfile = async (req, res) => {
       students: { count: studentCount || 0 }
     };
 
-    delete teacherProfile.password_hash;
-
     res.status(200).json({
       success: true,
       data: teacherProfile
@@ -39,7 +37,9 @@ const getProfile = async (req, res) => {
     logger.error('Get profile error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error fetching profile'
+      message: 'Server error fetching profile',
+      messageAr: 'خطأ في الخادم أثناء جلب الملف الشخصي',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -115,7 +115,9 @@ const getDashboardStats = async (req, res) => {
     logger.error('Get dashboard stats error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error fetching dashboard stats'
+      message: 'Server error fetching dashboard stats',
+      messageAr: 'خطأ في الخادم أثناء جلب إحصائيات لوحة التحكم',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -146,7 +148,9 @@ const getSettings = async (req, res) => {
     logger.error('Get settings error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error fetching settings'
+      message: 'Server error fetching settings',
+      messageAr: 'خطأ في الخادم أثناء جلب الإعدادات',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -165,7 +169,7 @@ const updateSettings = async (req, res) => {
     if (language !== undefined) updates.language = language;
 
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ success: false, message: 'No settings provided' });
+      return res.status(400).json({ success: false, message: 'No settings provided', messageAr: 'لم يتم تقديم إعدادات', code: 'VALIDATION_ERROR' });
     }
 
     const { data: updatedSettings, error } = await supabase
@@ -178,7 +182,7 @@ const updateSettings = async (req, res) => {
       .single();
 
     if (error) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.status(400).json({ success: false, message: error.message, messageAr: 'فشل في تحديث الإعدادات', code: 'INTERNAL_ERROR' });
     }
 
     res.status(200).json({
@@ -190,7 +194,9 @@ const updateSettings = async (req, res) => {
     logger.error('Update settings error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error updating settings'
+      message: 'Server error updating settings',
+      messageAr: 'خطأ في الخادم أثناء تحديث الإعدادات',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -248,6 +254,8 @@ const updateNotificationPreferences = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error updating notification preferences',
+      messageAr: 'خطأ في الخادم أثناء تحديث تفضيلات الإشعارات',
+      code: 'INTERNAL_ERROR'
     });
   }
 };

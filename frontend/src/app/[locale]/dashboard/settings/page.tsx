@@ -3,18 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useDebounce } from '@/hooks/useDebounce';
 import { formatPhoneNumber, validateEmail } from '@/lib/utils';
-import { Save, Upload, Phone, Clock, CheckCircle, XCircle, Loader2, MessageSquare } from 'lucide-react';
+import { Save, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import apiClient from '@/lib/client';
 import logger from '@/lib/logger';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageHeader } from '@/components/ui/PageHeader';
+import ProfileForm from '@/components/dashboard/settings/ProfileForm';
+import LocationSection from '@/components/dashboard/settings/LocationSection';
+import NotificationPrefs from '@/components/dashboard/settings/NotificationPrefs';
+import PreferencesSection from '@/components/dashboard/settings/PreferencesSection';
 
 interface TeacherSettings {
   name: string;
@@ -36,14 +35,6 @@ interface NotificationPref {
   label: string;
   enabled: boolean;
 }
-
-const TIMEZONES = [
-  { value: 'Africa/Cairo', label: 'Africa/Cairo (GMT+2)' },
-  { value: 'Asia/Riyadh', label: 'Asia/Riyadh (GMT+3)' },
-  { value: 'Asia/Dubai', label: 'Asia/Dubai (GMT+4)' },
-  { value: 'Europe/London', label: 'Europe/London (GMT+0)' },
-  { value: 'America/New_York', label: 'America/New_York (GMT-5)' },
-] as const;
 
 const t = {
   en: {
@@ -353,275 +344,72 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Profile */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-ink font-display">{lang.profile}</h2>
-
-        <div className="flex items-center gap-4">
-          <Avatar className="h-14 w-14">
-            <AvatarImage src="/avatars/teacher.jpg" />
-            <AvatarFallback className="text-base">
-              {settings.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'T'}
-            </AvatarFallback>
-          </Avatar>
-          <div className="space-y-1">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Upload className="h-4 w-4" />
-              {lang.uploadPhoto}
-            </Button>
-            <p className="text-xs text-ink/60 font-mono uppercase tracking-wider">
-              {lang.photoHint}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="fullName">{lang.fullName} *</Label>
-            <Input
-              id="fullName"
-              value={settings.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              className={errors.name ? 'border-destructive' : ''}
-            />
-            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="email">{lang.email} *</Label>
-            <Input
-              id="email"
-              type="email"
-              dir="ltr"
-              className={errors.email ? 'border-destructive' : ''}
-              value={settings.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-            />
-            {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="businessName">{lang.institution}</Label>
-            <Input
-              id="businessName"
-              value={settings.business_name}
-              onChange={(e) => handleInputChange('business_name', e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="subjects">{lang.subjects}</Label>
-            <Input
-              id="subjects"
-              value={settings.subjects.join(', ')}
-              onChange={(e) => handleInputChange('subjects', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-              placeholder={lang.subjectsPlaceholder}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="bio">{lang.bio}</Label>
-          <Textarea
-            id="bio"
-            value={settings.bio}
-            onChange={(e) => handleInputChange('bio', e.target.value)}
-            placeholder={lang.bioPlaceholder}
-            rows={2}
-          />
-        </div>
-      </section>
+      <ProfileForm
+        settings={settings}
+        errors={errors}
+        lang={{
+          fullName: lang.fullName,
+          email: lang.email,
+          institution: lang.institution,
+          subjects: lang.subjects,
+          subjectsPlaceholder: lang.subjectsPlaceholder,
+          bio: lang.bio,
+          bioPlaceholder: lang.bioPlaceholder,
+          uploadPhoto: lang.uploadPhoto,
+          photoHint: lang.photoHint,
+          phone: lang.phone,
+          whatsapp: lang.whatsapp,
+          whatsappHint: lang.whatsappHint,
+          whatsappStatus: lang.whatsappStatus,
+          connected: lang.connected,
+          disconnected: lang.disconnected,
+          statusMessage: statusMessage,
+          telegram: lang.telegram,
+        }}
+        isLoading={isLoading}
+        whatsappStatus={whatsappStatus}
+        statusMessage={statusMessage}
+        onInputChange={handleInputChange}
+        onPhoneChange={handlePhoneChange}
+      />
 
       <hr className="border-ink/10" />
 
-      {/* Contact */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-ink font-display">{lang.contact}</h2>
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="phone" className="gap-1.5 inline-flex items-center">
-              <Phone className="h-3.5 w-3.5" />
-              {lang.phone} *
-            </Label>
-            <Input
-              id="phone"
-              dir="ltr"
-              value={settings.phone}
-              onChange={(e) => handlePhoneChange('phone', e.target.value)}
-              placeholder="+201234567890"
-              className={errors.phone ? 'border-destructive' : ''}
-            />
-            {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="whatsapp" className="gap-1.5 inline-flex items-center">
-              <MessageSquare className="h-3.5 w-3.5" />
-              {lang.whatsapp}
-            </Label>
-            <Input
-              id="whatsapp"
-              dir="ltr"
-              value={settings.whatsapp_number}
-              onChange={(e) => handlePhoneChange('whatsapp_number', e.target.value)}
-              placeholder={settings.phone || "+201234567890"}
-              className={errors.whatsapp_number ? 'border-destructive' : ''}
-            />
-            {errors.whatsapp_number && <p className="text-sm text-destructive">{errors.whatsapp_number}</p>}
-            <p className="text-xs text-ink/60 font-mono uppercase tracking-wider">
-              {lang.whatsappHint}
-            </p>
-          </div>
-        </div>
-
-        {/* WhatsApp status — compact single row */}
-        <div className="flex items-center gap-2 text-sm">
-          {isLoading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-ink/40" />
-          ) : whatsappStatus === 'connected' ? (
-            <CheckCircle className="h-3.5 w-3.5 text-primary" />
-          ) : (
-            <XCircle className="h-3.5 w-3.5 text-destructive" />
-          )}
-          <span className="font-medium">{lang.whatsappStatus}</span>
-          <span className={`text-ink/60 ${whatsappStatus === 'connected' ? 'text-primary' : 'text-destructive'}`}>
-            {whatsappStatus === 'connected' ? lang.connected : lang.disconnected}
-          </span>
-          {statusMessage && (
-            <span className="text-ink/50">- {statusMessage}</span>
-          )}
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="telegram">{lang.telegram}</Label>
-          <Input
-            id="telegram"
-            value={settings.telegram_username}
-            onChange={(e) => handleInputChange('telegram_username', e.target.value)}
-            placeholder="@username"
-          />
-        </div>
-      </section>
+      <LocationSection
+        settings={settings}
+        lang={{
+          city: lang.city,
+          country: lang.country,
+          timezone: lang.timezone,
+          address: lang.address,
+          addressPlaceholder: lang.addressPlaceholder,
+          location: lang.location,
+        }}
+        onInputChange={handleInputChange}
+      />
 
       <hr className="border-ink/10" />
 
-      {/* Location */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-ink font-display">{lang.location}</h2>
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="city">{lang.city}</Label>
-            <Input
-              id="city"
-              value={settings.city}
-              onChange={(e) => handleInputChange('city', e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="country">{lang.country}</Label>
-            <Input
-              id="country"
-              value={settings.country}
-              onChange={(e) => handleInputChange('country', e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="timezone" className="gap-1.5 inline-flex items-center">
-              <Clock className="h-3.5 w-3.5" />
-              {lang.timezone}
-            </Label>
-            <Select
-              value={settings.timezone}
-              onValueChange={(value) => handleInputChange('timezone', value)}
-            >
-              <SelectTrigger id="timezone">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TIMEZONES.map(tz => (
-                  <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="address">{lang.address}</Label>
-            <Input
-              id="address"
-              value={settings.address}
-              onChange={(e) => handleInputChange('address', e.target.value)}
-              placeholder={lang.addressPlaceholder}
-            />
-          </div>
-        </div>
-      </section>
+      <NotificationPrefs
+        notifications={notifications}
+        isRTL={isRTL}
+        lang={{ notifications: lang.notifications }}
+        onToggle={toggleNotification}
+      />
 
       <hr className="border-ink/10" />
 
-      {/* Notifications */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-ink font-display">{lang.notifications}</h2>
-
-        <div className="divide-y divide-ink/10">
-          {notifications.map((item) => (
-            <div key={item.key} className="flex items-center justify-between py-3">
-              <span className="text-sm text-ink">{item.label}</span>
-              <button
-                type="button"
-                onClick={() => toggleNotification(item.key)}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                  item.enabled ? 'bg-primary' : 'bg-ink/20'
-                }`}
-                role="switch"
-                aria-checked={item.enabled}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out mt-0.5 ${
-                    item.enabled ? (isRTL ? '-translate-x-4 mr-0.5' : 'translate-x-4 ml-0.5') : 'translate-x-0.5'
-                  }`}
-                />
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <hr className="border-ink/10" />
-
-      {/* Preferences */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-ink font-display">{lang.preferences}</h2>
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="language">{lang.language}</Label>
-            <Select defaultValue={locale}>
-              <SelectTrigger id="language">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="ar">العربية</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="theme">{lang.theme}</Label>
-            <Select>
-              <SelectTrigger id="theme">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="light">{lang.light}</SelectItem>
-                <SelectItem value="dark">{lang.dark}</SelectItem>
-                <SelectItem value="system">{lang.system}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </section>
-
+      <PreferencesSection
+        locale={locale}
+        lang={{
+          language: lang.language,
+          theme: lang.theme,
+          light: lang.light,
+          dark: lang.dark,
+          system: lang.system,
+          preferences: lang.preferences,
+        }}
+      />
     </div>
   );
 }

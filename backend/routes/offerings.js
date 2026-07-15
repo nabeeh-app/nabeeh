@@ -62,7 +62,7 @@ router.get('/', authenticateToken, async (req, res) => {
         res.json({ success: true, data: offerings });
     } catch (error) {
         logger.error('Get offerings error', { error: error.message });
-        res.status(500).json({ success: false, message: 'Failed to fetch offerings' });
+        res.status(500).json({ success: false, message: 'Failed to fetch offerings', messageAr: 'فشل في جلب المقرّرات', code: 'INTERNAL_ERROR' });
     }
 });
 
@@ -140,13 +140,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
             .single();
 
         if (error || !offering) {
-            return res.status(404).json({ success: false, message: 'Offering not found' });
+            return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
         }
 
         res.json({ success: true, data: offering });
     } catch (error) {
         logger.error('Get offering error', { error: error.message });
-        res.status(500).json({ success: false, message: 'Failed to fetch offering' });
+        res.status(500).json({ success: false, message: 'Failed to fetch offering', messageAr: 'فشل في جلب المقرّر', code: 'INTERNAL_ERROR' });
     }
 });
 
@@ -241,9 +241,9 @@ router.post('/', authenticateToken, requirePermission('manage_offerings'), valid
     } catch (error) {
         logger.error('Create offering error', { error: error.message });
         if (error.code === '23505') {
-            return res.status(409).json({ success: false, message: 'Offering already exists for this subject and grade level' });
+            return res.status(409).json({ success: false, message: 'Offering already exists for this subject and grade level', messageAr: 'المقرّر موجود بالفعل لهذا المادة والمرحلة الدراسية', code: 'DUPLICATE' });
         }
-        res.status(500).json({ success: false, message: 'Failed to create offering' });
+        res.status(500).json({ success: false, message: 'Failed to create offering', messageAr: 'فشل في إنشاء المقرّر', code: 'INTERNAL_ERROR' });
     }
 });
 
@@ -305,7 +305,7 @@ router.delete('/:id', authenticateToken, requirePermission('manage_offerings'), 
             .single();
 
         if (fetchError || !offering) {
-            return res.status(404).json({ success: false, message: 'Offering not found' });
+            return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
         }
 
         const { error } = await supabase
@@ -317,7 +317,7 @@ router.delete('/:id', authenticateToken, requirePermission('manage_offerings'), 
         res.json({ success: true, message: 'Offering deleted successfully' });
     } catch (error) {
         logger.error('Delete offering error', { error: error.message });
-        res.status(500).json({ success: false, message: 'Failed to delete offering' });
+        res.status(500).json({ success: false, message: 'Failed to delete offering', messageAr: 'فشل في حذف المقرّر', code: 'INTERNAL_ERROR' });
     }
 });
 
@@ -381,7 +381,7 @@ router.get('/:offeringId/groups', authenticateToken, async (req, res) => {
             .single();
 
         if (!offering) {
-            return res.status(404).json({ success: false, message: 'Offering not found' });
+            return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
         }
 
         const { data: groups, error } = await supabase
@@ -408,7 +408,7 @@ router.get('/:offeringId/groups', authenticateToken, async (req, res) => {
         res.json({ success: true, data: groupsWithCounts });
     } catch (error) {
         logger.error('Get groups error', { error: error.message });
-        res.status(500).json({ success: false, message: 'Failed to fetch groups' });
+        res.status(500).json({ success: false, message: 'Failed to fetch groups', messageAr: 'فشل في جلب المجموعات', code: 'INTERNAL_ERROR' });
     }
 });
 
@@ -495,7 +495,7 @@ router.post('/:offeringId/groups', authenticateToken, requirePermission('manage_
             .eq('teacher_id', req.user.id)
             .single();
 
-        if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized' });
+        if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
         const { data: group, error } = await supabase
             .from('groups')
@@ -512,7 +512,7 @@ router.post('/:offeringId/groups', authenticateToken, requirePermission('manage_
         res.status(201).json({ success: true, data: group });
     } catch (error) {
         logger.error('Create group error', { error: error.message });
-        res.status(500).json({ success: false, message: 'Failed to create group' });
+        res.status(500).json({ success: false, message: 'Failed to create group', messageAr: 'فشل في إنشاء المجموعة', code: 'INTERNAL_ERROR' });
     }
 });
 
@@ -604,7 +604,7 @@ router.put('/:offeringId/groups/:groupId', authenticateToken, requirePermission(
             .eq('teacher_id', req.user.id)
             .single();
 
-        if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized' });
+        if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
         const allowedFields = ['name', 'max_capacity', 'schedule_description'];
         const updates = {};
@@ -615,7 +615,7 @@ router.put('/:offeringId/groups/:groupId', authenticateToken, requirePermission(
         });
 
         if (Object.keys(updates).length === 0) {
-            return res.status(400).json({ success: false, message: 'No valid fields to update' });
+            return res.status(400).json({ success: false, message: 'No valid fields to update', messageAr: 'لا توجد حقول صالحة للتحديث', code: 'VALIDATION_ERROR' });
         }
 
         const { data: group, error } = await supabase
@@ -630,7 +630,7 @@ router.put('/:offeringId/groups/:groupId', authenticateToken, requirePermission(
         res.json({ success: true, data: group });
     } catch (error) {
         logger.error('Update group error', { error: error.message });
-        res.status(500).json({ success: false, message: 'Failed to update group' });
+        res.status(500).json({ success: false, message: 'Failed to update group', messageAr: 'فشل في تحديث المجموعة', code: 'INTERNAL_ERROR' });
     }
 });
 
@@ -725,7 +725,7 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
         const { student_id } = req.body;
 
         if (!student_id) {
-            return res.status(400).json({ success: false, message: 'student_id is required' });
+            return res.status(400).json({ success: false, message: 'student_id is required', messageAr: 'معرّف الطالب مطلوب', code: 'VALIDATION_ERROR' });
         }
 
         // Verify ownership
@@ -736,7 +736,7 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
             .eq('teacher_id', req.user.id)
             .single();
 
-        if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized' });
+        if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
         // Check group exists and belongs to offering
         const { data: group } = await supabase
@@ -746,7 +746,7 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
             .eq('offering_id', offeringId)
             .single();
 
-        if (!group) return res.status(404).json({ success: false, message: 'Group not found' });
+        if (!group) return res.status(404).json({ success: false, message: 'Group not found', messageAr: 'لم يتم العثور على المجموعة', code: 'NOT_FOUND' });
 
         // Check capacity
         if (group.max_capacity) {
@@ -757,7 +757,7 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
                 .eq('status', 'active');
 
             if (count >= group.max_capacity) {
-                return res.status(400).json({ success: false, message: 'Group is at full capacity' });
+                return res.status(400).json({ success: false, message: 'Group is at full capacity', messageAr: 'المجموعة مكتملة العدد', code: 'VALIDATION_ERROR' });
             }
         }
 
@@ -770,7 +770,7 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
                 .single();
 
         if (existing && existing.status === 'active') {
-            return res.status(409).json({ success: false, message: 'Student is already enrolled in this group' });
+            return res.status(409).json({ success: false, message: 'Student is already enrolled in this group', messageAr: 'الطالب مسجّل بالفعل في هذه المجموعة', code: 'DUPLICATE' });
         }
 
         // Re-enroll if previously withdrawn, or create new
@@ -802,9 +802,9 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
     } catch (error) {
         logger.error('Enroll student error', { error: error.message });
         if (error.code === '23505') {
-            return res.status(409).json({ success: false, message: 'Student is already enrolled' });
+            return res.status(409).json({ success: false, message: 'Student is already enrolled', messageAr: 'الطالب مسجّل بالفعل', code: 'DUPLICATE' });
         }
-        res.status(500).json({ success: false, message: 'Failed to enroll student' });
+        res.status(500).json({ success: false, message: 'Failed to enroll student', messageAr: 'فشل في تسجيل الطالب', code: 'INTERNAL_ERROR' });
     }
 });
 
@@ -881,7 +881,7 @@ router.delete('/:offeringId/groups/:groupId/enroll/:studentId', authenticateToke
             .eq('teacher_id', req.user.id)
             .single();
 
-        if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized' });
+        if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
         const { error } = await supabase
             .from('enrollments')
@@ -893,7 +893,7 @@ router.delete('/:offeringId/groups/:groupId/enroll/:studentId', authenticateToke
         res.json({ success: true, message: 'Student unenrolled successfully' });
     } catch (error) {
         logger.error('Unenroll student error', { error: error.message });
-        res.status(500).json({ success: false, message: 'Failed to unenroll student' });
+        res.status(500).json({ success: false, message: 'Failed to unenroll student', messageAr: 'فشل في إلغاء تسجيل الطالب', code: 'INTERNAL_ERROR' });
     }
 });
 

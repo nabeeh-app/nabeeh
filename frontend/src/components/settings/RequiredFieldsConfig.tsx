@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Settings, Lock, Save, Loader2 } from 'lucide-react';
-import apiClient from '@/lib/api';
+import apiClient from '@/lib/client';
 
 const OPTIONAL_FIELDS = [
   { key: 'phone', label: 'Phone' },

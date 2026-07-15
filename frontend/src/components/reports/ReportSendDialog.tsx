@@ -12,7 +12,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 
 interface ReportSendDialogProps {
   open: boolean;

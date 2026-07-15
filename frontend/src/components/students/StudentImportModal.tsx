@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import FileUploadZone from './FileUploadZone';
 import ColumnMapper from './ColumnMapper';
 import ImportPreviewTable from './ImportPreviewTable';
-import apiClient from '@/lib/api';
+import apiClient from '@/lib/client';
 import { useOfferings } from '@/hooks/useOfferings';
 
 interface ImportRow {

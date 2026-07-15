@@ -1,4 +1,5 @@
 const { supabaseAdmin } = require('../config/database');
+const anomalyDetector = require('./anomalyDetector');
 const logger = require('./logger');
 
 // ── Comparison helpers ─────────────────────────────────────────
@@ -171,82 +172,25 @@ async function checkGradeThreshold(rule, teacherId) {
   }
 }
 
-// ── Check trend anomaly ────────────────────────────────────────
+// ── Check trend anomaly (delegates to anomalyDetector) ─────────
 async function checkTrendAnomaly(rule, teacherId) {
-  // Get all students in teacher's groups
-  const { data: enrollments } = await supabaseAdmin
-    .from('enrollments')
-    .select(`
-      id,
-      student_id,
-      students(name),
-      group:groups!inner(offering:offerings!inner(teacher_id))
-    `)
-    .eq('group.offering.teacher_id', teacherId);
+  const anomalies = await anomalyDetector.detectAttendanceAnomalies(teacherId);
 
-  if (!enrollments || enrollments.length === 0) return;
+  for (const anomaly of anomalies) {
+    const deduped = await hasRecentDuplicate(teacherId, anomaly.student_id, 'trend_anomaly');
+    if (deduped) continue;
 
-  for (const enrollment of enrollments) {
-    const studentId = enrollment.student_id;
-    const studentName = enrollment.students?.name || 'Student';
-
-    // Get last 10 session attendance
-    const { data: sessions } = await supabaseAdmin
-      .from('sessions')
-      .select('id, date')
-      .eq('group_id', enrollment.group?.id)
-      .order('date', { ascending: false })
-      .limit(10);
-
-    if (!sessions || sessions.length < 5) continue;
-
-    const sessionIds = sessions.map(s => s.id);
-    const { data: attendanceData } = await supabaseAdmin
-      .from('attendance')
-      .select('status, session_id')
-      .eq('enrollment_id', enrollment.id)
-      .in('session_id', sessionIds);
-
-    if (!attendanceData || attendanceData.length === 0) continue;
-
-    const recent = attendanceData.slice(0, Math.ceil(attendanceData.length / 2));
-    const older = attendanceData.slice(Math.ceil(attendanceData.length / 2));
-
-    const recentRate = recent.length > 0 ? recent.filter(a => a.status === 'present').length / recent.length : 0;
-    const olderRate = older.length > 0 ? older.filter(a => a.status === 'present').length / older.length : 0;
-    const drop = (olderRate - recentRate) * 100;
-
-    if (drop > 30) {
-      const deduped = await hasRecentDuplicate(teacherId, studentId, 'trend_anomaly');
-      if (deduped) continue;
-
-      await createAlert({
-        teacherId,
-        studentId,
-        alertRuleId: rule.id,
-        alertType: 'trend_anomaly',
-        title: `Attendance Drop: ${studentName}`,
-        message: `${studentName}'s attendance dropped by ${drop.toFixed(0)} percentage points (from ${(olderRate * 100).toFixed(0)}% to ${(recentRate * 100).toFixed(0)}%).`,
-        severity: 'critical',
-        metadata: { drop: drop.toFixed(1), recent_rate: (recentRate * 100).toFixed(1), older_rate: (olderRate * 100).toFixed(1) },
-        notificationMethod: rule.notification_method,
-      });
-    } else if (drop > 15) {
-      const deduped = await hasRecentDuplicate(teacherId, studentId, 'trend_anomaly');
-      if (deduped) continue;
-
-      await createAlert({
-        teacherId,
-        studentId,
-        alertRuleId: rule.id,
-        alertType: 'trend_anomaly',
-        title: `Attendance Decline: ${studentName}`,
-        message: `${studentName}'s attendance declined by ${drop.toFixed(0)} percentage points.`,
-        severity: 'warning',
-        metadata: { drop: drop.toFixed(1), recent_rate: (recentRate * 100).toFixed(1), older_rate: (olderRate * 100).toFixed(1) },
-        notificationMethod: rule.notification_method,
-      });
-    }
+    await createAlert({
+      teacherId,
+      studentId: anomaly.student_id,
+      alertRuleId: rule.id,
+      alertType: 'trend_anomaly',
+      title: `${anomaly.pattern === 'consecutive_absences' ? 'Consecutive Absences' : anomaly.severity === 'critical' ? 'Attendance Drop' : 'Attendance Decline'}: ${anomaly.student_name}`,
+      message: anomaly.detail,
+      severity: anomaly.severity,
+      metadata: { pattern: anomaly.pattern, recent_rate: anomaly.recent_rate, older_rate: anomaly.older_rate, source: 'anomaly_detector' },
+      notificationMethod: rule.notification_method,
+    });
   }
 }
 

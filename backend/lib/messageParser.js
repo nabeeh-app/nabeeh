@@ -1,5 +1,3 @@
-const logger = require('./logger');
-
 const INTENT_KEYWORDS = {
   attendance: {
     ar: ['حضور', 'غياب', 'attendance', 'absent', 'present', 'ateed'],

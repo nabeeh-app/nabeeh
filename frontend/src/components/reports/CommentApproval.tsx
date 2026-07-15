@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { CheckCircle, XCircle, Edit3, ArrowLeft, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 import { ApprovalQueue } from './ApprovalQueue';
 import { CommentDraft } from './CommentDraft';
 import { CommentEditor } from './CommentEditor';

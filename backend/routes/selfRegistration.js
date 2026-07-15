@@ -92,7 +92,7 @@ router.post('/link', authenticateToken, requirePermission('manage_students'), as
     const { groupId, expiresInHours = 168 } = req.body;
 
     if (!groupId) {
-      return res.status(400).json({ success: false, message: 'Group ID is required' });
+      return res.status(400).json({ success: false, message: 'Group ID is required', messageAr: 'معرّف المجموعة مطلوب', code: 'VALIDATION_ERROR' });
     }
 
     const { data: group, error: groupError } = await supabase
@@ -102,11 +102,11 @@ router.post('/link', authenticateToken, requirePermission('manage_students'), as
       .single();
 
     if (groupError || !group) {
-      return res.status(404).json({ success: false, message: 'Group not found' });
+      return res.status(404).json({ success: false, message: 'Group not found', messageAr: 'لم يتم العثور على المجموعة', code: 'NOT_FOUND' });
     }
 
     if (group.offering.teacher_id !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Unauthorized for this group' });
+      return res.status(403).json({ success: false, message: 'Unauthorized for this group', messageAr: 'غير مصرح لهذه المجموعة', code: 'FORBIDDEN' });
     }
 
     const token = uuidv4();
@@ -184,7 +184,7 @@ router.post('/link', authenticateToken, requirePermission('manage_students'), as
     });
   } catch (error) {
     logger.error('Generate registration link error', { error: error.message, teacherId: req.user.id });
-    res.status(500).json({ success: false, message: 'Failed to generate registration link' });
+    res.status(500).json({ success: false, message: 'Failed to generate registration link', messageAr: 'فشل في إنشاء رابط التسجيل', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -255,15 +255,15 @@ router.get('/form/:token', async (req, res) => {
       .single();
 
     if (tokenError || !tokenRecord) {
-      return res.status(404).json({ success: false, message: 'Invalid or expired registration link' });
+      return res.status(404).json({ success: false, message: 'Invalid or expired registration link', messageAr: 'رابط التسجيل غير صالح أو منتهي الصلاحية', code: 'NOT_FOUND' });
     }
 
     if (new Date(tokenRecord.expires_at) < new Date()) {
-      return res.status(410).json({ success: false, message: 'This registration link has expired' });
+      return res.status(410).json({ success: false, message: 'This registration link has expired', messageAr: 'انتهت صلاحية رابط التسجيل هذا', code: 'NOT_FOUND' });
     }
 
     if (tokenRecord.use_count >= tokenRecord.max_uses) {
-      return res.status(410).json({ success: false, message: 'This registration link has reached its maximum uses' });
+      return res.status(410).json({ success: false, message: 'This registration link has reached its maximum uses', messageAr: 'وصل رابط التسجيل إلى الحد الأقصى للاستخدامات', code: 'NOT_FOUND' });
     }
 
     res.json({
@@ -276,7 +276,7 @@ router.get('/form/:token', async (req, res) => {
     });
   } catch (error) {
     logger.error('Get registration form error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Failed to load registration form' });
+    res.status(500).json({ success: false, message: 'Failed to load registration form', messageAr: 'فشل في تحميل نموذج التسجيل', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -364,7 +364,7 @@ router.post('/submit/:token', async (req, res) => {
     const { name, phone, parent_phone } = req.body;
 
     if (!name || !name.trim()) {
-      return res.status(400).json({ success: false, message: 'Name is required' });
+      return res.status(400).json({ success: false, message: 'Name is required', messageAr: 'الاسم مطلوب', code: 'VALIDATION_ERROR' });
     }
 
     const { data: tokenRecord, error: tokenError } = await supabase
@@ -374,15 +374,15 @@ router.post('/submit/:token', async (req, res) => {
       .single();
 
     if (tokenError || !tokenRecord) {
-      return res.status(404).json({ success: false, message: 'Invalid or expired registration link' });
+      return res.status(404).json({ success: false, message: 'Invalid or expired registration link', messageAr: 'رابط التسجيل غير صالح أو منتهي الصلاحية', code: 'NOT_FOUND' });
     }
 
     if (new Date(tokenRecord.expires_at) < new Date()) {
-      return res.status(410).json({ success: false, message: 'This registration link has expired' });
+      return res.status(410).json({ success: false, message: 'This registration link has expired', messageAr: 'انتهت صلاحية رابط التسجيل هذا', code: 'NOT_FOUND' });
     }
 
     if (tokenRecord.use_count >= tokenRecord.max_uses) {
-      return res.status(410).json({ success: false, message: 'This registration link has reached its maximum uses' });
+      return res.status(410).json({ success: false, message: 'This registration link has reached its maximum uses', messageAr: 'وصل رابط التسجيل إلى الحد الأقصى للاستخدامات', code: 'NOT_FOUND' });
     }
 
     const studentCode = `REG-${Date.now().toString(36).toUpperCase()}`;
@@ -446,7 +446,7 @@ router.post('/submit/:token', async (req, res) => {
     });
   } catch (error) {
     logger.error('Self-registration submit error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Registration failed. Please try again.' });
+    res.status(500).json({ success: false, message: 'Registration failed. Please try again.', messageAr: 'فشل التسجيل. يرجى المحاولة مرة أخرى.', code: 'INTERNAL_ERROR' });
   }
 });
 

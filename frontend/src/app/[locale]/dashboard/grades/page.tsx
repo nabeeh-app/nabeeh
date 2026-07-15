@@ -4,53 +4,34 @@ import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Plus,
   GraduationCap,
-  TrendingUp,
-  TrendingDown,
-  Award,
   BookOpen,
   Calculator,
   Download,
   Upload,
-  Filter,
-  Search,
-  Edit,
-  Trash2,
-  Eye,
   BarChart3,
   FileSpreadsheet,
-  Target
+  Award
 } from 'lucide-react';
 import { Student, Grade, CreateGradeRequest } from '@/types';
-import { AlertCircle, ChevronDown } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { StatCards } from '@/components/ui/StatCards';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { ViewModeTabs } from '@/components/ui/ViewModeTabs';
 import { useOfferings } from '@/hooks/useOfferings';
 import { useStudents } from '@/hooks/useStudents';
 import { useGrades, useCreateGrade, useUpdateGrade, useDeleteGrade } from '@/hooks/useGrades';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import GradebookTable from '@/components/dashboard/grades/GradebookTable';
+import GradeListTable from '@/components/dashboard/grades/GradeListTable';
+import GradeFormModal from '@/components/dashboard/grades/GradeFormModal';
+import GradeStatsModal from '@/components/dashboard/grades/GradeStatsModal';
 
 interface GradeWithStudent extends Grade {
   student: Student;
@@ -120,9 +101,6 @@ export default function GradesPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
-  
-  const gradebookScrollRef = useRef<HTMLDivElement>(null);
-  const listScrollRef = useRef<HTMLDivElement>(null);
 
   const { data: offerings = [], isLoading: offeringsLoading } = useOfferings();
 
@@ -359,7 +337,6 @@ export default function GradesPage() {
 
   const uniqueSubjects = useMemo(() => [...new Set(grades.map(g => g.subject))], [grades]);
   const uniqueAssessments = useMemo(() => [...new Set(grades.map(g => g.assessment_name))], [grades]);
-  const assessmentTypes = ['test', 'quiz', 'homework', 'project', 'midterm', 'final'];
 
   const filteredGrades = useMemo(() => {
     return grades.filter(grade => {
@@ -371,20 +348,6 @@ export default function GradesPage() {
       return matchesSearch && matchesAssessmentType && matchesGradeFilter;
     });
   }, [grades, searchTerm, selectedAssessmentType, gradeFilter]);
-
-  const gradebookVirtualizer = useVirtualizer({
-    count: gradebook.length,
-    getScrollElement: () => gradebookScrollRef.current,
-    estimateSize: () => 72,
-    overscan: 5,
-  });
-
-  const listVirtualizer = useVirtualizer({
-    count: filteredGrades.length,
-    getScrollElement: () => listScrollRef.current,
-    estimateSize: () => 72,
-    overscan: 5,
-  });
 
   const isLoading = offeringsLoading || studentsLoading || gradesLoading;
 
@@ -448,122 +411,14 @@ export default function GradesPage() {
           <Upload className="w-4 h-4 mr-2" />
           {t('common.import')}
         </Button>
-        <Dialog open={isStatsModalOpen} onOpenChange={setStatsModalOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              {t('grades.gradeStatistics')}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>{t('grades.gradeStatistics')}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              {subjectStats.map((stat, index) => (
-                <div key={index} className="p-4 bg-surface-sage/50 rounded-md">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold">{stat.subject}</h3>
-                    <Badge variant="outline">{t('grades.studentsCount', { count: stat.student_count })}</Badge>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <div className="text-ink/60">{t('grades.averageLabel')}</div>
-                      <div className="font-medium">{stat.average_score.toFixed(1)}%</div>
-                    </div>
-                    <div>
-                      <div className="text-ink/60">{t('grades.stats.highestScore')}</div>
-                      <div className="font-medium text-primary">{stat.highest_score}%</div>
-                    </div>
-                    <div>
-                      <div className="text-ink/60">{t('grades.stats.lowestScore')}</div>
-                      <div className="font-medium text-destructive">{stat.lowest_score}%</div>
-                    </div>
-                    <div>
-                      <div className="text-ink/60">{t('grades.stats.totalAssessments')}</div>
-                      <div className="font-medium">{stat.total_assessments}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
-        <Dialog open={isAddGradeModalOpen} onOpenChange={setAddGradeModalOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" disabled={!selectedGroupId}>
-              <Plus className="w-4 h-4" />
-              {t('grades.addGrade')}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {t('grades.addNewGrade')}
-                {currentSubjectName && ` - ${currentSubjectName}`}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAddGrade} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="student_id">{t('grades.fields.student')} *</Label>
-                  <Select value={newGrade.student_id} onValueChange={(value) => setNewGrade(s => ({ ...s, student_id: value }))}>
-                    <SelectTrigger id="student_id">
-                      <SelectValue placeholder={t('grades.selectStudent')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {students.map(student => (
-                        <SelectItem key={student.id} value={student.id}>{student.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="subject">{t('grades.fields.subject')} *</Label>
-                  <Input id="subject" value={newGrade.subject || currentSubjectName} onChange={(e) => setNewGrade(s => ({ ...s, subject: e.target.value }))} placeholder={t('grades.subjectPlaceholder')} required disabled={!!currentSubjectName} />
-                </div>
-                <div>
-                  <Label htmlFor="assessment_type">{t('grades.fields.assessmentType')} *</Label>
-                  <Select value={newGrade.assessment_type} onValueChange={(value) => setNewGrade(s => ({ ...s, assessment_type: value }))}>
-                    <SelectTrigger id="assessment_type"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {assessmentTypes.map(type => (
-                        <SelectItem key={type} value={type}>{t(`grades.assessmentTypes.${type}`)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="assessment_name">{t('grades.fields.assessmentName')} *</Label>
-                  <Input id="assessment_name" value={newGrade.assessment_name} onChange={(e) => setNewGrade(s => ({ ...s, assessment_name: e.target.value }))} placeholder={t('grades.assessmentNamePlaceholder')} required />
-                </div>
-                <div>
-                  <Label htmlFor="score">{t('grades.fields.score')} *</Label>
-                  <Input id="score" type="number" min="0" step="0.5" value={newGrade.score} onChange={(e) => setNewGrade(s => ({ ...s, score: parseFloat(e.target.value) || 0 }))} required />
-                </div>
-                <div>
-                  <Label htmlFor="max_score">{t('grades.fields.maxScore')} *</Label>
-                  <Input id="max_score" type="number" min="1" value={newGrade.max_score} onChange={(e) => setNewGrade(s => ({ ...s, max_score: parseFloat(e.target.value) || 100 }))} required />
-                </div>
-                <div>
-                  <Label htmlFor="date">{t('grades.fields.date')} *</Label>
-                  <Input id="date" type="date" value={newGrade.date} onChange={(e) => setNewGrade(s => ({ ...s, date: e.target.value }))} required />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="notes">{t('grades.fields.notes')}</Label>
-                <textarea id="notes" className="w-full border rounded px-3 py-2" rows={3} value={newGrade.notes} onChange={(e) => setNewGrade(s => ({ ...s, notes: e.target.value }))} placeholder={t('grades.notesPlaceholder')} />
-              </div>
-              {formError && (
-                <div className="text-destructive text-sm bg-destructive/10 p-3 rounded">{formError}</div>
-              )}
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setAddGradeModalOpen(false)} disabled={submitting}>{t('common.cancel')}</Button>
-                <Button type="submit" disabled={submitting}>{submitting ? t('grades.saving') : t('common.save')}</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button variant="outline" size="sm" onClick={() => setStatsModalOpen(true)}>
+          <BarChart3 className="w-4 h-4 mr-2" />
+          {t('grades.gradeStatistics')}
+        </Button>
+        <Button className="gap-2" onClick={() => setAddGradeModalOpen(true)} disabled={!selectedGroupId}>
+          <Plus className="w-4 h-4" />
+          {t('grades.addGrade')}
+        </Button>
       </PageHeader>
 
       <StatCards stats={stats} />
@@ -579,233 +434,69 @@ export default function GradesPage() {
         </div>
       </div>
 
-      {/* Gradebook View */}
       {viewMode === 'gradebook' && (
-        <div className="space-y-0">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-ink font-display">
-              {t('grades.gradebook')}
-              {currentSubjectName && ` - ${currentSubjectName}`}
-            </h2>
-          </div>
-          {gradebook.length === 0 ? (
-            <EmptyState icon={GraduationCap} message={t('grades.noGradesDisplay')} />
-          ) : (
-            <div ref={gradebookScrollRef} className="overflow-x-auto max-h-[600px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[200px]">{t('grades.fields.student')}</TableHead>
-                    {uniqueAssessments.slice(0, 5).map(assessment => (
-                      <TableHead key={assessment} className="text-center min-w-[120px]">{assessment}</TableHead>
-                    ))}
-                    <TableHead className="text-center min-w-[100px]">{t('grades.averageLabel')}</TableHead>
-                    <TableHead className="text-center min-w-[80px]">{t('grades.gradeLabel')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {gradebookVirtualizer.getVirtualItems().map((virtualRow) => {
-                    const entry = gradebook[virtualRow.index];
-                    return (
-                      <TableRow
-                        key={entry.student_id}
-                        className="absolute w-full"
-                        style={{
-                          height: `${virtualRow.size}px`,
-                          transform: `translateY(${virtualRow.start}px)`,
-                        }}
-                      >
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="bg-primary/10 text-primary">
-                                {entry.student_name.split(' ')[0].charAt(0)}
-                                {entry.student_name.split(' ')[1]?.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">{entry.student_name}</span>
-                          </div>
-                        </TableCell>
-                        {uniqueAssessments.slice(0, 5).map(assessment => (
-                          <TableCell key={assessment} className="text-center">
-                            {entry.grades[assessment] ? (
-                              <div className="space-y-1">
-                                <div className="font-medium">
-                                  {entry.grades[assessment].score}/{entry.grades[assessment].max_score}
-                                </div>
-                                <div className={`text-xs px-2 py-1 rounded ${getGradeColor(entry.grades[assessment].percentage)}`}>
-                                  {entry.grades[assessment].percentage}%
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="text-ink/40">-</span>
-                            )}
-                          </TableCell>
-                        ))}
-                        <TableCell className="text-center">
-                          <div className={`font-bold px-3 py-1 rounded ${getGradeColor(entry.average)}`}>
-                            {entry.average}%
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className={getGradeColor(entry.average)}>
-                            {entry.letter_grade}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
+        <GradebookTable
+          gradebook={gradebook}
+          uniqueAssessments={uniqueAssessments}
+          currentSubjectName={currentSubjectName}
+          getGradeColor={getGradeColor}
+        />
       )}
 
-      {/* List View */}
       {viewMode === 'list' && (
-        <div className="space-y-0">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-ink font-display">{t('grades.gradeList')}</h2>
-          </div>
-          {filteredGrades.length === 0 ? (
-            <EmptyState icon={GraduationCap} message={t('grades.noGradesMatch')} />
-          ) : (
-            <div ref={listScrollRef} className="overflow-auto max-h-[600px]">
-              <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('grades.fields.student')}</TableHead>
-                  <TableHead>{t('grades.fields.subject')}</TableHead>
-                  <TableHead>{t('grades.assessment')}</TableHead>
-                  <TableHead>{t('grades.fields.score')}</TableHead>
-                  <TableHead>{t('grades.percentageLabel')}</TableHead>
-                  <TableHead>{t('grades.gradeLabel')}</TableHead>
-                  <TableHead>{t('grades.fields.date')}</TableHead>
-                  <TableHead>{t('grades.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {listVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const grade = filteredGrades[virtualRow.index];
-                  return (
-                    <TableRow
-                      key={grade.id}
-                      className="absolute w-full"
-                      style={{
-                        height: `${virtualRow.size}px`,
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                    >
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-surface-cool text-ink/60">
-                              {grade.student?.name?.split(' ')[0]?.charAt(0)}
-                              {grade.student?.name?.split(' ')[1]?.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{grade.student?.name || 'Unknown'}</div>
-                            <div className="text-sm text-ink/60">{grade.student?.grade_level}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell><Badge variant="outline">{grade.subject}</Badge></TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{grade.assessment_name}</div>
-                          <div className="text-sm text-ink/60 capitalize">{grade.assessment_type}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell><span className="font-medium">{grade.score}/{grade.max_score}</span></TableCell>
-                      <TableCell>
-                        <div className={`font-medium px-2 py-1 rounded text-center ${getGradeColor(grade.percentage)}`}>
-                          {grade.percentage}%
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={getGradeColor(grade.percentage)}>
-                          {grade.letter_grade || getLetterGrade(grade.percentage)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {new Date(grade.date).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-1">
-                          <Button variant="ghost" size="sm" onClick={() => handleEditGrade(grade)} title={t('common.edit')}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteGrade(grade)} className="text-destructive hover:text-destructive/80" title={t('common.delete')}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-            </div>
-          )}
-        </div>
+        <GradeListTable
+          grades={filteredGrades}
+          onEdit={handleEditGrade}
+          onDelete={handleDeleteGrade}
+          getGradeColor={getGradeColor}
+          getLetterGrade={getLetterGrade}
+        />
       )}
 
-      {/* Edit Grade Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('grades.editGradeTitle')}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleUpdateGrade} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit_score">{t('grades.fields.score')} *</Label>
-                <Input id="edit_score" type="number" min="0" step="0.5" value={newGrade.score} onChange={(e) => setNewGrade(s => ({ ...s, score: parseFloat(e.target.value) || 0 }))} required />
-              </div>
-              <div>
-                <Label htmlFor="edit_max_score">{t('grades.fields.maxScore')} *</Label>
-                <Input id="edit_max_score" type="number" min="1" value={newGrade.max_score} onChange={(e) => setNewGrade(s => ({ ...s, max_score: parseFloat(e.target.value) || 100 }))} required />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="edit_notes">{t('grades.fields.notes')}</Label>
-              <textarea id="edit_notes" className="w-full border rounded px-3 py-2" rows={3} value={newGrade.notes} onChange={(e) => setNewGrade(s => ({ ...s, notes: e.target.value }))} placeholder={t('grades.notesPlaceholder')} />
-            </div>
-            {formError && (
-              <div className="text-destructive text-sm bg-destructive/10 p-3 rounded">{formError}</div>
-            )}
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setEditModalOpen(false)} disabled={submitting}>{t('common.cancel')}</Button>
-              <Button type="submit" disabled={submitting}>{submitting ? t('grades.saving') : t('common.save')}</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <GradeFormModal
+        open={isEditModalOpen}
+        onOpenChange={setEditModalOpen}
+        mode="edit"
+        grade={newGrade}
+        onGradeChange={setNewGrade}
+        students={students}
+        currentSubjectName={currentSubjectName}
+        formError={formError}
+        submitting={submitting}
+        onSubmit={handleUpdateGrade}
+        onCancel={() => setEditModalOpen(false)}
+      />
 
-      <AlertDialog open={alertDialog.open} onOpenChange={(open) => setAlertDialog(prev => ({ ...prev, open }))}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{alertDialog.title}</AlertDialogTitle>
-            <AlertDialogDescription>{alertDialog.description}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              className={alertDialog.variant === 'destructive' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
-              onClick={() => {
-                alertDialog.onConfirm();
-                setAlertDialog(prev => ({ ...prev, open: false }));
-              }}
-            >
-              {t('common.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <GradeFormModal
+        open={isAddGradeModalOpen}
+        onOpenChange={setAddGradeModalOpen}
+        mode="add"
+        grade={newGrade}
+        onGradeChange={setNewGrade}
+        students={students}
+        currentSubjectName={currentSubjectName}
+        formError={formError}
+        submitting={submitting}
+        onSubmit={handleAddGrade}
+        onCancel={() => setAddGradeModalOpen(false)}
+      />
+
+      <GradeStatsModal
+        open={isStatsModalOpen}
+        onOpenChange={setStatsModalOpen}
+        subjectStats={subjectStats}
+      />
+
+      <ConfirmDialog
+        open={alertDialog.open}
+        onOpenChange={(open) => setAlertDialog(prev => ({ ...prev, open }))}
+        title={alertDialog.title}
+        description={alertDialog.description}
+        onConfirm={alertDialog.onConfirm}
+        variant={alertDialog.variant}
+        cancelLabel={t('common.cancel')}
+        confirmLabel={t('common.confirm')}
+      />
     </div>
   );
 }

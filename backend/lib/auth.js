@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const logger = require('./logger');
 
 /**
@@ -100,6 +101,26 @@ class TokenService {
  * Password strength validation
  */
 class PasswordService {
+    /**
+     * Hash a password using bcrypt
+     * @param {string} password - Plain text password
+     * @returns {Promise<string>} - Bcrypt hash
+     */
+    async hashPassword(password) {
+        const saltRounds = 12;
+        return bcrypt.hash(password, saltRounds);
+    }
+
+    /**
+     * Compare a plain text password against a bcrypt hash
+     * @param {string} password - Plain text password
+     * @param {string} hash - Bcrypt hash to compare against
+     * @returns {Promise<boolean>} - true if match
+     */
+    async comparePassword(password, hash) {
+        return bcrypt.compare(password, hash);
+    }
+
     validatePasswordStrength(password) {
         const errors = [];
         if (password.length < 8) errors.push('Password must be at least 8 characters');

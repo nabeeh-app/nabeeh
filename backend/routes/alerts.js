@@ -50,7 +50,7 @@ const getRules = async (req, res) => {
     res.json({ success: true, data: data || [] });
   } catch (error) {
     logger.error('Get alert rules error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching alert rules' });
+    res.status(500).json({ success: false, message: 'Server error fetching alert rules', messageAr: 'خطأ في الخادم أثناء جلب قواعد التنبيه', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -66,7 +66,7 @@ const createRule = async (req, res) => {
     res.status(201).json({ success: true, data });
   } catch (error) {
     logger.error('Create alert rule error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error creating alert rule' });
+    res.status(500).json({ success: false, message: 'Server error creating alert rule', messageAr: 'خطأ في الخادم أثناء إنشاء قاعدة التنبيه', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -84,11 +84,11 @@ const updateRule = async (req, res) => {
       .eq('id', id).eq('teacher_id', teacherId)
       .select().single();
     if (error) throw error;
-    if (!data) return res.status(404).json({ success: false, message: 'Alert rule not found' });
+    if (!data) return res.status(404).json({ success: false, message: 'Alert rule not found', messageAr: 'لم يتم العثور على قاعدة التنبيه', code: 'NOT_FOUND' });
     res.json({ success: true, data });
   } catch (error) {
     logger.error('Update alert rule error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error updating alert rule' });
+    res.status(500).json({ success: false, message: 'Server error updating alert rule', messageAr: 'خطأ في الخادم أثناء تحديث قاعدة التنبيه', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -104,7 +104,7 @@ const deleteRule = async (req, res) => {
     res.json({ success: true, message: 'Alert rule deleted' });
   } catch (error) {
     logger.error('Delete alert rule error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error deleting alert rule' });
+    res.status(500).json({ success: false, message: 'Server error deleting alert rule', messageAr: 'خطأ في الخادم أثناء حذف قاعدة التنبيه', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -115,7 +115,7 @@ const toggleRule = async (req, res) => {
     const { data: rule } = await supabaseAdmin
       .from('alert_rules').select('is_enabled')
       .eq('id', id).eq('teacher_id', teacherId).single();
-    if (!rule) return res.status(404).json({ success: false, message: 'Alert rule not found' });
+    if (!rule) return res.status(404).json({ success: false, message: 'Alert rule not found', messageAr: 'لم يتم العثور على قاعدة التنبيه', code: 'NOT_FOUND' });
     const { data, error } = await supabaseAdmin
       .from('alert_rules')
       .update({ is_enabled: !rule.is_enabled })
@@ -124,7 +124,7 @@ const toggleRule = async (req, res) => {
     res.json({ success: true, data, message: `Alert rule ${data.is_enabled ? 'enabled' : 'disabled'}` });
   } catch (error) {
     logger.error('Toggle alert rule error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error toggling alert rule' });
+    res.status(500).json({ success: false, message: 'Server error toggling alert rule', messageAr: 'خطأ في الخادم أثناء تبديل حالة قاعدة التنبيه', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -155,7 +155,7 @@ const getAlerts = async (req, res) => {
     });
   } catch (error) {
     logger.error('Get alerts error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching alerts' });
+    res.status(500).json({ success: false, message: 'Server error fetching alerts', messageAr: 'خطأ في الخادم أثناء جلب التنبيهات', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -170,7 +170,7 @@ const markAlertRead = async (req, res) => {
     res.json({ success: true, message: 'Alert marked as read' });
   } catch (error) {
     logger.error('Mark alert read error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error marking alert' });
+    res.status(500).json({ success: false, message: 'Server error marking alert', messageAr: 'خطأ في الخادم أثناء تحديث حالة التنبيه', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -184,7 +184,7 @@ const markAllAlertsRead = async (req, res) => {
     res.json({ success: true, message: 'All alerts marked as read' });
   } catch (error) {
     logger.error('Mark all alerts read error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error marking alerts' });
+    res.status(500).json({ success: false, message: 'Server error marking alerts', messageAr: 'خطأ في الخادم أثناء تحديث حالة التنبيهات', code: 'INTERNAL_ERROR' });
   }
 };
 

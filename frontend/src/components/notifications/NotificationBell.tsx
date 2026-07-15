@@ -6,7 +6,7 @@ import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { NotificationPanel } from './NotificationPanel';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 
 export function NotificationBell() {
   const t = useTranslations('notifications');

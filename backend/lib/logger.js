@@ -19,8 +19,9 @@ const logger = winston.createLogger({
 
 // Baileys v7 requires pino-compatible logger with trace/debug methods
 logger.trace = logger.debug;
+const originalChild = logger.child.bind(logger);
 logger.child = (bindings) => {
-  const child = logger.child(bindings);
+  const child = originalChild(bindings);
   child.trace = child.debug;
   return child;
 };

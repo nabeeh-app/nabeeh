@@ -56,7 +56,7 @@ const getNotifications = async (req, res) => {
     });
   } catch (error) {
     logger.error('Get notifications error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching notifications' });
+    res.status(500).json({ success: false, message: 'Server error fetching notifications', messageAr: 'خطأ في الخادم أثناء جلب الإشعارات', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -73,7 +73,7 @@ const getUnreadCount = async (req, res) => {
     res.json({ success: true, data: { count: count || 0 } });
   } catch (error) {
     logger.error('Get unread count error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching unread count' });
+    res.status(500).json({ success: false, message: 'Server error fetching unread count', messageAr: 'خطأ في الخادم أثناء جلب عدد غير المقروءة', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -94,7 +94,7 @@ const markRead = async (req, res) => {
     res.json({ success: true, message: 'Notification marked as read' });
   } catch (error) {
     logger.error('Mark notification read error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error marking notification' });
+    res.status(500).json({ success: false, message: 'Server error marking notification', messageAr: 'خطأ في الخادم أثناء تحديث حالة الإشعار', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -114,7 +114,7 @@ const markAllRead = async (req, res) => {
     res.json({ success: true, message: 'All notifications marked as read' });
   } catch (error) {
     logger.error('Mark all notifications read error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error marking notifications' });
+    res.status(500).json({ success: false, message: 'Server error marking notifications', messageAr: 'خطأ في الخادم أثناء تحديث حالة الإشعارات', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -135,7 +135,7 @@ const deleteNotification = async (req, res) => {
     res.json({ success: true, message: 'Notification deleted' });
   } catch (error) {
     logger.error('Delete notification error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error deleting notification' });
+    res.status(500).json({ success: false, message: 'Server error deleting notification', messageAr: 'خطأ في الخادم أثناء حذف الإشعار', code: 'INTERNAL_ERROR' });
   }
 };
 

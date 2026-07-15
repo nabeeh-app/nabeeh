@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 import { useOfferings } from '@/hooks/useOfferings';
 import { ReportPreview } from './ReportPreview';
 import { ReportSendDialog } from './ReportSendDialog';

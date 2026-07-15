@@ -1,37 +1,25 @@
 'use client';
 
-import { useTranslations, useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useState, useMemo } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Plus, Edit, Trash2, Eye, Download, Upload, Users, GraduationCap, Phone, Calendar, MapPin, BookOpen, Link2 } from 'lucide-react';
+import { Plus, Download, Upload, Users, GraduationCap, Calendar, BookOpen, Link2 } from 'lucide-react';
 import { Student, CreateStudentRequest, Parent } from '@/types';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { StatCards } from '@/components/ui/StatCards';
 import { FilterBar } from '@/components/ui/FilterBar';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Pagination } from '@/components/ui/Pagination';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useStudents, useCreateStudent, useUpdateStudent, useDeleteStudent } from '@/hooks/useStudents';
 import { useOfferings } from '@/hooks/useOfferings';
 import StudentImportModal from '@/components/students/StudentImportModal';
 import SelfRegistrationLink from '@/components/students/SelfRegistrationLink';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import StudentListTable from '@/components/dashboard/students/StudentListTable';
+import StudentDetailSidebar from '@/components/dashboard/students/StudentDetailSidebar';
+import StudentFormModal from '@/components/dashboard/students/StudentFormModal';
 
 interface StudentWithParents extends Student {
   parents: Parent[];
@@ -41,7 +29,6 @@ const PAGE_SIZE = 20;
 
 export default function StudentsPage() {
   const t = useTranslations();
-  const locale = useLocale();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
@@ -281,189 +268,10 @@ export default function StudentsPage() {
           <Download className="w-4 h-4 mr-2" />
           {t('common.export')}
         </Button>
-        <Dialog open={isAddModalOpen} onOpenChange={setAddModalOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              {t('students.addStudent')}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {t('students.addStudent')}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAddStudent} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="student_id">
-                    {t('students.fields.studentId')} *
-                  </Label>
-                  <Input
-                    id="student_id"
-                    value={newStudent.student_id}
-                    onChange={(e) => setNewStudent(s => ({ ...s, student_id: e.target.value }))}
-                    placeholder={t('students.studentIdPlaceholder')}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="name">
-                    {t('students.fields.name')} *
-                  </Label>
-                  <Input
-                    id="name"
-                    value={newStudent.name}
-                    onChange={(e) => setNewStudent(s => ({ ...s, name: e.target.value }))}
-                    placeholder={t('students.fullNamePlaceholder')}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="group_id">
-                    {t('students.fields.group')} *
-                  </Label>
-                  <Select
-                    value={newStudent.group_id}
-                    onValueChange={(groupId) => {
-                      const offering = offerings.find(o => o.groups.some((g) => g.id === groupId));
-                      setNewStudent(s => ({
-                        ...s,
-                        group_id: groupId,
-                        grade_level: offering?.grade_level?.name || s.grade_level
-                      }));
-                    }}
-                  >
-                    <SelectTrigger id="group_id">
-                      <SelectValue placeholder={t('students.selectClass')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {offerings.flatMap(o => o.groups.map((g) => (
-                        <SelectItem key={g.id} value={g.id}>
-                          {o.subject.name_en} - {g.name}
-                        </SelectItem>
-                      )))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="grade_level">
-                    {t('students.fields.gradeLevel')} *
-                  </Label>
-                  <Input
-                    id="grade_level"
-                    value={newStudent.grade_level}
-                    onChange={(e) => setNewStudent(s => ({ ...s, grade_level: e.target.value }))}
-                    placeholder={t('students.gradeLevelPlaceholder')}
-                    required
-                    readOnly
-                    className="bg-surface-cool"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="date_of_birth">
-                    {t('students.fields.dateOfBirth')}
-                  </Label>
-                  <Input
-                    id="date_of_birth"
-                    type="date"
-                    value={newStudent.date_of_birth}
-                    onChange={(e) => setNewStudent(s => ({ ...s, date_of_birth: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="gender">
-                    {t('students.fields.gender')}
-                  </Label>
-                  <Select
-                    value={newStudent.gender}
-                    onValueChange={(value) => setNewStudent(s => ({ ...s, gender: value }))}
-                  >
-                    <SelectTrigger id="gender">
-                      <SelectValue placeholder={t('students.selectGender')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">{t('students.gender.male')}</SelectItem>
-                      <SelectItem value="female">{t('students.gender.female')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="emergency_contact">
-                    {t('students.fields.emergencyContact')}
-                  </Label>
-                  <Input
-                    id="emergency_contact"
-                    dir="ltr"
-                    className="text-left"
-                    value={newStudent.emergency_contact}
-                    onChange={(e) => setNewStudent(s => ({ ...s, emergency_contact: e.target.value }))}
-                    placeholder="+966xxxxxxxxx"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="subjects">
-                  {t('students.fields.subjects')}
-                </Label>
-                <Input
-                  id="subjects"
-                  value={Array.isArray(newStudent.subjects) ? newStudent.subjects.join(', ') : ''}
-                  onChange={(e) => setNewStudent(s => ({
-                    ...s,
-                    subjects: e.target.value.split(',').map(subject => subject.trim()).filter(Boolean)
-                  }))}
-                  placeholder={t('students.subjectsPlaceholder')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="address">
-                  {t('students.fields.address')}
-                </Label>
-                <Input
-                  id="address"
-                  value={newStudent.address}
-                  onChange={(e) => setNewStudent(s => ({ ...s, address: e.target.value }))}
-                  placeholder={t('students.addressPlaceholder')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="notes">
-                  {t('students.fields.notes')}
-                </Label>
-                <Textarea
-                  id="notes"
-                  rows={3}
-                  value={newStudent.notes}
-                  onChange={(e) => setNewStudent(s => ({ ...s, notes: e.target.value }))}
-                  placeholder={t('students.notesPlaceholder')}
-                />
-              </div>
-              {formError && (
-                <div className="text-destructive text-sm bg-destructive/10 p-3 rounded">
-                  {formError}
-                </div>
-              )}
-              <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setAddModalOpen(false)}
-                  disabled={submitting}
-                >
-                  {t('common.cancel')}
-                </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting
-                    ? t('common.saving')
-                    : t('common.save')
-                  }
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button className="gap-2" onClick={() => setAddModalOpen(true)}>
+          <Plus className="w-4 h-4" />
+          {t('students.addStudent')}
+        </Button>
       </PageHeader>
 
       <StatCards stats={stats} />
@@ -515,432 +323,64 @@ export default function StudentsPage() {
             {t('students.studentList')}
           </h2>
         </div>
-        {filteredStudents.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            message={
-              searchTerm || statusFilter !== 'all' || gradeFilter !== 'all'
-                ? t('students.noStudentsMatch')
-                : t('students.noStudentsYet')
-            }
-          />
-        ) : (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('students.student')}</TableHead>
-                  <TableHead>{t('students.details')}</TableHead>
-                  <TableHead>{t('students.fields.subjects')}</TableHead>
-                  <TableHead>{t('students.fields.status')}</TableHead>
-                  <TableHead>{t('students.enrollment')}</TableHead>
-                  <TableHead>{t('students.actionsColumn')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStudents.map((student) => {
-                  const status = getStatusBadge(student.status);
-                  return (
-                    <TableRow key={student.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              {student.name.split(' ')[0].charAt(0)}
-                              {student.name.split(' ')[1]?.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{student.name}</div>
-                            <div className="text-sm text-ink/60">ID: {student.student_id}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm space-y-1">
-                          <div className="flex items-center gap-1">
-                            <GraduationCap className="h-3 w-3 text-ink/40" />
-                            <span>{student.grade_level}</span>
-                          </div>
-                          {student.emergency_contact && (
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3 text-ink/40" />
-                              <span className="text-ink/60">{student.emergency_contact}</span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {student.subjects?.slice(0, 2).map((subject, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {subject}
-                            </Badge>
-                          ))}
-                          {student.subjects && student.subjects.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{student.subjects.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={status.variant} className={status.color}>
-                          {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {new Date(student.enrollment_date).toLocaleDateString(
-                            locale === 'ar' ? 'ar-SA' : 'en-US'
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewStudent(student)}
-                            aria-label={t('students.viewDetails')}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditStudent(student)}
-                            aria-label={t('common.edit')}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteStudent(student)}
-                            className="text-destructive hover:text-destructive/80"
-                            aria-label={t('common.delete')}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              onPageChange={setPage}
-            />
-          </>
-        )}
+        <StudentListTable
+          students={filteredStudents}
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          searchTerm={searchTerm}
+          statusFilter={statusFilter}
+          gradeFilter={gradeFilter}
+          onView={handleViewStudent}
+          onEdit={handleEditStudent}
+          onDelete={handleDeleteStudent}
+          getStatusBadge={getStatusBadge}
+        />
       </div>
 
-      {/* View Student Modal */}
-      <Dialog open={isViewModalOpen} onOpenChange={setViewModalOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogClose asChild>
-            <button
-              className="absolute top-4 ltr:right-4 rtl:left-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              aria-label={t('common.close')}
-            >
-              <span className="sr-only">{t('common.close')}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
-          </DialogClose>
+      <StudentDetailSidebar
+        student={selectedStudent}
+        open={isViewModalOpen}
+        onOpenChange={setViewModalOpen}
+        getStatusBadge={getStatusBadge}
+      />
 
-          <DialogHeader>
-            <DialogTitle>
-              {t('students.studentDetails')}
-            </DialogTitle>
-          </DialogHeader>
+      <StudentFormModal
+        open={isEditModalOpen}
+        onOpenChange={setEditModalOpen}
+        mode="edit"
+        student={newStudent}
+        onStudentChange={setNewStudent}
+        offerings={offerings}
+        formError={formError}
+        submitting={submitting}
+        onSubmit={handleUpdateStudent}
+        onCancel={() => setEditModalOpen(false)}
+      />
 
-          {selectedStudent && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16 shrink-0">
-                  <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                    {selectedStudent.name.split(' ')[0].charAt(0)}
-                    {selectedStudent.name.split(' ')[1]?.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-xl font-semibold truncate">{selectedStudent.name}</h3>
-                    <Badge variant={getStatusBadge(selectedStudent.status).variant} className="shrink-0">
-                      {getStatusBadge(selectedStudent.status).label}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-ink/60 mt-0.5" dir="ltr" style={{ direction: 'ltr' }}>
-                    ID: {selectedStudent.student_id}
-                  </p>
-                </div>
-              </div>
+      <StudentFormModal
+        open={isAddModalOpen}
+        onOpenChange={setAddModalOpen}
+        mode="add"
+        student={newStudent}
+        onStudentChange={setNewStudent}
+        offerings={offerings}
+        formError={formError}
+        submitting={submitting}
+        onSubmit={handleAddStudent}
+        onCancel={() => setAddModalOpen(false)}
+      />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
-                    {t('students.basicInfo')}
-                  </h4>
-                  <div className="space-y-2.5 text-sm">
-                    <div className="flex items-center gap-2.5">
-                      <GraduationCap className="h-4 w-4 text-ink/40 shrink-0" />
-                      <span>{selectedStudent.grade_level}</span>
-                    </div>
-                    {selectedStudent.date_of_birth && (
-                      <div className="flex items-center gap-2.5">
-                        <Calendar className="h-4 w-4 text-ink/40 shrink-0" />
-                        <span>
-                          {new Date(selectedStudent.date_of_birth).toLocaleDateString(
-                            locale === 'ar' ? 'ar-SA' : 'en-US'
-                          )}
-                        </span>
-                      </div>
-                    )}
-                    {selectedStudent.gender && (
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-ink/40">·</span>
-                        <span>
-                          <span className="text-ink/60">{t('students.genderLabel')}</span>{' '}
-                          {selectedStudent.gender === 'male'
-                            ? t('students.gender.male')
-                            : t('students.gender.female')
-                          }
-                        </span>
-                      </div>
-                    )}
-                    {selectedStudent.address && (
-                      <div className="flex items-center gap-2.5">
-                        <MapPin className="h-4 w-4 text-ink/40 shrink-0" />
-                        <span>{selectedStudent.address}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
-                    {t('students.contactInfo')}
-                  </h4>
-                  <div className="space-y-2.5 text-sm">
-                    {selectedStudent.emergency_contact && (
-                      <div className="flex items-center gap-2.5">
-                        <Phone className="h-4 w-4 text-ink/40 shrink-0" />
-                        <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
-                          {selectedStudent.emergency_contact}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2.5">
-                      <Calendar className="h-4 w-4 text-ink/40 shrink-0" />
-                      <span>
-                        <span className="text-ink/60">{t('students.enrollmentDateLabel')}:</span>{' '}
-                        {new Date(selectedStudent.enrollment_date).toLocaleDateString(
-                          locale === 'ar' ? 'ar-SA' : 'en-US'
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {selectedStudent.subjects && selectedStudent.subjects.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
-                    {t('students.fields.subjects')}
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedStudent.subjects.map((subject, index) => (
-                      <Badge key={index} variant="outline">
-                        {subject}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedStudent.parents && selectedStudent.parents.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
-                    {t('students.parentsGuardians')}
-                  </h4>
-                  <div className="space-y-2">
-                    {selectedStudent.parents.map((parent) => (
-                      <div key={parent.id} className="flex items-center justify-between p-3 bg-surface-cool rounded gap-3">
-                        <div className="min-w-0">
-                          <div className="font-medium truncate">{parent.name}</div>
-                          <div className="text-sm text-ink/60" dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
-                            {parent.phone}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs text-ink/60">{parent.relationship}</span>
-                          {parent.is_primary && (
-                            <Badge variant="outline" className="text-xs">
-                              {t('students.primary')}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedStudent.notes && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-ink/80 border-b border-ink/10 pb-1.5">
-                    {t('students.fields.notes')}
-                  </h4>
-                  <p className="text-sm text-ink/60 bg-surface-cool p-3 rounded">
-                    {selectedStudent.notes}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Student Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {t('students.editStudent')}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleUpdateStudent} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit_student_id">
-                  {t('students.fields.studentId')} *
-                </Label>
-                <Input
-                  id="edit_student_id"
-                  value={newStudent.student_id}
-                  onChange={(e) => setNewStudent(s => ({ ...s, student_id: e.target.value }))}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit_name">
-                  {t('students.fields.name')} *
-                </Label>
-                <Input
-                  id="edit_name"
-                  value={newStudent.name}
-                  onChange={(e) => setNewStudent(s => ({ ...s, name: e.target.value }))}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit_group_id">
-                  {t('students.fields.group')} *
-                </Label>
-                <Select
-                  value={newStudent.group_id}
-                  onValueChange={(groupId) => {
-                    const offering = offerings.find(o => o.groups.some((g) => g.id === groupId));
-                    setNewStudent(s => ({
-                      ...s,
-                      group_id: groupId,
-                      grade_level: offering?.grade_level?.name || s.grade_level
-                    }));
-                  }}
-                >
-                  <SelectTrigger id="edit_group_id">
-                    <SelectValue placeholder={t('students.selectClass')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {offerings.flatMap(o => o.groups.map((g) => (
-                      <SelectItem key={g.id} value={g.id}>
-                        {o.subject.name_en} - {g.name}
-                      </SelectItem>
-                    )))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="edit_grade_level">
-                  {t('students.fields.gradeLevel')} *
-                </Label>
-                <Input
-                  id="edit_grade_level"
-                  value={newStudent.grade_level}
-                  onChange={(e) => setNewStudent(s => ({ ...s, grade_level: e.target.value }))}
-                  required
-                  readOnly
-                  className="bg-surface-cool"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit_status">
-                  {t('students.fields.status')}
-                </Label>
-                <Select
-                  value={newStudent.status}
-                  onValueChange={(value) => setNewStudent(s => ({ ...s, status: value as 'active' | 'inactive' | 'graduated' }))}
-                >
-                  <SelectTrigger id="edit_status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">{t('students.status.active')}</SelectItem>
-                    <SelectItem value="inactive">{t('students.status.inactive')}</SelectItem>
-                    <SelectItem value="graduated">{t('students.status.graduated')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            {formError && (
-              <div className="text-destructive text-sm bg-destructive/10 p-3 rounded">
-                {formError}
-              </div>
-            )}
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditModalOpen(false)}
-                disabled={submitting}
-              >
-                {t('common.cancel')}
-              </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting
-                  ? t('common.saving')
-                  : t('common.save')
-                }
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={alertDialog.open} onOpenChange={(open) => setAlertDialog(prev => ({ ...prev, open }))}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{alertDialog.title}</AlertDialogTitle>
-            <AlertDialogDescription>{alertDialog.description}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              className={alertDialog.variant === 'destructive' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
-              onClick={() => {
-                alertDialog.onConfirm();
-                setAlertDialog(prev => ({ ...prev, open: false }));
-              }}
-            >
-              {t('common.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={alertDialog.open}
+        onOpenChange={(open) => setAlertDialog(prev => ({ ...prev, open }))}
+        title={alertDialog.title}
+        description={alertDialog.description}
+        onConfirm={alertDialog.onConfirm}
+        variant={alertDialog.variant}
+        cancelLabel={t('common.cancel')}
+        confirmLabel={t('common.confirm')}
+      />
 
       <StudentImportModal
         open={isImportModalOpen}

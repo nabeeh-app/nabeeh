@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 import type { Notification } from '@/types';
 
 const NOTIFICATION_ICONS: Record<string, typeof Bell> = {

@@ -247,19 +247,17 @@ export default function ResetPasswordPage() {
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
         <img
           src="/login-hero.jpeg"
-          alt={isRTL ? 'مساعد تعليمي ذكي' : 'Smart teaching assistant'}
+          alt={t('resetPasswordHeroAlt')}
           className="absolute inset-0 w-full h-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/40 to-ink/10" />
         <div className="relative z-10 flex flex-col justify-end p-12 text-white">
           <div>
             <h2 className="text-4xl font-bold font-display leading-tight mb-4">
-              {isRTL ? 'عيّن كلمة مرور\nجديدة' : 'Set a new\npassword'}
+              {t('resetPasswordHeroTitle')}
             </h2>
             <p className="text-lg text-white/80 font-body max-w-md">
-              {isRTL
-                ? 'اختر كلمة مرور قوية واحتفظ بها في مكان آمن'
-                : 'Choose a strong password and keep it in a safe place'}
+              {t('resetPasswordHeroDescription')}
             </p>
           </div>
           <div className="mt-12 pt-8 border-t border-white/10">

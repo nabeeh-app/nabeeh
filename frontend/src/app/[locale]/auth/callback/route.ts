@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { randomBytes } from 'crypto';
 
 function getOrigin(request: Request): string {
   const forwardedHost = request.headers.get('x-forwarded-host');
@@ -52,6 +53,11 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/${locale}/login?error=oauth_exchange_failed`);
   }
 
+  // Ensure all auth cookies are flushed before redirect
+  // The Supabase JS library defers SIGNED_IN notification via setTimeout(0)
+  // which may not run before the response is returned in serverless environments
+  await new Promise((r) => setTimeout(r, 0));
+
   const { session } = data;
 
   // Exchange Supabase session for backend JWT — all server-side, no intermediate page
@@ -70,19 +76,21 @@ export async function GET(request: Request) {
 
     if (data.success && data.data?.token) {
       // Set the backend JWT cookie on the same response
+      // Use 'lax' in production so the cookie survives cross-origin redirects
+      // (OAuth flow goes Google → app, and 'strict' blocks cookies on cross-site navigations)
       response.cookies.set('nabeeh_token', data.data.token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+        sameSite: 'lax',
         maxAge: 24 * 60 * 60,
         path: '/',
       });
 
-      const csrfToken = require('crypto').randomBytes(32).toString('hex');
+      const csrfToken = randomBytes(32).toString('hex');
       response.cookies.set('csrf_token', csrfToken, {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+        sameSite: 'lax',
         maxAge: 24 * 60 * 60,
         path: '/',
       });
@@ -90,11 +98,10 @@ export async function GET(request: Request) {
       return response;
     }
 
-    // Backend exchange failed — still redirect to dashboard (Supabase session is valid)
-    // The dashboard will handle the missing backend token
-    return response;
+    // Backend exchange failed — redirect to login with error
+    return NextResponse.redirect(`${origin}/${locale}/login?error=oauth_backend_failed`);
   } catch {
-    // Backend unreachable — still redirect to dashboard with Supabase session
-    return response;
+    // Backend unreachable — redirect to login with error
+    return NextResponse.redirect(`${origin}/${locale}/login?error=oauth_backend_unreachable`);
   }
 }

@@ -150,7 +150,7 @@ function autoDetectMapping(headers) {
 router.post('/preview', authenticateToken, requirePermission('manage_students'), upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded' });
+      return res.status(400).json({ success: false, message: 'No file uploaded', messageAr: 'لم يتم رفع أي ملف', code: 'VALIDATION_ERROR' });
     }
 
     const { headers, rows, errors: parseErrors } = parseFile(req.file.buffer, req.file.originalname);
@@ -160,7 +160,7 @@ router.post('/preview', authenticateToken, requirePermission('manage_students'),
     }
 
     if (rows.length === 0) {
-      return res.status(400).json({ success: false, message: 'File is empty or has no data rows' });
+      return res.status(400).json({ success: false, message: 'File is empty or has no data rows', messageAr: 'الملف فارغ أو لا يحتوي على صفوف بيانات', code: 'VALIDATION_ERROR' });
     }
 
     const { mapping, unmapped } = autoDetectMapping(headers);
@@ -186,7 +186,7 @@ router.post('/preview', authenticateToken, requirePermission('manage_students'),
     });
   } catch (error) {
     logger.error('Import preview error', { error: error.message, teacherId: req.user.id });
-    res.status(500).json({ success: false, message: 'Failed to parse file' });
+    res.status(500).json({ success: false, message: 'Failed to parse file', messageAr: 'فشل في تحليل الملف', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -261,7 +261,7 @@ router.post('/preview', authenticateToken, requirePermission('manage_students'),
 router.post('/validate', authenticateToken, requirePermission('manage_students'), upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded' });
+      return res.status(400).json({ success: false, message: 'No file uploaded', messageAr: 'لم يتم رفع أي ملف', code: 'VALIDATION_ERROR' });
     }
 
     let fieldMapping;
@@ -281,7 +281,7 @@ router.post('/validate', authenticateToken, requirePermission('manage_students')
     const { headers, rows } = parseFile(req.file.buffer, req.file.originalname);
 
     if (rows.length === 0) {
-      return res.status(400).json({ success: false, message: 'File is empty' });
+      return res.status(400).json({ success: false, message: 'File is empty', messageAr: 'الملف فارغ', code: 'VALIDATION_ERROR' });
     }
 
     if (Object.keys(fieldMapping).length === 0) {
@@ -301,7 +301,7 @@ router.post('/validate', authenticateToken, requirePermission('manage_students')
     });
   } catch (error) {
     logger.error('Import validate error', { error: error.message, teacherId: req.user.id });
-    res.status(500).json({ success: false, message: 'Validation failed' });
+    res.status(500).json({ success: false, message: 'Validation failed', messageAr: 'فشلت التحقق', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -392,11 +392,11 @@ router.post('/execute', authenticateToken, requirePermission('manage_students'),
     const { fieldMapping, rows, groupId, skipErrors = true } = req.body;
 
     if (!fieldMapping || !rows || !Array.isArray(rows) || rows.length === 0) {
-      return res.status(400).json({ success: false, message: 'Invalid import data' });
+      return res.status(400).json({ success: false, message: 'Invalid import data', messageAr: 'بيانات الاستيراد غير صالحة', code: 'VALIDATION_ERROR' });
     }
 
     if (!groupId) {
-      return res.status(400).json({ success: false, message: 'Target group is required' });
+      return res.status(400).json({ success: false, message: 'Target group is required', messageAr: 'المجموعة الهدف مطلوبة', code: 'VALIDATION_ERROR' });
     }
 
     const { data: groupCheck } = await supabase
@@ -406,7 +406,7 @@ router.post('/execute', authenticateToken, requirePermission('manage_students'),
       .single();
 
     if (!groupCheck || groupCheck.offering.teacher_id !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Unauthorized for this group' });
+      return res.status(403).json({ success: false, message: 'Unauthorized for this group', messageAr: 'غير مصرح لهذه المجموعة', code: 'FORBIDDEN' });
     }
 
     const { rows: validatedRows, stats } = validateImportData(
@@ -488,7 +488,7 @@ router.post('/execute', authenticateToken, requirePermission('manage_students'),
     });
   } catch (error) {
     logger.error('Import execute error', { error: error.message, teacherId: req.user.id });
-    res.status(500).json({ success: false, message: 'Import failed' });
+    res.status(500).json({ success: false, message: 'Import failed', messageAr: 'فشل الاستيراد', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -570,7 +570,7 @@ router.post('/paste', authenticateToken, requirePermission('manage_students'), a
     const { text } = req.body;
 
     if (!text || typeof text !== 'string') {
-      return res.status(400).json({ success: false, message: 'No text provided' });
+      return res.status(400).json({ success: false, message: 'No text provided', messageAr: 'لم يتم توفير نص', code: 'VALIDATION_ERROR' });
     }
 
     const result = Papa.parse(text.trim(), {
@@ -580,7 +580,7 @@ router.post('/paste', authenticateToken, requirePermission('manage_students'), a
     });
 
     if (result.data.length === 0) {
-      return res.status(400).json({ success: false, message: 'No data rows found in pasted content' });
+      return res.status(400).json({ success: false, message: 'No data rows found in pasted content', messageAr: 'لم يتم العثور على صفوف بيانات في المحتوى الملصق', code: 'VALIDATION_ERROR' });
     }
 
     const headers = result.meta.fields || [];
@@ -599,7 +599,7 @@ router.post('/paste', authenticateToken, requirePermission('manage_students'), a
     });
   } catch (error) {
     logger.error('Paste parse error', { error: error.message, teacherId: req.user.id });
-    res.status(500).json({ success: false, message: 'Failed to parse pasted data' });
+    res.status(500).json({ success: false, message: 'Failed to parse pasted data', messageAr: 'فشل في تحليل البيانات الملصقة', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -644,7 +644,7 @@ router.post('/demo/seed', authenticateToken, requirePermission('manage_students'
     res.json({ success: true, data: result });
   } catch (error) {
     logger.error('Seed demo data error', { error: error.message, teacherId: req.user.id });
-    res.status(500).json({ success: false, message: 'Failed to seed demo data' });
+    res.status(500).json({ success: false, message: 'Failed to seed demo data', messageAr: 'فشل في إنشاء بيانات التجربة', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -689,7 +689,7 @@ router.post('/demo/remove', authenticateToken, requirePermission('manage_student
     res.json({ success: true, data: result });
   } catch (error) {
     logger.error('Remove demo data error', { error: error.message, teacherId: req.user.id });
-    res.status(500).json({ success: false, message: 'Failed to remove demo data' });
+    res.status(500).json({ success: false, message: 'Failed to remove demo data', messageAr: 'فشل في حذف بيانات التجربة', code: 'INTERNAL_ERROR' });
   }
 });
 

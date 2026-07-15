@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 import type { ReportDraft } from '@/types';
 
 interface CommentEditorProps {

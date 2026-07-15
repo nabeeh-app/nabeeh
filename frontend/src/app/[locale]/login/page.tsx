@@ -247,7 +247,7 @@ export default function LoginPage() {
         {/* Hero Image */}
         <img
           src="/login-hero.jpeg"
-          alt={isRTL ? 'مساعد تعليمي ذكي' : 'Smart teaching assistant'}
+          alt={t('loginHeroAlt')}
           className="absolute inset-0 w-full h-full object-cover object-center"
         />
 
@@ -258,13 +258,10 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col justify-end p-12 text-white">
           <div>
             <h2 className="text-4xl font-bold font-display leading-tight mb-4">
-              {isRTL ? 'حوّل فصولك إلى\nتجربة ذكية' : 'Transform your classroom\ninto a smart experience'}
+              {t('loginHeroTitle')}
             </h2>
             <p className="text-lg text-white/80 font-body max-w-md">
-              {isRTL
-                ? 'إدارة الطلاب والحضور والتواصل مع أولياء الأمور — كل ما تحتاجه في مكان واحد'
-                : 'Manage students, attendance, and parent communication — everything you need in one place'
-              }
+              {t('loginHeroDescription')}
             </p>
           </div>
 

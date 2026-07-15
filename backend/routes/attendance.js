@@ -77,7 +77,9 @@ const getAttendance = async (req, res) => {
     logger.error('Get attendance error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error fetching attendance'
+      message: 'Server error fetching attendance',
+      messageAr: 'خطأ في الخادم أثناء جلب سجلات الحضور',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -93,7 +95,9 @@ const markAttendance = async (req, res) => {
     if (!incomingRecords || !Array.isArray(incomingRecords)) {
       return res.status(400).json({
         success: false,
-        message: 'Attendance records array is required'
+        message: 'Attendance records array is required',
+        messageAr: 'مطلوب مصفوفة سجلات الحضور',
+        code: 'VALIDATION_ERROR'
       });
     }
 
@@ -105,7 +109,9 @@ const markAttendance = async (req, res) => {
     if (attendance_records.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Each attendance record must include student_id and group_id'
+        message: 'Each attendance record must include student_id and group_id',
+        messageAr: 'يجب أن يتضمن كل سجل حضور معرّف الطالب ومعرّف المجموعة',
+        code: 'VALIDATION_ERROR'
       });
     }
 
@@ -147,7 +153,7 @@ const markAttendance = async (req, res) => {
     });
 
     if (activeRecords.length === 0) {
-      return res.status(400).json({ success: false, message: 'No valid enrollments found for these students/groups' });
+      return res.status(400).json({ success: false, message: 'No valid enrollments found for these students/groups', messageAr: 'لم يتم العثور على تسجيلات صالحة لهؤلاء الطلاب/المجموعات', code: 'VALIDATION_ERROR' });
     }
 
     // 2. Upsert Attendance
@@ -161,7 +167,9 @@ const markAttendance = async (req, res) => {
     if (error) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
+        messageAr: 'فشل في تحديث سجل الحضور',
+        code: 'INTERNAL_ERROR'
       });
     }
 
@@ -174,7 +182,9 @@ const markAttendance = async (req, res) => {
     logger.error('Mark attendance error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error marking attendance'
+      message: 'Server error marking attendance',
+      messageAr: 'خطأ في الخادم أثناء تسجيل الحضور',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -215,7 +225,9 @@ const getAttendanceSummary = async (req, res) => {
     logger.error('Get attendance summary error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error fetching attendance summary'
+      message: 'Server error fetching attendance summary',
+      messageAr: 'خطأ في الخادم أثناء جلب ملخص الحضور',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -240,11 +252,11 @@ const updateAttendance = async (req, res) => {
       .single();
 
     if (fetchError || !record) {
-      return res.status(404).json({ success: false, message: 'Attendance record not found' });
+      return res.status(404).json({ success: false, message: 'Attendance record not found', messageAr: 'لم يتم العثور على سجل الحضور', code: 'NOT_FOUND' });
     }
 
     if (record.enrollment.teacher_id !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Unauthorized' });
+      return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
     }
 
     const updates = {};
@@ -252,7 +264,7 @@ const updateAttendance = async (req, res) => {
     if (notes !== undefined) updates.notes = notes;
 
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ success: false, message: 'No fields to update' });
+      return res.status(400).json({ success: false, message: 'No fields to update', messageAr: 'لا توجد حقول للتحديث', code: 'VALIDATION_ERROR' });
     }
 
     const { data: updated, error } = await supabase
@@ -266,7 +278,7 @@ const updateAttendance = async (req, res) => {
     res.json({ success: true, data: updated });
   } catch (error) {
     logger.error('Update attendance error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error updating attendance' });
+    res.status(500).json({ success: false, message: 'Server error updating attendance', messageAr: 'خطأ في الخادم أثناء تحديث سجل الحضور', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -358,7 +370,7 @@ router.post('/lock', authenticateToken, requirePermission('manage_attendance'), 
     const { session_id, student_id } = req.body;
 
     if (!session_id || !student_id) {
-      return res.status(400).json({ success: false, message: 'session_id and student_id are required' });
+      return res.status(400).json({ success: false, message: 'session_id and student_id are required', messageAr: 'معرّف الجلسة ومعرّف الطالب مطلوبان', code: 'VALIDATION_ERROR' });
     }
 
     // Check for existing lock
@@ -379,6 +391,7 @@ router.post('/lock', authenticateToken, requirePermission('manage_attendance'), 
         return res.status(409).json({
           success: false,
           message: `Locked by ${lockOwnerName}`,
+          messageAr: existingLock.locked_by === req.user.id ? 'القفل محتفظ به من قِبَلك' : 'القفل محتفظ به من مستخدم آخر',
           code: 'LOCK_CONFLICT',
           data: { locked_by: existingLock.locked_by, locked_at: existingLock.locked_at }
         });
@@ -405,7 +418,7 @@ router.post('/lock', authenticateToken, requirePermission('manage_attendance'), 
     res.status(201).json({ success: true, data: lock, message: 'Lock acquired' });
   } catch (error) {
     logger.error('Acquire attendance lock error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error acquiring lock' });
+    res.status(500).json({ success: false, message: 'Server error acquiring lock', messageAr: 'خطأ في الخادم أثناء الحصول على القفل', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -471,7 +484,7 @@ router.delete('/lock', authenticateToken, async (req, res) => {
     const { session_id, student_id } = req.body;
 
     if (!session_id || !student_id) {
-      return res.status(400).json({ success: false, message: 'session_id and student_id are required' });
+      return res.status(400).json({ success: false, message: 'session_id and student_id are required', messageAr: 'معرّف الجلسة ومعرّف الطالب مطلوبان', code: 'VALIDATION_ERROR' });
     }
 
     const { error } = await supabase
@@ -486,7 +499,7 @@ router.delete('/lock', authenticateToken, async (req, res) => {
     res.json({ success: true, message: 'Lock released' });
   } catch (error) {
     logger.error('Release attendance lock error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error releasing lock' });
+    res.status(500).json({ success: false, message: 'Server error releasing lock', messageAr: 'خطأ في الخادم أثناء تحرير القفل', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -580,7 +593,7 @@ router.get('/lock/:sessionId/:studentId', authenticateToken, async (req, res) =>
     res.json({ success: true, data: { locked: true, ...lock } });
   } catch (error) {
     logger.error('Check attendance lock error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error checking lock' });
+    res.status(500).json({ success: false, message: 'Server error checking lock', messageAr: 'خطأ في الخادم أثناء التحقق من القفل', code: 'INTERNAL_ERROR' });
   }
 });
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed';
 

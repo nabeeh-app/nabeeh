@@ -38,7 +38,7 @@ const getParents = async (req, res) => {
 
     if (student_id) {
       if (!studentIds.has(student_id)) {
-        return res.status(403).json({ success: false, message: 'Unauthorized access to student' });
+        return res.status(403).json({ success: false, message: 'Unauthorized access to student', messageAr: 'غير مصرح بالوصول إلى هذا الطالب', code: 'FORBIDDEN' });
       }
       parentQuery = parentQuery.eq('student_id', student_id);
     }
@@ -64,7 +64,9 @@ const getParents = async (req, res) => {
     logger.error('Get parents error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error fetching parents'
+      message: 'Server error fetching parents',
+      messageAr: 'خطأ في الخادم أثناء جلب أولياء الأمور',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -84,7 +86,7 @@ const getParent = async (req, res) => {
       .single();
 
     if (error || !parent) {
-      return res.status(404).json({ success: false, message: 'Parent not found' });
+      return res.status(404).json({ success: false, message: 'Parent not found', messageAr: 'لم يتم العثور على ولي الأمر', code: 'NOT_FOUND' });
     }
 
     // Verify ownership via enrollment
@@ -96,13 +98,13 @@ const getParent = async (req, res) => {
       .limit(1);
 
     if (!enrollment || enrollment.length === 0) {
-      return res.status(403).json({ success: false, message: 'Unauthorized' });
+      return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
     }
 
     res.status(200).json({ success: true, data: parent });
   } catch (error) {
     logger.error('Get parent error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching parent' });
+    res.status(500).json({ success: false, message: 'Server error fetching parent', messageAr: 'خطأ في الخادم أثناء جلب ولي الأمر', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -125,7 +127,9 @@ const createParent = async (req, res) => {
     if (!student_id || !name || !phone || !relationship) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: student_id, name, phone, relationship'
+        message: 'Missing required fields: student_id, name, phone, relationship',
+        messageAr: 'حقول مطلوبة مفقودة: معرّف الطالب، الاسم، الهاتف، العلاقة',
+        code: 'VALIDATION_ERROR'
       });
     }
 
@@ -140,7 +144,9 @@ const createParent = async (req, res) => {
     if (enrollError || !enrollments || enrollments.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Student not found or not enrolled in your classes'
+        message: 'Student not found or not enrolled in your classes',
+        messageAr: 'لم يتم العثور على الطالب أو غير مسجّل في فصولك',
+        code: 'NOT_FOUND'
       });
     }
 
@@ -164,7 +170,9 @@ const createParent = async (req, res) => {
     if (error) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
+        messageAr: 'فشل في إنشاء ولي الأمر',
+        code: 'INTERNAL_ERROR'
       });
     }
 
@@ -176,7 +184,9 @@ const createParent = async (req, res) => {
     logger.error('Create parent error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error creating parent'
+      message: 'Server error creating parent',
+      messageAr: 'خطأ في الخادم أثناء إنشاء ولي الأمر',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -207,7 +217,7 @@ const updateParent = async (req, res) => {
       .single();
 
     if (!accessCheck) {
-      return res.status(404).json({ success: false, message: 'Parent not found' });
+      return res.status(404).json({ success: false, message: 'Parent not found', messageAr: 'لم يتم العثور على ولي الأمر', code: 'NOT_FOUND' });
     }
 
     const { data: enrollment } = await supabase
@@ -218,7 +228,7 @@ const updateParent = async (req, res) => {
       .limit(1);
 
     if (!enrollment || enrollment.length === 0) {
-      return res.status(403).json({ success: false, message: 'Unauthorized' });
+      return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
     }
 
     const { data: parent, error } = await supabase
@@ -234,7 +244,9 @@ const updateParent = async (req, res) => {
     if (error) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
+        messageAr: 'فشل في تحديث ولي الأمر',
+        code: 'INTERNAL_ERROR'
       });
     }
 
@@ -246,7 +258,9 @@ const updateParent = async (req, res) => {
     logger.error('Update parent error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error updating parent'
+      message: 'Server error updating parent',
+      messageAr: 'خطأ في الخادم أثناء تحديث ولي الأمر',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -266,7 +280,9 @@ const deleteParent = async (req, res) => {
     if (!parent) {
       return res.status(404).json({
         success: false,
-        message: 'Parent not found'
+        message: 'Parent not found',
+        messageAr: 'لم يتم العثور على ولي الأمر',
+        code: 'NOT_FOUND'
       });
     }
 
@@ -281,7 +297,9 @@ const deleteParent = async (req, res) => {
     if (!enrollment || enrollment.length === 0) {
       return res.status(403).json({
         success: false,
-        message: 'Unauthorized'
+        message: 'Unauthorized',
+        messageAr: 'غير مصرح',
+        code: 'FORBIDDEN'
       });
     }
 
@@ -293,7 +311,9 @@ const deleteParent = async (req, res) => {
     if (error) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
+        messageAr: 'فشل في حذف ولي الأمر',
+        code: 'INTERNAL_ERROR'
       });
     }
 
@@ -305,7 +325,9 @@ const deleteParent = async (req, res) => {
     logger.error('Delete parent error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error deleting parent'
+      message: 'Server error deleting parent',
+      messageAr: 'خطأ في الخادم أثناء حذف ولي الأمر',
+      code: 'INTERNAL_ERROR'
     });
   }
 };

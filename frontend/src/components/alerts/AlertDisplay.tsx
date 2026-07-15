@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 import { timeAgo } from '@/lib/utils';
 import { SEVERITY_CONFIG } from '@/lib/severityConfig';
 import type { Alert } from '@/types';

@@ -156,7 +156,7 @@ export default function RegisterPage({ params: _params }: Props) {
         <div className="text-center">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold text-primary font-display">
-              {isRTL ? 'نبيه - Nabeeh' : 'Nabeeh - نبيه'}
+              {t(isRTL ? 'brandNameAr' : 'brandNameEn')}
             </h1>
             <div className="flex gap-2">
               <Link 
@@ -221,7 +221,7 @@ export default function RegisterPage({ params: _params }: Props) {
                     id="name"
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    placeholder={isRTL ? 'أحمد محمد حسن' : 'John Smith'}
+                    placeholder={t(isRTL ? 'namePlaceholderAr' : 'namePlaceholderEn')}
                     className={cn(
                       isRTL && 'text-right',
                       errors.name && 'border-destructive'
@@ -240,7 +240,7 @@ export default function RegisterPage({ params: _params }: Props) {
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    placeholder={isRTL ? 'ahmed@example.com' : 'john@example.com'}
+                    placeholder={t('emailPlaceholderRegister')}
                     className={errors.email ? 'border-destructive' : ''}
                   />
                   {errors.email && <p className="text-base text-destructive">{errors.email}</p>}
@@ -354,7 +354,7 @@ export default function RegisterPage({ params: _params }: Props) {
                       id="business_name"
                       value={formData.business_name}
                       onChange={(e) => handleInputChange('business_name', e.target.value)}
-                      placeholder={isRTL ? 'أكاديمية الرياضيات' : 'Math Academy'}
+                      placeholder={t(isRTL ? 'institutionPlaceholderAr' : 'institutionPlaceholderEn')}
                       className={isRTL ? 'text-right' : ''}
                     />
                   </div>
@@ -368,7 +368,7 @@ export default function RegisterPage({ params: _params }: Props) {
                       id="subjects"
                       value={formData.subjects}
                       onChange={(e) => handleInputChange('subjects', e.target.value)}
-                      placeholder={isRTL ? 'الرياضيات، الفيزياء، الكيمياء' : 'Mathematics, Physics, Chemistry'}
+                      placeholder={t(isRTL ? 'subjectsPlaceholderAr' : 'subjectsPlaceholderEn')}
                       className={isRTL ? 'text-right' : ''}
                     />
                     <p className="text-xs text-ink/60 font-mono uppercase tracking-wider">

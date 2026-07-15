@@ -131,7 +131,9 @@ const getGrades = async (req, res) => {
     logger.error('Get grades error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error fetching grades'
+      message: 'Server error fetching grades',
+      messageAr: 'خطأ في الخادم أثناء جلب الدرجات',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -156,14 +158,16 @@ const createGrade = async (req, res) => {
     if (!student_id || !subject || !assessment_name || score === undefined || !max_score) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields'
+        message: 'Missing required fields',
+        messageAr: 'حقول مطلوبة مفقودة',
+        code: 'VALIDATION_ERROR'
       });
     }
 
     // 1. Resolve Enrollment & Offering
     const resolved = await resolveEnrollmentAndOffering(student_id, subject, req.user.id);
     if (!resolved) {
-      return res.status(404).json({ success: false, message: 'Student enrollment not found for this subject' });
+      return res.status(404).json({ success: false, message: 'Student enrollment not found for this subject', messageAr: 'لم يتم العثور على تسجيل الطالب في هذاالمادة', code: 'NOT_FOUND' });
     }
     const { enrollment_id, offering_id } = resolved;
 
@@ -218,7 +222,9 @@ const createGrade = async (req, res) => {
     logger.error('Create grade error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error creating grade'
+      message: 'Server error creating grade',
+      messageAr: 'خطأ في الخادم أثناء إنشاء الدرجة',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -233,7 +239,9 @@ const createBulkGrades = async (req, res) => {
     if (!grades || !Array.isArray(grades)) {
       return res.status(400).json({
         success: false,
-        message: 'Grades array is required'
+        message: 'Grades array is required',
+        messageAr: 'مطلوب مصفوفة الدرجات',
+        code: 'VALIDATION_ERROR'
       });
     }
 
@@ -399,7 +407,9 @@ const createBulkGrades = async (req, res) => {
     logger.error('Bulk create grades error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error creating bulk grades'
+      message: 'Server error creating bulk grades',
+      messageAr: 'خطأ في الخادم أثناء إنشاء الدرجات بالجملة',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -450,7 +460,7 @@ const updateGrade = async (req, res) => {
       .single();
 
     if (fetchError || !currentGrade) {
-      return res.status(404).json({ success: false, message: 'Grade not found or unauthorized' });
+      return res.status(404).json({ success: false, message: 'Grade not found or unauthorized', messageAr: 'لم يتم العثور على الدرجة أو غير مصرح', code: 'NOT_FOUND' });
     }
 
     // 2. Update Assessment (if needed) - Affects all students!
@@ -510,7 +520,9 @@ const updateGrade = async (req, res) => {
     logger.error('Update grade error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error updating grade'
+      message: 'Server error updating grade',
+      messageAr: 'خطأ في الخادم أثناء تحديث الدرجة',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -529,7 +541,7 @@ const deleteGrade = async (req, res) => {
       .single();
 
     if (!grade) {
-      return res.status(404).json({ success: false, message: 'Grade not found or unauthorized' });
+      return res.status(404).json({ success: false, message: 'Grade not found or unauthorized', messageAr: 'لم يتم العثور على الدرجة أو غير مصرح', code: 'NOT_FOUND' });
     }
 
     const { error } = await supabase
@@ -547,7 +559,9 @@ const deleteGrade = async (req, res) => {
     logger.error('Delete grade error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error deleting grade'
+      message: 'Server error deleting grade',
+      messageAr: 'خطأ في الخادم أثناء حذف الدرجة',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -651,7 +665,9 @@ const getGradeStats = async (req, res) => {
     logger.error('Get grade stats error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error fetching grade statistics'
+      message: 'Server error fetching grade statistics',
+      messageAr: 'خطأ في الخادم أثناء جلب إحصائيات الدرجات',
+      code: 'INTERNAL_ERROR'
     });
   }
 };

@@ -15,7 +15,7 @@ function setAuthCookie(res, token) {
   res.cookie('nabeeh_token', token, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? 'strict' : 'lax',
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000, // 24 hours, matches JWT_EXPIRES_IN default
     path: '/'
   });
@@ -23,7 +23,7 @@ function setAuthCookie(res, token) {
   res.cookie('csrf_token', csrfToken, {
     httpOnly: false,
     secure: isProd,
-    sameSite: isProd ? 'strict' : 'lax',
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000,
     path: '/'
   });

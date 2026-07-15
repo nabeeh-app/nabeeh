@@ -38,7 +38,7 @@ const generateComment = async (req, res) => {
 
     const { data: student } = await supabaseAdmin
       .from('students').select('id, name').eq('id', student_id).single();
-    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
 
     const { data: enrollment } = await supabaseAdmin
       .from('enrollments')
@@ -48,7 +48,7 @@ const generateComment = async (req, res) => {
       .limit(1)
       .maybeSingle();
     if (!enrollment) {
-      return res.status(404).json({ success: false, message: 'Student not found' });
+      return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
     }
 
     const { data: teacher } = await supabaseAdmin
@@ -78,7 +78,7 @@ const generateComment = async (req, res) => {
         student_id,
         group_id: group_id || null,
         draft_text: draftText,
-        data_sources: { grades: gradesResult?.recentGrades || [], attendance },
+        data_sources: { grades: gradesResult?.recentGrades || [], attendance: attendanceRecords },
         status: 'pending',
       }])
       .select().single();
@@ -94,7 +94,7 @@ const generateComment = async (req, res) => {
     res.status(201).json({ success: true, data: draft });
   } catch (error) {
     logger.error('Generate comment error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error generating comment' });
+    res.status(500).json({ success: false, message: 'Server error generating comment', messageAr: 'خطأ في الخادم أثناء إنشاء التعليق', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -129,7 +129,7 @@ const getDrafts = async (req, res) => {
     });
   } catch (error) {
     logger.error('Get drafts error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching drafts' });
+    res.status(500).json({ success: false, message: 'Server error fetching drafts', messageAr: 'خطأ في الخادم أثناء جلب المسودات', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -150,12 +150,12 @@ const updateDraft = async (req, res) => {
       .select().single();
 
     if (error) throw error;
-    if (!data) return res.status(404).json({ success: false, message: 'Draft not found' });
+    if (!data) return res.status(404).json({ success: false, message: 'Draft not found', messageAr: 'لم يتم العثور على المسودة', code: 'NOT_FOUND' });
 
     res.json({ success: true, data });
   } catch (error) {
     logger.error('Update draft error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error updating draft' });
+    res.status(500).json({ success: false, message: 'Server error updating draft', messageAr: 'خطأ في الخادم أثناء تحديث المسودة', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -169,7 +169,7 @@ const approveDraft = async (req, res) => {
       .select('*, students(name, id)')
       .eq('id', id).eq('teacher_id', teacherId).single();
 
-    if (!draft) return res.status(404).json({ success: false, message: 'Draft not found' });
+    if (!draft) return res.status(404).json({ success: false, message: 'Draft not found', messageAr: 'لم يتم العثور على المسودة', code: 'NOT_FOUND' });
 
     const finalText = draft.edited_text || draft.draft_text;
 
@@ -224,7 +224,7 @@ const approveDraft = async (req, res) => {
     res.json({ success: true, message: 'Report approved and sent' });
   } catch (error) {
     logger.error('Approve draft error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error approving draft' });
+    res.status(500).json({ success: false, message: 'Server error approving draft', messageAr: 'خطأ في الخادم أثناء الموافقة على المسودة', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -240,7 +240,7 @@ const rejectDraft = async (req, res) => {
     res.json({ success: true, message: 'Draft rejected' });
   } catch (error) {
     logger.error('Reject draft error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error rejecting draft' });
+    res.status(500).json({ success: false, message: 'Server error rejecting draft', messageAr: 'خطأ في الخادم أثناء رفض المسودة', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -256,14 +256,14 @@ const bulkGenerate = async (req, res) => {
       .eq('offerings.teacher_id', teacherId)
       .maybeSingle();
     if (!group) {
-      return res.status(404).json({ success: false, message: 'Group not found' });
+      return res.status(404).json({ success: false, message: 'Group not found', messageAr: 'لم يتم العثور على المجموعة', code: 'NOT_FOUND' });
     }
 
     const jobId = createJob('bulk-report', { teacherId, group_id });
     res.status(202).json({ success: true, data: { job_id: jobId, status: 'pending' } });
   } catch (error) {
     logger.error('Bulk generate error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error in bulk generation' });
+    res.status(500).json({ success: false, message: 'Server error in bulk generation', messageAr: 'خطأ في الخادم أثناء الإنشاء الجماعي', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -281,7 +281,7 @@ const getLatestDigest = async (req, res) => {
     res.json({ success: true, data: data || null });
   } catch (error) {
     logger.error('Get latest digest error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching digest' });
+    res.status(500).json({ success: false, message: 'Server error fetching digest', messageAr: 'خطأ في الخادم أثناء جلب الملخص', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -296,11 +296,11 @@ const getDigestByWeek = async (req, res) => {
       .eq('week_start', weekStart)
       .single();
 
-    if (!data) return res.status(404).json({ success: false, message: 'Digest not found for this week' });
+    if (!data) return res.status(404).json({ success: false, message: 'Digest not found for this week', messageAr: 'لم يتم العثور على الملخص لهذا الأسبوع', code: 'NOT_FOUND' });
     res.json({ success: true, data });
   } catch (error) {
     logger.error('Get digest by week error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching digest' });
+    res.status(500).json({ success: false, message: 'Server error fetching digest', messageAr: 'خطأ في الخادم أثناء جلب الملخص', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -812,7 +812,7 @@ router.get('/weekly-digest/:weekStart', authenticateToken, getDigestByWeek);
  */
 router.get('/jobs/:jobId', authenticateToken, (req, res) => {
   const job = getJob(req.params.jobId);
-  if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
+  if (!job) return res.status(404).json({ success: false, message: 'Job not found', messageAr: 'لم يتم العثور على المهمة', code: 'NOT_FOUND' });
   res.json({ success: true, data: job });
 });
 

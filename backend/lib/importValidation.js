@@ -1,5 +1,3 @@
-const logger = require('./logger');
-
 const HEADER_MAPPINGS = {
   name: ['name', 'اسم', 'student name', 'اسم الطالب', 'الاسم', 'student_name', 'full name', 'الاسم الكامل'],
   phone: ['phone', 'هاتف', 'mobile', 'جوال', ' telephone', 'رقم الهاتف', 'student_phone'],

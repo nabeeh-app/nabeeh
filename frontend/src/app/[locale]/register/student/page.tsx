@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle, Loader2 } from 'lucide-react';
-import apiClient from '@/lib/api';
+import apiClient from '@/lib/client';
 
 interface FormSchema {
   groupName: string;

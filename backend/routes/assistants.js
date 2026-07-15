@@ -124,6 +124,7 @@ const inviteAssistant = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: `Your ${tier} plan does not support assistants. Please upgrade.`,
+        messageAr: 'خطتك الحالية لا تدعم المساعدين. يرجى الترقية.',
         code: 'TIER_LIMIT'
       });
     }
@@ -132,13 +133,14 @@ const inviteAssistant = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: `You have reached the maximum of ${limit} pending invites for your ${tier} plan.`,
+        messageAr: `لقد وصلت إلى الحد الأقصى من ${limit} دعوات معلقة لخطتك ${tier}.`,
         code: 'INVITE_LIMIT'
       });
     }
 
     // Check duplicate invite
     if (existingInvite) {
-      return res.status(409).json({ success: false, message: 'A pending invite already exists for this email.', code: 'INVITE_EXISTS' });
+      return res.status(409).json({ success: false, message: 'A pending invite already exists for this email.', messageAr: 'توجد دعوة معلقة بالفعل لهذا البريد الإلكتروني.', code: 'INVITE_EXISTS' });
     }
 
     // Check existing user → already assistant?
@@ -152,7 +154,7 @@ const inviteAssistant = async (req, res) => {
         .maybeSingle();
 
       if (existingLink) {
-        return res.status(409).json({ success: false, message: 'This user is already your assistant.', code: 'ALREADY_ASSISTANT' });
+        return res.status(409).json({ success: false, message: 'This user is already your assistant.', messageAr: 'هذا المستخدم مساعدك بالفعل.', code: 'ALREADY_ASSISTANT' });
       }
     }
 
@@ -238,7 +240,7 @@ const inviteAssistant = async (req, res) => {
     });
   } catch (error) {
     logger.error('Invite assistant error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error sending invitation' });
+    res.status(500).json({ success: false, message: 'Server error sending invitation', messageAr: 'خطأ في الخادم أثناء إرسال الدعوة', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -259,7 +261,7 @@ const listInvites = async (req, res) => {
     res.json({ success: true, data: invites });
   } catch (error) {
     logger.error('List invites error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching invites' });
+    res.status(500).json({ success: false, message: 'Server error fetching invites', messageAr: 'خطأ في الخادم أثناء جلب الدعوات', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -278,7 +280,7 @@ const acceptInvite = async (req, res) => {
       .maybeSingle();
 
     if (inviteError || !invite) {
-      return res.status(404).json({ success: false, message: 'Invalid or expired invitation.', code: 'INVALID_INVITE' });
+      return res.status(404).json({ success: false, message: 'Invalid or expired invitation.', messageAr: 'دعوة غير صالحة أو منتهية الصلاحية.', code: 'INVALID_INVITE' });
     }
 
     // Check expiry
@@ -288,7 +290,7 @@ const acceptInvite = async (req, res) => {
         .update({ status: 'expired' })
         .eq('id', invite.id);
 
-      return res.status(410).json({ success: false, message: 'Invitation has expired.', code: 'INVITE_EXPIRED' });
+      return res.status(410).json({ success: false, message: 'Invitation has expired.', messageAr: 'انتهت صلاحية الدعوة.', code: 'INVITE_EXPIRED' });
     }
 
     // Check if already an active assistant for this teacher
@@ -301,7 +303,7 @@ const acceptInvite = async (req, res) => {
       .maybeSingle();
 
     if (existingLink) {
-      return res.status(409).json({ success: false, message: 'You are already an assistant for this teacher.', code: 'ALREADY_ASSISTANT' });
+      return res.status(409).json({ success: false, message: 'You are already an assistant for this teacher.', messageAr: 'أنت مساعد لهذا المعلم بالفعل.', code: 'ALREADY_ASSISTANT' });
     }
 
     // Create the assistant link
@@ -342,7 +344,7 @@ const acceptInvite = async (req, res) => {
     });
   } catch (error) {
     logger.error('Accept invite error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error accepting invitation' });
+    res.status(500).json({ success: false, message: 'Server error accepting invitation', messageAr: 'خطأ في الخادم أثناء قبول الدعوة', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -382,7 +384,7 @@ const listAssistants = async (req, res) => {
     res.json({ success: true, data: result });
   } catch (error) {
     logger.error('List assistants error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching assistants' });
+    res.status(500).json({ success: false, message: 'Server error fetching assistants', messageAr: 'خطأ في الخادم أثناء جلب المساعدين', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -410,7 +412,7 @@ const updatePermissions = async (req, res) => {
       .maybeSingle();
 
     if (fetchError || !link) {
-      return res.status(404).json({ success: false, message: 'Assistant not found' });
+      return res.status(404).json({ success: false, message: 'Assistant not found', messageAr: 'لم يتم العثور على المساعد', code: 'NOT_FOUND' });
     }
 
     const { error: updateError } = await supabaseAdmin
@@ -434,7 +436,7 @@ const updatePermissions = async (req, res) => {
     res.json({ success: true, data: { id, permissions: filteredPermissions }, message: 'Permissions updated' });
   } catch (error) {
     logger.error('Update permissions error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error updating permissions' });
+    res.status(500).json({ success: false, message: 'Server error updating permissions', messageAr: 'خطأ في الخادم أثناء تحديث الصلاحيات', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -453,7 +455,7 @@ const updateStatus = async (req, res) => {
       .maybeSingle();
 
     if (fetchError || !link) {
-      return res.status(404).json({ success: false, message: 'Assistant not found' });
+      return res.status(404).json({ success: false, message: 'Assistant not found', messageAr: 'لم يتم العثور على المساعد', code: 'NOT_FOUND' });
     }
 
     const { error: updateError } = await supabaseAdmin
@@ -479,7 +481,7 @@ const updateStatus = async (req, res) => {
     res.json({ success: true, data: { id, status }, message: `Assistant ${status}` });
   } catch (error) {
     logger.error('Update status error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error updating status' });
+    res.status(500).json({ success: false, message: 'Server error updating status', messageAr: 'خطأ في الخادم أثناء تحديث الحالة', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -497,7 +499,7 @@ const removeAssistant = async (req, res) => {
       .maybeSingle();
 
     if (fetchError || !link) {
-      return res.status(404).json({ success: false, message: 'Assistant not found' });
+      return res.status(404).json({ success: false, message: 'Assistant not found', messageAr: 'لم يتم العثور على المساعد', code: 'NOT_FOUND' });
     }
 
     // Soft delete — set status to 'removed'
@@ -521,7 +523,7 @@ const removeAssistant = async (req, res) => {
     res.json({ success: true, message: 'Assistant removed' });
   } catch (error) {
     logger.error('Remove assistant error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error removing assistant' });
+    res.status(500).json({ success: false, message: 'Server error removing assistant', messageAr: 'خطأ في الخادم أثناء إزالة المساعد', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -530,7 +532,7 @@ const leaveTeacher = async (req, res) => {
   try {
     const parsed = leaveTeacherSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ success: false, message: parsed.error.issues[0].message });
+      return res.status(400).json({ success: false, message: parsed.error.issues[0].message, messageAr: 'إدخال غير صالح', code: 'VALIDATION_ERROR' });
     }
     const { teacher_id } = parsed.data;
 
@@ -545,11 +547,11 @@ const leaveTeacher = async (req, res) => {
       .maybeSingle();
 
     if (fetchError || !link) {
-      return res.status(404).json({ success: false, message: 'Active assistant link not found' });
+      return res.status(404).json({ success: false, message: 'Active assistant link not found', messageAr: 'لم يتم العثور على رابط المساعد النشط', code: 'NOT_FOUND' });
     }
 
     if (req.user.id !== link.assistant_id) {
-      return res.status(403).json({ success: false, message: 'Not authorized' });
+      return res.status(403).json({ success: false, message: 'Not authorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
     }
 
     const { error: updateError } = await supabaseAdmin
@@ -573,7 +575,7 @@ const leaveTeacher = async (req, res) => {
     res.json({ success: true, message: 'You have left this teacher\'s team' });
   } catch (error) {
     logger.error('Leave teacher error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error leaving teacher' });
+    res.status(500).json({ success: false, message: 'Server error leaving teacher', messageAr: 'خطأ في الخادم أثناء مغادرة المعلم', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -589,15 +591,15 @@ const getInviteByToken = async (req, res) => {
       .single();
 
     if (error || !invite) {
-      return res.status(404).json({ success: false, message: 'Invalid or expired invitation.' });
+      return res.status(404).json({ success: false, message: 'Invalid or expired invitation.', messageAr: 'دعوة غير صالحة أو منتهية الصلاحية.', code: 'INVALID_INVITE' });
     }
 
     if (invite.status !== 'pending') {
-      return res.status(410).json({ success: false, message: 'This invitation has already been used.', code: 'INVITE_USED' });
+      return res.status(410).json({ success: false, message: 'This invitation has already been used.', messageAr: 'تم استخدام هذه الدعوة بالفعل.', code: 'INVITE_USED' });
     }
 
     if (new Date(invite.expires_at) < new Date()) {
-      return res.status(410).json({ success: false, message: 'This invitation has expired.', code: 'INVITE_EXPIRED' });
+      return res.status(410).json({ success: false, message: 'This invitation has expired.', messageAr: 'انتهت صلاحية هذه الدعوة.', code: 'INVITE_EXPIRED' });
     }
 
     // Get teacher name
@@ -618,7 +620,7 @@ const getInviteByToken = async (req, res) => {
     });
   } catch (error) {
     logger.error('Get invite by token error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error', messageAr: 'خطأ في الخادم', code: 'INTERNAL_ERROR' });
   }
 };
 

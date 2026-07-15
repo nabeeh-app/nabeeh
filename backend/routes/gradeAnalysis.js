@@ -48,7 +48,7 @@ const getGroupComparison = async (req, res) => {
       .eq('teacher_id', teacherId)
       .single();
 
-    if (!offering) return res.status(404).json({ success: false, message: 'Offering not found' });
+    if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
 
     // Get groups with their enrollments and grades
     const { data: groups } = await supabaseAdmin
@@ -93,7 +93,7 @@ const getGroupComparison = async (req, res) => {
     res.json({ success: true, data: result });
   } catch (error) {
     logger.error('Get group comparison error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching group comparison' });
+    res.status(500).json({ success: false, message: 'Server error fetching group comparison', messageAr: 'خطأ في الخادم أثناء جلب مقارنة المجموعات', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -111,7 +111,7 @@ const getAtRisk = async (req, res) => {
       .eq('teacher_id', teacherId)
       .single();
 
-    if (!offering) return res.status(404).json({ success: false, message: 'Offering not found' });
+    if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
 
     // Get all enrollments in this offering with grades and attendance
     const { data: enrollments } = await supabaseAdmin
@@ -178,7 +178,7 @@ const getAtRisk = async (req, res) => {
     res.json({ success: true, data: atRisk });
   } catch (error) {
     logger.error('Get at-risk students error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching at-risk students' });
+    res.status(500).json({ success: false, message: 'Server error fetching at-risk students', messageAr: 'خطأ في الخادم أثناء جلب الطلاب المعرضين للخطر', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -196,7 +196,7 @@ const getDistribution = async (req, res) => {
       .single();
 
     if (!assessment || assessment.offering?.teacher_id !== teacherId) {
-      return res.status(404).json({ success: false, message: 'Assessment not found' });
+      return res.status(404).json({ success: false, message: 'Assessment not found', messageAr: 'لم يتم العثور على التقييم', code: 'NOT_FOUND' });
     }
 
     // Get all grades for this assessment
@@ -255,7 +255,7 @@ const getDistribution = async (req, res) => {
     });
   } catch (error) {
     logger.error('Get grade distribution error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching grade distribution' });
+    res.status(500).json({ success: false, message: 'Server error fetching grade distribution', messageAr: 'خطأ في الخادم أثناء جلب توزيع الدرجات', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -293,7 +293,7 @@ const getTrends = async (req, res) => {
     res.json({ success: true, data: { student_id: studentId, trends } });
   } catch (error) {
     logger.error('Get grade trends error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching grade trends' });
+    res.status(500).json({ success: false, message: 'Server error fetching grade trends', messageAr: 'خطأ في الخادم أثناء جلب اتجاهات الدرجات', code: 'INTERNAL_ERROR' });
   }
 };
 
@@ -311,7 +311,7 @@ const getOverview = async (req, res) => {
       .eq('teacher_id', teacherId)
       .single();
 
-    if (!offering) return res.status(404).json({ success: false, message: 'Offering not found' });
+    if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
 
     // Get all grades in this offering
     const { data: grades } = await supabaseAdmin
@@ -364,7 +364,7 @@ const getOverview = async (req, res) => {
     });
   } catch (error) {
     logger.error('Get grade overview error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching grade overview' });
+    res.status(500).json({ success: false, message: 'Server error fetching grade overview', messageAr: 'خطأ في الخادم أثناء جلب نظرة عامة على الدرجات', code: 'INTERNAL_ERROR' });
   }
 };
 

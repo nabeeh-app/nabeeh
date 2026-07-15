@@ -71,10 +71,11 @@ async function evaluateAllAlerts() {
   }
 }
 
-// ── Anomaly detection: daily at 6 AM Cairo (4:00 UTC) ──────────
-async function detectAllAnomalies() {
+// ── Grade anomaly detection: daily at 6 AM Cairo (4:00 UTC) ────
+// Attendance trend anomalies are handled by evaluateAllAlerts via alertEvaluator.
+async function detectGradeAnomalies() {
   try {
-    logger.info('Cron: running anomaly detection');
+    logger.info('Cron: running grade anomaly detection');
 
     const { data: teachers } = await supabaseAdmin
       .from('teachers')
@@ -85,17 +86,15 @@ async function detectAllAnomalies() {
 
     for (const teacher of teachers) {
       try {
-        const attendanceAnomalies = await anomalyDetector.detectAttendanceAnomalies(teacher.id);
         const gradeAnomalies = await anomalyDetector.detectGradeAnomalies(teacher.id);
-        const allAnomalies = [...attendanceAnomalies, ...gradeAnomalies];
 
-        for (const anomaly of allAnomalies) {
+        for (const anomaly of gradeAnomalies) {
           if (anomaly.severity === 'critical') {
             await supabaseAdmin.from('alerts').insert([{
               teacher_id: teacher.id,
               student_id: anomaly.student_id,
               alert_type: 'trend_anomaly',
-              title: `Anomaly: ${anomaly.student_name}`,
+              title: `Grade Anomaly: ${anomaly.student_name}`,
               message: anomaly.detail,
               severity: 'critical',
               metadata: { pattern: anomaly.pattern, source: 'anomaly_detector' },
@@ -103,13 +102,13 @@ async function detectAllAnomalies() {
           }
         }
       } catch (err) {
-        logger.error('Cron: anomaly detection failed for teacher', { teacherId: teacher.id, error: err.message });
+        logger.error('Cron: grade anomaly detection failed for teacher', { teacherId: teacher.id, error: err.message });
       }
     }
 
-    logger.info('Cron: anomaly detection completed', { teacherCount: teachers.length });
+    logger.info('Cron: grade anomaly detection completed', { teacherCount: teachers.length });
   } catch (error) {
-    logger.error('Cron: detectAllAnomalies error', { error: error.message });
+    logger.error('Cron: detectGradeAnomalies error', { error: error.message });
   }
 }
 
@@ -121,8 +120,8 @@ function startCronJobs() {
   // Alert evaluation: every 30 minutes
   tasks.push(cron.schedule('*/30 * * * *', evaluateAllAlerts));
 
-  // Anomaly detection: daily at 6 AM Cairo (4:00 UTC)
-  tasks.push(cron.schedule('0 4 * * *', detectAllAnomalies));
+  // Grade anomaly detection: daily at 6 AM Cairo (4:00 UTC)
+  tasks.push(cron.schedule('0 4 * * *', detectGradeAnomalies));
 
   logger.info('Cron jobs started', { count: tasks.length });
 }

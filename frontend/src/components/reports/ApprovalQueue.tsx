@@ -6,7 +6,7 @@ import { ClipboardCheck, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/client';
 import type { ReportDraft } from '@/types';
 
 const STATUS_VARIANT = {

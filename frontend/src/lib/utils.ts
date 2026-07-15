@@ -7,13 +7,20 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function timeAgo(dateStr: string, locale: string = 'ar'): string {
+export function timeAgo(dateStr: string, locale: string = 'ar', t?: (key: string, params?: Record<string, unknown>) => string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   const diffMs = now - then;
   const mins = Math.floor(diffMs / 60000);
   const hours = Math.floor(diffMs / 3600000);
   const days = Math.floor(diffMs / 86400000);
+
+  if (t) {
+    if (mins < 1) return t('timeAgo.justNow');
+    if (mins < 60) return t('timeAgo.minutesAgo', { n: mins });
+    if (hours < 24) return t('timeAgo.hoursAgo', { n: hours });
+    return t('timeAgo.daysAgo', { n: days });
+  }
 
   if (locale === 'ar') {
     if (mins < 1) return 'الآن';
@@ -28,7 +35,7 @@ export function timeAgo(dateStr: string, locale: string = 'ar'): string {
 }
 
 // Unified status badge utility
-export const getStatusBadge = (status: string, locale: 'en' | 'ar' = 'ar') => {
+export const getStatusBadge = (status: string, locale: 'en' | 'ar' = 'ar', t?: (key: string) => string) => {
   const statusMap: Record<string, { variant: 'default' | 'destructive' | 'secondary' | 'outline', label: string, labelAr: string }> = {
     // Common statuses
     active: { variant: 'default', label: 'Active', labelAr: 'نشط' },
@@ -65,9 +72,13 @@ export const getStatusBadge = (status: string, locale: 'en' | 'ar' = 'ar') => {
 
   const config = statusMap[status.toLowerCase()] || { variant: 'outline' as const, label: status, labelAr: status };
 
+  const label = t
+    ? (t(`statuses.${status.toLowerCase()}`) || config.label)
+    : (locale === 'ar' ? config.labelAr : config.label);
+
   return {
     variant: config.variant,
-    label: locale === 'ar' ? config.labelAr : config.label
+    label
   };
 };
 

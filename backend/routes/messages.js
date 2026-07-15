@@ -27,7 +27,9 @@ const getConversations = async (req, res) => {
     if (error) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
+        messageAr: 'خطأ في استعلام قاعدة البيانات',
+        code: 'INTERNAL_ERROR'
       });
     }
 
@@ -39,7 +41,9 @@ const getConversations = async (req, res) => {
     logger.error('Get conversations error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error fetching conversations'
+      message: 'Server error fetching conversations',
+      messageAr: 'خطأ في الخادم أثناء جلب المحادثات',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -63,7 +67,9 @@ const getConversationMessages = async (req, res) => {
     if (!conversation) {
       return res.status(404).json({
         success: false,
-        message: 'Conversation not found'
+        message: 'Conversation not found',
+        messageAr: 'لم يتم العثور على المحادثة',
+        code: 'NOT_FOUND'
       });
     }
 
@@ -77,7 +83,9 @@ const getConversationMessages = async (req, res) => {
     if (error) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
+        messageAr: 'خطأ في جلب الرسائل',
+        code: 'INTERNAL_ERROR'
       });
     }
 
@@ -102,7 +110,9 @@ const getConversationMessages = async (req, res) => {
     logger.error('Get conversation messages error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error fetching messages'
+      message: 'Server error fetching messages',
+      messageAr: 'خطأ في الخادم أثناء جلب الرسائل',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -166,7 +176,9 @@ const getMessageStats = async (req, res) => {
     logger.error('Get message stats error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error fetching message statistics'
+      message: 'Server error fetching message statistics',
+      messageAr: 'خطأ في الخادم أثناء جلب إحصائيات الرسائل',
+      code: 'INTERNAL_ERROR'
     });
   }
 };

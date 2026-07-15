@@ -73,7 +73,9 @@ const getStudents = async (req, res) => {
     if (error) {
       return res.status(400).json({
         success: false,
-        message: error.message
+        message: error.message,
+        messageAr: 'إدخال غير صالح',
+        code: 'VALIDATION_ERROR'
       });
     }
 
@@ -91,7 +93,9 @@ const getStudents = async (req, res) => {
     logger.error('Get students error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error fetching students'
+      message: 'Server error fetching students',
+      messageAr: 'خطأ في الخادم أثناء جلب الطلاب',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -132,7 +136,9 @@ const getStudent = async (req, res) => {
     if (error || !student) {
       return res.status(404).json({
         success: false,
-        message: 'Student not found'
+        message: 'Student not found',
+        messageAr: 'لم يتم العثور على الطالب',
+        code: 'NOT_FOUND'
       });
     }
 
@@ -145,7 +151,9 @@ const getStudent = async (req, res) => {
     logger.error('Get student error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: 'Server error fetching student'
+      message: 'Server error fetching student',
+      messageAr: 'خطأ في الخادم أثناء جلب الطالب',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -167,7 +175,9 @@ const createStudent = async (req, res) => {
     if (!name || !group_id) {
       return res.status(400).json({
         success: false,
-        message: 'Student name and Group ID are required'
+        message: 'Student name and Group ID are required',
+        messageAr: 'اسم الطالب ومعرّف المجموعة مطلوبان',
+        code: 'VALIDATION_ERROR'
       });
     }
 
@@ -179,7 +189,7 @@ const createStudent = async (req, res) => {
       .single();
 
     if (!groupCheck || groupCheck.offering.teacher_id !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Unauthorized to add to this group' });
+      return res.status(403).json({ success: false, message: 'Unauthorized to add to this group', messageAr: 'غير مصرح بالإضافة إلى هذه المجموعة', code: 'FORBIDDEN' });
     }
 
     // 1. Create Student
@@ -231,7 +241,9 @@ const createStudent = async (req, res) => {
     logger.error('Create student error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: error.message || 'Server error creating student'
+      message: error.message || 'Server error creating student',
+      messageAr: 'خطأ في الخادم أثناء إنشاء الطالب',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -258,7 +270,7 @@ const updateStudent = async (req, res) => {
       .eq('student_id', req.params.id)
       .eq('teacher_id', req.user.id);
 
-    if (count === 0) return res.status(403).json({ success: false, message: 'Unauthorized' });
+    if (count === 0) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
     const { data: student, error } = await supabase
       .from('students')
@@ -277,7 +289,9 @@ const updateStudent = async (req, res) => {
     logger.error('Update student error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
+      messageAr: 'خطأ في الخادم أثناء تحديث الطالب',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -302,7 +316,7 @@ const deleteStudent = async (req, res) => {
       .eq('teacher_id', req.user.id);
 
     if (!enrollments || enrollments.length === 0) {
-      return res.status(404).json({ success: false, message: 'Student not found in your classes' });
+      return res.status(404).json({ success: false, message: 'Student not found in your classes', messageAr: 'لم يتم العثور على الطالب في فصولك', code: 'NOT_FOUND' });
     }
 
     const enrollmentIds = enrollments.map(e => e.id);
@@ -326,7 +340,9 @@ const deleteStudent = async (req, res) => {
     logger.error('Delete student error', { error: error.message });
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
+      messageAr: 'خطأ في الخادم أثناء حذف الطالب',
+      code: 'INTERNAL_ERROR'
     });
   }
 };
@@ -347,7 +363,7 @@ const getStudentStats = async (req, res) => {
       .eq('teacher_id', req.user.id);
 
     if (enrollError || !enrollments || enrollments.length === 0) {
-      return res.status(404).json({ success: false, message: 'Student not found or unauthorized' });
+      return res.status(404).json({ success: false, message: 'Student not found or unauthorized', messageAr: 'لم يتم العثور على الطالب أو غير مصرح', code: 'NOT_FOUND' });
     }
 
     const enrollmentIds = enrollments.map(e => e.id);
@@ -417,7 +433,7 @@ const getStudentStats = async (req, res) => {
 
   } catch (error) {
     logger.error('Get student stats error', { error: error.message });
-    res.status(500).json({ success: false, message: 'Server error fetching stats' });
+    res.status(500).json({ success: false, message: 'Server error fetching stats', messageAr: 'خطأ في الخادم أثناء جلب الإحصائيات', code: 'INTERNAL_ERROR' });
   }
 };
 

@@ -186,19 +186,17 @@ export default function ForgotPasswordPage() {
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
         <img
           src="/login-hero.jpeg"
-          alt={isRTL ? 'مساعد تعليمي ذكي' : 'Smart teaching assistant'}
+          alt={t('forgotPasswordHeroAlt')}
           className="absolute inset-0 w-full h-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/40 to-ink/10" />
         <div className="relative z-10 flex flex-col justify-end p-12 text-white">
           <div>
             <h2 className="text-4xl font-bold font-display leading-tight mb-4">
-              {isRTL ? 'لا تقلق\nنسيت كلمة المرور' : "Don't worry\nForget your password"}
+              {t('forgotPasswordHeroTitle')}
             </h2>
             <p className="text-lg text-white/80 font-body max-w-md">
-              {isRTL
-                ? 'سنرسل لك رابط لإعادة تعيين كلمة المرور في ثوانٍ'
-                : "We'll send you a link to reset your password in seconds"}
+              {t('forgotPasswordHeroDescription')}
             </p>
           </div>
           <div className="mt-12 pt-8 border-t border-white/10">

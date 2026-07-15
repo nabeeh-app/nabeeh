@@ -1,3 +1,20 @@
+/**
+ * aiService.js — Advanced AI module for paid tiers.
+ *
+ * This module provides:
+ *   - LangChain ChatGoogleGenerativeAI with tool calling (attendance, grades, class performance)
+ *   - Token budgeting per teacher per month
+ *   - Conversation history context
+ *   - Report comment generation
+ *
+ * IMPORTANT: Routes should NOT import this module directly.
+ * Use aiResponder.js as the unified entry point. aiResponder delegates to
+ * this module for paid tiers (basic/pro/center) automatically.
+ *
+ * The only exception is report generation (generateReportComment), which is
+ * called directly by reports.js and jobQueue.js since it's not a chat flow.
+ */
+
 const { ChatGoogleGenerativeAI } = require('@langchain/google-genai');
 const { DynamicTool } = require('@langchain/core/tools');
 const { HumanMessage, SystemMessage, AIMessage, ToolMessage } = require('@langchain/core/messages');
@@ -362,40 +379,9 @@ Keep it 3-5 sentences. Be specific and data-driven.`;
   return response.content || '';
 }
 
-// ── Anomaly detection helper (used by anomalyDetector.js) ─────
-async function detectAnomalies(teacherId) {
-  // This is a lightweight wrapper; the actual detection logic lives in anomalyDetector.js
-  // This function is kept for backward compatibility with aiResponder.js consumers
-  return { anomalies: [], message: 'Use anomalyDetector.js for full detection' };
-}
-
-// ── Weekly digest generator ────────────────────────────────────
-async function generateWeeklyDigest(digestData, language) {
-  const langLabel = language === 'ar' ? 'Arabic' : 'English';
-
-  const prompt = `Generate a weekly teaching digest summary in ${langLabel}.
-
-Data for this week:
-- Improved attendance: ${JSON.stringify(digestData.improved || [])}
-- Declining attendance: ${JSON.stringify(digestData.declining || [])}
-- Grade changes: ${JSON.stringify(digestData.gradeChanges || [])}
-- At-risk students: ${JSON.stringify(digestData.atRisk || [])}
-
-Provide:
-1. Key highlights (what went well)
-2. Areas of concern
-3. Action items for the teacher
-Keep it concise and actionable. Use bullet points.`;
-
-  const response = await model.invoke([new HumanMessage(prompt)]);
-  return response.content || '';
-}
-
 module.exports = {
   generateWithTools,
   generateReportComment,
-  detectAnomalies,
-  generateWeeklyDigest,
   buildConversationContext,
   checkTokenBudget,
 };
