@@ -13,6 +13,7 @@ import { StatCards } from '@/components/ui/StatCards';
 import { FilterBar } from '@/components/ui/FilterBar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useStudents, useCreateStudent, useUpdateStudent, useDeleteStudent } from '@/hooks/useStudents';
+import { getStatusBadge } from '@/lib/utils';
 import { useOfferings } from '@/hooks/useOfferings';
 import StudentImportModal from '@/components/students/StudentImportModal';
 import SelfRegistrationLink from '@/components/students/SelfRegistrationLink';
@@ -28,7 +29,9 @@ interface StudentWithParents extends Student {
 const PAGE_SIZE = 20;
 
 export default function StudentsPage() {
-  const t = useTranslations();
+  const t = useTranslations('students');
+  const tCommon = useTranslations('common');
+  const tErrors = useTranslations('errors');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
@@ -111,7 +114,7 @@ export default function StudentsPage() {
     e.preventDefault();
 
     if (!newStudent.name || !newStudent.grade_level || !newStudent.student_id || !newStudent.group_id) {
-      setFormError(t('students.validation.fillRequired'));
+      setFormError(t('validation.fillRequired'));
       return;
     }
 
@@ -157,7 +160,7 @@ export default function StudentsPage() {
     e.preventDefault();
     if (!selectedStudent) return;
     if (!newStudent.group_id) {
-      setFormError(t('students.validation.selectClass'));
+      setFormError(t('validation.selectClass'));
       return;
     }
 
@@ -179,8 +182,8 @@ export default function StudentsPage() {
   const handleDeleteStudent = async (student: StudentWithParents) => {
     setAlertDialog({
       open: true,
-      title: t('common.delete'),
-      description: t('students.deleteConfirm'),
+      title: tCommon('delete'),
+      description: t('deleteConfirm'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
@@ -189,8 +192,8 @@ export default function StudentsPage() {
           const message = err instanceof Error ? err.message : String(err);
           setAlertDialog({
             open: true,
-            title: t('errors.generic'),
-            description: message || t('errors.generic'),
+            title: tErrors('generic'),
+            description: message || tErrors('generic'),
             onConfirm: () => setAlertDialog(prev => ({ ...prev, open: false })),
           });
         }
@@ -216,61 +219,40 @@ export default function StudentsPage() {
     setFormError('');
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusMap = {
-      active: {
-        variant: 'default' as const,
-        label: t('students.status.active'),
-        color: 'bg-surface-sage text-ink'
-      },
-      inactive: {
-        variant: 'secondary' as const,
-        label: t('students.status.inactive'),
-        color: 'bg-surface-cool text-ink/70'
-      },
-      graduated: {
-        variant: 'outline' as const,
-        label: t('students.status.graduated'),
-        color: 'bg-primary/10 text-primary'
-      }
-    };
-    return statusMap[status as keyof typeof statusMap] || statusMap.active;
-  };
-
   const uniqueGrades = [...new Set(students.map(s => s.grade_level))].filter(Boolean);
 
   if (isLoading) {
-    return <LoadingSpinner message={t('students.loading')} />;
+    return <LoadingSpinner message={t('loading')} />;
   }
 
   const stats = [
-    { icon: Users, value: studentsResponse?.pagination?.total ?? students.length, label: t('students.totalStudents'), color: 'primary' as const },
-    { icon: GraduationCap, value: students.filter(s => s.status === 'active').length, label: t('students.activeStudents'), color: 'success' as const },
-    { icon: BookOpen, value: uniqueGrades.length, label: t('students.fields.gradeLevel'), color: 'accent' as const },
-    { icon: Calendar, value: students.filter(s => { const d = new Date(s.enrollment_date); const m = new Date(); m.setMonth(m.getMonth() - 1); return d >= m; }).length, label: t('students.newThisMonth'), color: 'warning' as const },
+    { icon: Users, value: studentsResponse?.pagination?.total ?? students.length, label: t('totalStudents'), color: 'primary' as const },
+    { icon: GraduationCap, value: students.filter(s => s.status === 'active').length, label: t('activeStudents'), color: 'success' as const },
+    { icon: BookOpen, value: uniqueGrades.length, label: t('fields.gradeLevel'), color: 'accent' as const },
+    { icon: Calendar, value: students.filter(s => { const d = new Date(s.enrollment_date); const m = new Date(); m.setMonth(m.getMonth() - 1); return d >= m; }).length, label: t('newThisMonth'), color: 'warning' as const },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('students.title')}
-        description={t('students.descriptionCount', { count: studentsResponse?.pagination?.total ?? students.length })}
+        title={t('title')}
+        description={t('descriptionCount', { count: studentsResponse?.pagination?.total ?? students.length })}
       >
         <Button variant="outline" size="sm" onClick={() => setImportModalOpen(true)}>
           <Upload className="w-4 h-4 mr-2" />
-          {t('common.import')}
+          {tCommon('import')}
         </Button>
         <Button variant="outline" size="sm" onClick={() => setSelfRegModalOpen(true)}>
           <Link2 className="w-4 h-4 mr-2" />
-          {t('students.selfRegister')}
+          {t('selfRegister')}
         </Button>
         <Button variant="outline" size="sm">
           <Download className="w-4 h-4 mr-2" />
-          {t('common.export')}
+          {tCommon('export')}
         </Button>
         <Button className="gap-2" onClick={() => setAddModalOpen(true)}>
           <Plus className="w-4 h-4" />
-          {t('students.addStudent')}
+          {t('addStudent')}
         </Button>
       </PageHeader>
 
@@ -279,20 +261,20 @@ export default function StudentsPage() {
       <FilterBar
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder={t('students.searchPlaceholderShort')}
+        searchPlaceholder={t('searchPlaceholderShort')}
         resultCount={filteredStudents.length}
         totalCount={students.length}
-        resultLabel={t('students.resultLabel', { filtered: filteredStudents.length, total: students.length })}
+        resultLabel={t('resultLabel', { filtered: filteredStudents.length, total: students.length })}
       >
         <Select
           value={selectedGroupId}
           onValueChange={(v) => { setSelectedGroupId(v); setPage(1); }}
         >
           <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder={t('students.allClasses')} />
+            <SelectValue placeholder={t('allClasses')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('students.allClasses')}</SelectItem>
+            <SelectItem value="all">{t('allClasses')}</SelectItem>
             {offerings.flatMap(o => o.groups.map((g) => (
               <SelectItem key={g.id} value={g.id}>
                 {o.subject.name_en} - {g.name}
@@ -306,13 +288,13 @@ export default function StudentsPage() {
           onValueChange={setStatusFilter}
         >
           <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder={t('students.allStatus')} />
+            <SelectValue placeholder={t('allStatus')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('students.allStatus')}</SelectItem>
-            <SelectItem value="active">{t('students.status.active')}</SelectItem>
-            <SelectItem value="inactive">{t('students.status.inactive')}</SelectItem>
-            <SelectItem value="graduated">{t('students.status.graduated')}</SelectItem>
+            <SelectItem value="all">{t('allStatus')}</SelectItem>
+            <SelectItem value="active">{t('status.active')}</SelectItem>
+            <SelectItem value="inactive">{t('status.inactive')}</SelectItem>
+            <SelectItem value="graduated">{t('status.graduated')}</SelectItem>
           </SelectContent>
         </Select>
       </FilterBar>
@@ -320,7 +302,7 @@ export default function StudentsPage() {
       <div className="space-y-0">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-ink font-display">
-            {t('students.studentList')}
+            {t('studentList')}
           </h2>
         </div>
         <StudentListTable
@@ -378,8 +360,8 @@ export default function StudentsPage() {
         description={alertDialog.description}
         onConfirm={alertDialog.onConfirm}
         variant={alertDialog.variant}
-        cancelLabel={t('common.cancel')}
-        confirmLabel={t('common.confirm')}
+        cancelLabel={tCommon('cancel')}
+        confirmLabel={tCommon('confirm')}
       />
 
       <StudentImportModal
@@ -393,7 +375,7 @@ export default function StudentsPage() {
       <Dialog open={isSelfRegModalOpen} onOpenChange={setSelfRegModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('students.selfRegister')}</DialogTitle>
+            <DialogTitle>{t('selfRegister')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-[var(--color-ink)]/60">

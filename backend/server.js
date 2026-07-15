@@ -76,23 +76,29 @@ app.use(apiLimiter); // General API rate limiting
 app.get('/health', (req, res) => {
   const whatsappSummary = sessionManager.getSessionsSnapshot();
   res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    version: process.env.npm_package_version || '1.0.0',
-    whatsapp: {
-      totalSessions: whatsappSummary.length,
-      connectedSessions: whatsappSummary.filter(s => s.status === 'connected').length
+    success: true,
+    data: {
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      version: process.env.npm_package_version || '1.0.0',
+      whatsapp: {
+        totalSessions: whatsappSummary.length,
+        connectedSessions: whatsappSummary.filter(s => s.status === 'connected').length
+      }
     }
   });
 });
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    version: process.env.npm_package_version || '1.0.0'
+    success: true,
+    data: {
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      version: process.env.npm_package_version || '1.0.0'
+    }
   });
 });
 
@@ -103,10 +109,13 @@ app.get('/ready', (req, res) => {
   const isReady = connected > 0 || sessions.length === 0;
 
   res.status(isReady ? 200 : 503).json({
-    status: isReady ? 'READY' : 'NOT_READY',
-    whatsappSessions: sessions.length,
-    whatsappConnected: connected,
-    timestamp: new Date().toISOString()
+    success: isReady,
+    data: {
+      status: isReady ? 'READY' : 'NOT_READY',
+      whatsappSessions: sessions.length,
+      whatsappConnected: connected,
+      timestamp: new Date().toISOString()
+    }
   });
 });
 

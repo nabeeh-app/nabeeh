@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
-import { CheckCircle, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 import apiClient from '@/lib/client';
 
 interface FormSchema {
@@ -90,7 +90,7 @@ export default function StudentRegistrationPage() {
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-canvas)] p-4">
         <div className="max-w-md text-center space-y-4">
           <div className="rounded-full bg-error/10 p-4 mx-auto w-fit">
-            <span className="text-2xl">⚠️</span>
+            <AlertTriangle className="h-10 w-10 text-error" />
           </div>
           <h1 className="text-xl font-semibold text-[var(--color-ink)]">{t('formTitle')}</h1>
           <p className="text-sm text-error">{error}</p>

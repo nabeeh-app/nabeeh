@@ -15,7 +15,7 @@ interface StudentDetailSidebarProps {
   student: StudentWithParents | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  getStatusBadge: (status: string) => { variant: 'default' | 'secondary' | 'outline'; label: string; color: string };
+  getStatusBadge: (status: string) => { variant: 'default' | 'secondary' | 'outline' | 'destructive'; label: string; color: string };
 }
 
 export default function StudentDetailSidebar({

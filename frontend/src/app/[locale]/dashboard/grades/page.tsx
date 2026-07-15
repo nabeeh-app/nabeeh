@@ -82,7 +82,10 @@ const getGradeColor = (percentage: number): string => {
 };
 
 export default function GradesPage() {
-  const t = useTranslations();
+  const t = useTranslations('grades');
+  const tCommon = useTranslations('common');
+  const tErrors = useTranslations('errors');
+  const tStudents = useTranslations('students');
   const locale = useLocale();
   const router = useRouter();
 
@@ -242,7 +245,7 @@ export default function GradesPage() {
       group_id: gradeToSubmit.group_id || selectedGroupId
     };
     if (!gradeWithGroup.group_id || !gradeWithGroup.student_id || !gradeWithGroup.subject || !gradeWithGroup.assessment_name) {
-      setFormError(t('grades.validation.fillRequired'));
+      setFormError(t('validation.fillRequired'));
       return;
     }
     try {
@@ -279,7 +282,7 @@ export default function GradesPage() {
     e.preventDefault();
     if (!selectedGrade) return;
     if (!newGrade.group_id && !effectiveSelectedGroupId) {
-      setFormError(t('grades.validation.selectClass'));
+      setFormError(t('validation.selectClass'));
       return;
     }
     try {
@@ -301,8 +304,8 @@ export default function GradesPage() {
   const handleDeleteGrade = async (grade: GradeWithStudent) => {
     setAlertDialog({
       open: true,
-      title: t('common.delete'),
-      description: t('grades.deleteConfirm'),
+      title: tCommon('delete'),
+      description: t('deleteConfirm'),
       variant: 'destructive',
       onConfirm: async () => {
         try {
@@ -311,8 +314,8 @@ export default function GradesPage() {
           const message = err instanceof Error ? err.message : String(err);
           setAlertDialog({
             open: true,
-            title: t('errors.generic'),
-            description: message || t('errors.generic'),
+            title: tErrors('generic'),
+            description: message || tErrors('generic'),
             onConfirm: () => setAlertDialog(prev => ({ ...prev, open: false })),
           });
         }
@@ -352,7 +355,7 @@ export default function GradesPage() {
   const isLoading = offeringsLoading || studentsLoading || gradesLoading;
 
   if (isLoading) {
-    return <LoadingSpinner message={t('grades.loading')} />;
+    return <LoadingSpinner message={t('loading')} />;
   }
 
   if (groups.length === 0) {
@@ -360,11 +363,11 @@ export default function GradesPage() {
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink/20 bg-surface-sage p-4 text-ink">
           <div className="space-y-1">
-            <p className="text-sm font-semibold">{t('grades.noGroups')}</p>
-            <p className="text-sm text-ink/70">{t('grades.noGroupsDescription')}</p>
+            <p className="text-sm font-semibold">{t('noGroups')}</p>
+            <p className="text-sm text-ink/70">{t('noGroupsDescription')}</p>
           </div>
           <Button asChild variant="outline" className="border-ink/20 text-ink hover:bg-surface-cool">
-            <Link href={`/${locale}/dashboard/classes?setup=required`}>{t('grades.setUpGroups')}</Link>
+            <Link href={`/${locale}/dashboard/classes?setup=required`}>{t('setUpGroups')}</Link>
           </Button>
         </div>
       </div>
@@ -372,26 +375,26 @@ export default function GradesPage() {
   }
 
   const stats = [
-    { icon: GraduationCap, value: grades.length, label: t('grades.totalGrades'), color: 'primary' as const },
-    { icon: BookOpen, value: uniqueSubjects.length, label: t('grades.subjectsLabel'), color: 'success' as const },
-    { icon: Calculator, value: grades.length > 0 ? (grades.reduce((sum, g) => sum + g.percentage, 0) / grades.length).toFixed(1) + '%' : '0%', label: t('grades.overallAverage'), color: 'accent' as const },
-    { icon: Award, value: grades.filter(g => g.percentage >= 90).length, label: t('grades.excellentGrades'), color: 'warning' as const },
+    { icon: GraduationCap, value: grades.length, label: t('totalGrades'), color: 'primary' as const },
+    { icon: BookOpen, value: uniqueSubjects.length, label: t('subjectsLabel'), color: 'success' as const },
+    { icon: Calculator, value: grades.length > 0 ? (grades.reduce((sum, g) => sum + g.percentage, 0) / grades.length).toFixed(1) + '%' : '0%', label: t('overallAverage'), color: 'accent' as const },
+    { icon: Award, value: grades.filter(g => g.percentage >= 90).length, label: t('excellentGrades'), color: 'warning' as const },
   ];
 
   const viewModes = [
-    { id: 'gradebook', label: t('grades.gradebook'), icon: FileSpreadsheet },
-    { id: 'list', label: t('grades.gradeList'), icon: GraduationCap },
+    { id: 'gradebook', label: t('gradebook'), icon: FileSpreadsheet },
+    { id: 'list', label: t('gradeList'), icon: GraduationCap },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('grades.title')}
-        description={t('grades.descriptionCount')}
+        title={t('title')}
+        description={t('descriptionCount')}
       >
         <Select value={effectiveSelectedGroupId} onValueChange={setSelectedGroupId}>
           <SelectTrigger className="w-[300px]">
-            <SelectValue placeholder={t('students.fields.group')} />
+            <SelectValue placeholder={tStudents('fields.group')} />
           </SelectTrigger>
           <SelectContent>
             {offerings.map((offering) => (
@@ -405,19 +408,19 @@ export default function GradesPage() {
         </Select>
         <Button variant="outline" size="sm">
           <Download className="w-4 h-4 mr-2" />
-          {t('common.export')}
+          {tCommon('export')}
         </Button>
         <Button variant="outline" size="sm">
           <Upload className="w-4 h-4 mr-2" />
-          {t('common.import')}
+          {tCommon('import')}
         </Button>
         <Button variant="outline" size="sm" onClick={() => setStatsModalOpen(true)}>
           <BarChart3 className="w-4 h-4 mr-2" />
-          {t('grades.gradeStatistics')}
+          {t('gradeStatistics')}
         </Button>
         <Button className="gap-2" onClick={() => setAddGradeModalOpen(true)} disabled={!selectedGroupId}>
           <Plus className="w-4 h-4" />
-          {t('grades.addGrade')}
+          {t('addGrade')}
         </Button>
       </PageHeader>
 
@@ -430,7 +433,7 @@ export default function GradesPage() {
           onChange={(mode) => setViewMode(mode as 'gradebook' | 'list')}
         />
         <div className="flex items-center space-x-2">
-          <Input placeholder={t('grades.searchEllipsis')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-64" />
+          <Input placeholder={t('searchEllipsis')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-64" />
         </div>
       </div>
 
@@ -494,8 +497,8 @@ export default function GradesPage() {
         description={alertDialog.description}
         onConfirm={alertDialog.onConfirm}
         variant={alertDialog.variant}
-        cancelLabel={t('common.cancel')}
-        confirmLabel={t('common.confirm')}
+        cancelLabel={tCommon('cancel')}
+        confirmLabel={tCommon('confirm')}
       />
     </div>
   );

@@ -66,7 +66,7 @@ export default function ResetPasswordPage() {
   // Invalid / missing token
   if (!token) {
     return (
-      <div className={cn("min-h-screen flex items-center justify-center bg-canvas px-6", isRTL && "font-arabic")} dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className="min-h-screen flex items-center justify-center bg-canvas px-6" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="w-full max-w-[440px]">
           <div className="bg-white border border-surface-cool p-8 text-center">
             <div className="flex justify-center mb-6">
@@ -93,7 +93,7 @@ export default function ResetPasswordPage() {
   // Success
   if (success) {
     return (
-      <div className={cn("min-h-screen flex items-center justify-center bg-canvas px-6", isRTL && "font-arabic")} dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className="min-h-screen flex items-center justify-center bg-canvas px-6" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="w-full max-w-[440px]">
           <div className="bg-white border border-surface-cool p-8 text-center">
             <div className="flex justify-center mb-6">
@@ -113,7 +113,7 @@ export default function ResetPasswordPage() {
 
   // Form
   return (
-    <div className={cn("min-h-screen flex", isRTL && "font-arabic")} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen flex" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-20 bg-canvas relative">
         <GridPattern
           width={30}

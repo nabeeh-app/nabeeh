@@ -142,10 +142,7 @@ export default function RegisterPage({ params: _params }: Props) {
   };
 
   return (
-    <div className={cn(
-      "relative min-h-screen flex items-center justify-center bg-canvas py-12 px-4 sm:px-6 lg:px-8",
-      isRTL && "font-arabic"
-    )} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="relative min-h-screen flex items-center justify-center bg-canvas py-12 px-4 sm:px-6 lg:px-8" dir={isRTL ? 'rtl' : 'ltr'}>
       <GridPattern
         width={30}
         height={30}

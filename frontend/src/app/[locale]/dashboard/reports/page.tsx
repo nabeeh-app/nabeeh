@@ -22,8 +22,11 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { StatCards } from '@/components/ui/StatCards';
 
 export default function ReportsPage() {
-  const t = useTranslations();
+  const t = useTranslations('reports');
   const tReportsStatus = useTranslations('reportsStatus');
+  const tGrades = useTranslations('grades');
+  const tAttendance = useTranslations('attendance');
+  const tMessages = useTranslations('messages');
 
   const [gradeStats, setGradeStats] = useState<GradeStats | null>(null);
   const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummary | null>(null);
@@ -81,32 +84,32 @@ export default function ReportsPage() {
   }, [dateRange]);
 
   if (loading) {
-    return <LoadingSpinner message={t('reports.loading')} />;
+    return <LoadingSpinner message={t('loading')} />;
   }
 
   const stats = [
     {
       icon: Users,
       value: attendanceSummary?.total_sessions ?? '—',
-      label: t('reports.totalStudents'),
+      label: t('totalStudents'),
       color: 'primary' as const,
     },
     {
       icon: Calendar,
       value: attendanceSummary ? `${Math.round(attendanceSummary.attendance_rate)}%` : '—',
-      label: t('reports.attendanceRate'),
+      label: t('attendanceRate'),
       color: 'success' as const,
     },
     {
       icon: GraduationCap,
       value: gradeStats ? `${Math.round(gradeStats.average_score)}%` : '—',
-      label: t('reports.averageScore'),
+      label: t('averageScore'),
       color: 'accent' as const,
     },
     {
       icon: MessageSquare,
       value: messageStats?.total_messages ?? '—',
-      label: t('reports.totalMessages'),
+      label: t('totalMessages'),
       color: 'warning' as const,
     },
   ];
@@ -124,17 +127,17 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('reports.title')}
-        description={t('reports.description')}
+        title={t('title')}
+        description={t('description')}
       >
         <Select value={dateRange} onValueChange={setDateRange}>
           <SelectTrigger className="min-w-[180px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="lastWeek">{t('reports.lastWeek')}</SelectItem>
-            <SelectItem value="lastMonth">{t('reports.lastMonth')}</SelectItem>
-            <SelectItem value="lastSemester">{t('reports.lastSemester')}</SelectItem>
+            <SelectItem value="lastWeek">{t('lastWeek')}</SelectItem>
+            <SelectItem value="lastMonth">{t('lastMonth')}</SelectItem>
+            <SelectItem value="lastSemester">{t('lastSemester')}</SelectItem>
           </SelectContent>
         </Select>
       </PageHeader>
@@ -147,12 +150,12 @@ export default function ReportsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-display">
               <GraduationCap className="h-5 w-5 text-primary" />
-              {t('reports.topSubjects')}
+              {t('topSubjects')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {topSubjects.length === 0 ? (
-              <p className="text-ink/60 text-center py-4 font-body">{t('reports.noData')}</p>
+              <p className="text-ink/60 text-center py-4 font-body">{t('noData')}</p>
             ) : (
               <div className="space-y-3">
                 {topSubjects.map(([subject, data]) => (
@@ -181,12 +184,12 @@ export default function ReportsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-display">
               <BarChart3 className="h-5 w-5 text-primary" />
-              {t('grades.assessmentTypes.quiz')} / {t('grades.assessmentTypes.exam')}
+              {tGrades('assessmentTypes.quiz')} / {tGrades('assessmentTypes.exam')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {assessmentTypes.length === 0 ? (
-              <p className="text-ink/60 text-center py-4 font-body">{t('reports.noData')}</p>
+              <p className="text-ink/60 text-center py-4 font-body">{t('noData')}</p>
             ) : (
               <div className="space-y-3">
                 {assessmentTypes.map(([type, data]) => (
@@ -219,12 +222,12 @@ export default function ReportsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-display">
               <Calendar className="h-5 w-5 text-primary" />
-              {t('attendance.title')}
+              {tAttendance('title')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {!attendanceSummary ? (
-              <p className="text-ink/60 text-center py-4 font-body">{t('reports.noData')}</p>
+              <p className="text-ink/60 text-center py-4 font-body">{t('noData')}</p>
             ) : (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -233,7 +236,7 @@ export default function ReportsPage() {
                       {attendanceSummary.present_count}
                     </div>
                     <div className="text-xs text-ink/60 font-mono uppercase tracking-wider">
-                      {t('attendance.summary.present')}
+                      {tAttendance('summary.present')}
                     </div>
                   </div>
                   <div className="bg-surface-cool p-3 rounded-md text-center">
@@ -241,7 +244,7 @@ export default function ReportsPage() {
                       {attendanceSummary.absent_count}
                     </div>
                     <div className="text-xs text-ink/60 font-mono uppercase tracking-wider">
-                      {t('attendance.summary.absent')}
+                      {tAttendance('summary.absent')}
                     </div>
                   </div>
                   <div className="bg-surface-cool p-3 rounded-md text-center">
@@ -249,7 +252,7 @@ export default function ReportsPage() {
                       {attendanceSummary.late_count}
                     </div>
                     <div className="text-xs text-ink/60 font-mono uppercase tracking-wider">
-                      {t('attendance.summary.late')}
+                      {tAttendance('summary.late')}
                     </div>
                   </div>
                   <div className="bg-surface-cool p-3 rounded-md text-center">
@@ -257,7 +260,7 @@ export default function ReportsPage() {
                       {attendanceSummary.excused_count}
                     </div>
                     <div className="text-xs text-ink/60 font-mono uppercase tracking-wider">
-                      {t('attendance.summary.excused')}
+                      {tAttendance('summary.excused')}
                     </div>
                   </div>
                 </div>
@@ -265,7 +268,7 @@ export default function ReportsPage() {
                   <div className="text-3xl font-bold text-primary font-display">
                     {Math.round(attendanceSummary.attendance_rate)}%
                   </div>
-                  <div className="text-sm text-ink/60">{t('attendance.summary.percentage')}</div>
+                  <div className="text-sm text-ink/60">{tAttendance('summary.percentage')}</div>
                 </div>
               </div>
             )}
@@ -277,12 +280,12 @@ export default function ReportsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-display">
               <MessageSquare className="h-5 w-5 text-primary" />
-              {t('messages.title')}
+              {tMessages('title')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {!messageStats ? (
-              <p className="text-ink/60 text-center py-4 font-body">{t('reports.noData')}</p>
+              <p className="text-ink/60 text-center py-4 font-body">{t('noData')}</p>
             ) : (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -299,7 +302,7 @@ export default function ReportsPage() {
                       {messageStats.incoming_messages}
                     </div>
                     <div className="text-xs text-ink/60 font-mono uppercase tracking-wider">
-                      {t('messages.received')}
+                      {tMessages('received')}
                     </div>
                   </div>
                   <div className="bg-surface-cool p-3 rounded-md text-center">
@@ -307,7 +310,7 @@ export default function ReportsPage() {
                       {messageStats.outgoing_messages}
                     </div>
                     <div className="text-xs text-ink/60 font-mono uppercase tracking-wider">
-                      {t('messages.sent')}
+                      {tMessages('sent')}
                     </div>
                   </div>
                   <div className="bg-surface-cool p-3 rounded-md text-center">

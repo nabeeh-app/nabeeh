@@ -221,7 +221,7 @@ export function WhatsAppDemo() {
   }
 
   return (
-    <div className={cn('w-full max-w-sm bg-canvas rounded-2xl border border-ink/10 shadow-lg overflow-hidden flex flex-col', isRTL && 'font-arabic')}>
+    <div className="w-full max-w-sm bg-canvas rounded-2xl border border-ink/10 shadow-lg overflow-hidden flex flex-col">
       {/* WhatsApp header */}
       <div className="bg-primary px-4 py-3 flex items-center gap-3 shrink-0">
         <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">

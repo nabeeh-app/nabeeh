@@ -33,7 +33,7 @@ interface StudentListTableProps {
   onView: (student: StudentWithParents) => void;
   onEdit: (student: StudentWithParents) => void;
   onDelete: (student: StudentWithParents) => void;
-  getStatusBadge: (status: string) => { variant: 'default' | 'secondary' | 'outline'; label: string; color: string };
+  getStatusBadge: (status: string) => { variant: 'default' | 'secondary' | 'outline' | 'destructive'; label: string; color: string };
 }
 
 export default function StudentListTable({

@@ -1,15 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations, useLocale } from 'next-intl';
-import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 export function CookieNotice() {
   const [isVisible, setIsVisible] = useState(false);
-  const locale = useLocale();
-  const isAr = locale === 'ar';
   const t = useTranslations('cookie');
-  const isRTL = isAr;
 
   useEffect(() => {
     const consent = localStorage.getItem('nabeeh-cookie-consent');
@@ -33,10 +29,7 @@ export function CookieNotice() {
   return (
     <div className="fixed bottom-0 inset-x-0 z-50 p-4 sm:p-6">
       <div
-        className={cn(
-          "max-w-2xl mx-auto bg-ink text-canvas rounded-xl shadow-2xl p-6 border border-canvas/10",
-          isRTL && "font-arabic"
-        )}
+        className="max-w-2xl mx-auto bg-ink text-canvas rounded-xl shadow-2xl p-6 border border-canvas/10"
       >
         <p className="text-sm font-body text-canvas/80 mb-4">
           {t('message')}

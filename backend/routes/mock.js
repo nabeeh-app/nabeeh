@@ -98,23 +98,168 @@ function paginate(data, page = 1, limit = 50) {
   return { success: true, data: data.slice(start, start + limit), pagination: { page, limit, total, pages } };
 }
 
+/**
+ * @openapi
+ * /auth/login:
+ *   post:
+ *     tags: [Mock]
+ *     summary: Mock login
+ *     description: Returns a mock JWT token and teacher profile. Only available when USE_MOCK_DB=true.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful
+ */
 // Auth routes
 router.post('/auth/login', (req, res) => {
   res.json({ success: true, data: { teacher: mockTeacher, token: 'mock-jwt-token' }, message: 'Login successful' });
 });
+
+/**
+ * @openapi
+ * /auth/register:
+ *   post:
+ *     tags: [Mock]
+ *     summary: Mock registration
+ *     description: Returns a mock registered teacher. Only available when USE_MOCK_DB=true.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, email, password]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Registration successful
+ */
 router.post('/auth/register', (req, res) => {
   res.json({ success: true, data: { teacher: { ...mockTeacher, name: req.body.name, email: req.body.email }, token: 'mock-jwt-token' }, message: 'Registration successful' });
 });
+
+/**
+ * @openapi
+ * /auth/me:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock current user profile
+ *     description: Returns the mock teacher profile. Only available when USE_MOCK_DB=true.
+ *     responses:
+ *       200:
+ *         description: Profile retrieved
+ */
 router.get('/auth/me', (req, res) => {
   res.json({ success: true, data: mockTeacher });
 });
+
+/**
+ * @openapi
+ * /auth/profile:
+ *   put:
+ *     tags: [Mock]
+ *     summary: Mock update profile
+ *     description: Returns the updated mock teacher profile. Only available when USE_MOCK_DB=true.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               business_name:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profile updated
+ */
 router.put('/auth/profile', (req, res) => {
   res.json({ success: true, data: { ...mockTeacher, ...req.body } });
 });
+
+/**
+ * @openapi
+ * /auth/admin/create-teacher:
+ *   post:
+ *     tags: [Mock]
+ *     summary: Mock admin create teacher
+ *     description: Returns a mock created teacher. Only available when USE_MOCK_DB=true.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, email]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               role:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Teacher created
+ */
 router.post('/auth/admin/create-teacher', (req, res) => {
   res.json({ success: true, data: { ...mockTeacher, name: req.body.name, email: req.body.email, role: req.body.role || 'teacher' } });
 });
 
+/**
+ * @openapi
+ * /students:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock list students
+ *     description: Returns a paginated list of mock students with optional filters. Only available when USE_MOCK_DB=true.
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *       - in: query
+ *         name: grade_level
+ *         schema: { type: string }
+ *       - in: query
+ *         name: status
+ *         schema: { type: string }
+ *       - in: query
+ *         name: group_id
+ *         schema: { type: string }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50 }
+ *     responses:
+ *       200:
+ *         description: Students list
+ */
 // Students routes
 router.get('/students', (req, res) => {
   let filtered = [...mockStudents];
@@ -124,15 +269,78 @@ router.get('/students', (req, res) => {
   if (req.query.group_id) filtered = filtered.filter((s) => s.group_id === req.query.group_id);
   res.json(paginate(filtered, parseInt(req.query.page) || 1, parseInt(req.query.limit) || 50));
 });
+
+/**
+ * @openapi
+ * /students/{id}:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock get student by ID
+ *     description: Returns a single mock student. Only available when USE_MOCK_DB=true.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Student found
+ *       404:
+ *         description: Student not found
+ */
 router.get('/students/:id', (req, res) => {
   const student = mockStudents.find((s) => s.id === req.params.id);
   if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
   res.json({ success: true, data: student });
 });
+
+/**
+ * @openapi
+ * /students/{id}/stats:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock get student stats
+ *     description: Returns mock attendance and academic stats for a student. Only available when USE_MOCK_DB=true.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Student stats
+ */
 router.get('/students/:id/stats', (req, res) => {
   res.json({ success: true, data: { attendance: { present: 18, absent: 2, late: 1, excused: 1, total_days: 22, attendance_percentage: 82 }, academic: { average_score: 87, total_assessments: 5 } } });
 });
 
+/**
+ * @openapi
+ * /attendance:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock list attendance records
+ *     description: Returns mock attendance records with optional filters. Only available when USE_MOCK_DB=true.
+ *     parameters:
+ *       - in: query
+ *         name: student_id
+ *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: start_date
+ *         schema: { type: string, format: date }
+ *       - in: query
+ *         name: end_date
+ *         schema: { type: string, format: date }
+ *       - in: query
+ *         name: status
+ *         schema: { type: string, enum: [present, absent, late, excused] }
+ *       - in: query
+ *         name: group_id
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Attendance records
+ */
 // Attendance routes
 router.get('/attendance', (req, res) => {
   let filtered = [...mockAttendance];
@@ -143,10 +351,55 @@ router.get('/attendance', (req, res) => {
   if (req.query.group_id) filtered = filtered.filter((a) => a.group_id === req.query.group_id);
   res.json({ success: true, data: filtered });
 });
+
+/**
+ * @openapi
+ * /attendance/summary:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock attendance summary
+ *     description: Returns aggregated attendance statistics. Only available when USE_MOCK_DB=true.
+ *     responses:
+ *       200:
+ *         description: Attendance summary
+ */
 router.get('/attendance/summary', (req, res) => {
   res.json({ success: true, data: { total_sessions: 42, present_count: 35, absent_count: 3, late_count: 2, excused_count: 2, attendance_rate: 83 } });
 });
 
+/**
+ * @openapi
+ * /grades:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock list grades
+ *     description: Returns a paginated list of mock grades with optional filters. Only available when USE_MOCK_DB=true.
+ *     parameters:
+ *       - in: query
+ *         name: student_id
+ *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: subject
+ *         schema: { type: string }
+ *       - in: query
+ *         name: assessment_type
+ *         schema: { type: string }
+ *       - in: query
+ *         name: start_date
+ *         schema: { type: string, format: date }
+ *       - in: query
+ *         name: end_date
+ *         schema: { type: string, format: date }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50 }
+ *     responses:
+ *       200:
+ *         description: Grades list
+ */
 // Grades routes
 router.get('/grades', (req, res) => {
   let filtered = [...mockGrades];
@@ -157,56 +410,272 @@ router.get('/grades', (req, res) => {
   if (req.query.end_date) filtered = filtered.filter((g) => g.date <= req.query.end_date);
   res.json(paginate(filtered, parseInt(req.query.page) || 1, parseInt(req.query.limit) || 50));
 });
+
+/**
+ * @openapi
+ * /grades/stats:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock grade statistics
+ *     description: Returns aggregated grade statistics by subject and assessment type. Only available when USE_MOCK_DB=true.
+ *     responses:
+ *       200:
+ *         description: Grade statistics
+ */
 router.get('/grades/stats', (req, res) => {
   res.json({ success: true, data: { total_assessments: 15, average_score: 83, by_subject: { Mathematics: { count: 9, average: 87 }, Physics: { count: 4, average: 74 }, Arabic: { count: 2, average: 89 } }, by_assessment_type: { quiz: { count: 4, average: 79 }, midterm: { count: 4, average: 80 }, homework: { count: 2, average: 93 }, final: { count: 5, average: 88 } } } });
 });
 
+/**
+ * @openapi
+ * /messages/conversations:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock list conversations
+ *     description: Returns a paginated list of mock conversations. Only available when USE_MOCK_DB=true.
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50 }
+ *     responses:
+ *       200:
+ *         description: Conversations list
+ */
 // Messages routes
 router.get('/messages/conversations', (req, res) => {
   res.json(paginate(mockConversations, parseInt(req.query.page) || 1, parseInt(req.query.limit) || 50));
 });
+
+/**
+ * @openapi
+ * /messages/conversations/{id}:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock get conversation messages
+ *     description: Returns messages for a specific conversation. Only available when USE_MOCK_DB=true.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50 }
+ *     responses:
+ *       200:
+ *         description: Messages list
+ */
 router.get('/messages/conversations/:id', (req, res) => {
   const msgs = mockMessages.filter((m) => m.conversation_id === req.params.id);
   res.json(paginate(msgs, parseInt(req.query.page) || 1, parseInt(req.query.limit) || 50));
 });
+
+/**
+ * @openapi
+ * /messages/stats:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock message statistics
+ *     description: Returns aggregated message statistics. Only available when USE_MOCK_DB=true.
+ *     responses:
+ *       200:
+ *         description: Message statistics
+ */
 router.get('/messages/stats', (req, res) => {
   res.json({ success: true, data: { total_messages: 156, incoming_messages: 89, outgoing_messages: 67, automated_messages: 45, manual_messages: 22, common_intents: { attendance: 32, grades: 28, schedule: 15, payment: 12, general: 2 } } });
 });
 
+/**
+ * @openapi
+ * /offerings:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock list offerings
+ *     description: Returns all mock course offerings. Only available when USE_MOCK_DB=true.
+ *     responses:
+ *       200:
+ *         description: Offerings list
+ */
 // Offerings routes
 router.get('/offerings', (req, res) => {
   res.json({ success: true, data: mockOfferings });
 });
 
+/**
+ * @openapi
+ * /teachers/dashboard:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock teacher dashboard stats
+ *     description: Returns mock dashboard statistics for the teacher. Only available when USE_MOCK_DB=true.
+ *     responses:
+ *       200:
+ *         description: Dashboard stats
+ */
 // Teachers routes
 router.get('/teachers/dashboard', (req, res) => {
   res.json({ success: true, data: { total_students: 12, active_students: 8, total_parents: 10, recent_attendance: [{ date: daysAgo(0), present: 7, absent: 1, total: 8 }, { date: daysAgo(1), present: 6, absent: 1, total: 8 }, { date: daysAgo(2), present: 8, absent: 0, total: 8 }, { date: daysAgo(3), present: 5, absent: 2, total: 8 }, { date: daysAgo(4), present: 7, absent: 1, total: 8 }], recent_grades: [{ subject: 'Mathematics', average: 87, count: 9 }, { subject: 'Physics', average: 74, count: 4 }, { subject: 'Arabic', average: 89, count: 2 }], message_stats: { total_conversations: 5, unread_messages: 2, response_rate: 92 } } });
 });
+
+/**
+ * @openapi
+ * /teachers/settings:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock get teacher settings
+ *     description: Returns mock teacher settings. Only available when USE_MOCK_DB=true.
+ *     responses:
+ *       200:
+ *         description: Teacher settings
+ */
 router.get('/teachers/settings', (req, res) => {
   res.json({ success: true, data: { id: 'cc0e8400-e29b-41d4-a716-446655440080', teacher_id: TEACHER_ID, auto_reply_enabled: true, auto_reply_message: 'شكراً لرسالتك، سأرد عليك في أقرب وقت', attendance_reminder_enabled: true, attendance_reminder_time: '08:00', grade_notification_enabled: true, preferred_language: 'ar', timezone: 'Africa/Cairo', created_at: '2024-09-01T00:00:00.000Z', updated_at: nowISO() } });
 });
+
+/**
+ * @openapi
+ * /teachers/settings:
+ *   put:
+ *     tags: [Mock]
+ *     summary: Mock update teacher settings
+ *     description: Returns the updated mock teacher settings. Only available when USE_MOCK_DB=true.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               auto_reply_enabled:
+ *                 type: boolean
+ *               attendance_reminder_enabled:
+ *                 type: boolean
+ *               preferred_language:
+ *                 type: string
+ *                 enum: [ar, en]
+ *               timezone:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Settings updated
+ */
 router.put('/teachers/settings', (req, res) => {
   res.json({ success: true, data: { id: 'cc0e8400-e29b-41d4-a716-446655440080', teacher_id: TEACHER_ID, ...req.body, preferred_language: req.body.preferred_language || 'ar', timezone: req.body.timezone || 'Africa/Cairo', created_at: '2024-09-01T00:00:00.000Z', updated_at: nowISO() } });
 });
 
+/**
+ * @openapi
+ * /parents:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock list parents
+ *     description: Returns a list of mock parent contacts. Only available when USE_MOCK_DB=true.
+ *     responses:
+ *       200:
+ *         description: Parents list
+ */
 // Parents routes
 router.get('/parents', (req, res) => {
   res.json({ success: true, data: mockStudents.filter((s) => s.parents?.length).flatMap((s) => s.parents.map((p) => ({ ...p, student_id: s.id, email: null, telegram_username: null, communication_preferences: null, created_at: s.created_at, updated_at: s.updated_at, student: { id: s.id, name: s.name, student_id: s.student_id } }))) });
 });
 
+/**
+ * @openapi
+ * /whatsapp/status:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock WhatsApp status
+ *     description: Returns mock WhatsApp connection status. Only available when USE_MOCK_DB=true.
+ *     responses:
+ *       200:
+ *         description: WhatsApp status
+ */
 // WhatsApp routes
 router.get('/whatsapp/status', (req, res) => {
   res.json({ connected: false, status: 'disconnected', message: 'WhatsApp not connected', sessionExists: false });
 });
+
+/**
+ * @openapi
+ * /whatsapp/conversations:
+ *   get:
+ *     tags: [Mock]
+ *     summary: Mock list WhatsApp conversations
+ *     description: Returns a paginated list of mock WhatsApp conversations. Only available when USE_MOCK_DB=true.
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50 }
+ *     responses:
+ *       200:
+ *         description: Conversations list
+ */
 router.get('/whatsapp/conversations', (req, res) => {
   res.json(paginate(mockConversations, parseInt(req.query.page) || 1, parseInt(req.query.limit) || 50));
 });
+
+/**
+ * @openapi
+ * /whatsapp/pair:
+ *   post:
+ *     tags: [Mock]
+ *     summary: Mock WhatsApp pairing
+ *     description: Simulates starting WhatsApp pairing. Only available when USE_MOCK_DB=true.
+ *     responses:
+ *       200:
+ *         description: Pairing started
+ */
 router.post('/whatsapp/pair', (req, res) => {
   res.json({ success: true, message: 'Pairing started' });
 });
+
+/**
+ * @openapi
+ * /whatsapp/logout:
+ *   post:
+ *     tags: [Mock]
+ *     summary: Mock WhatsApp logout
+ *     description: Simulates WhatsApp logout. Only available when USE_MOCK_DB=true.
+ *     responses:
+ *       200:
+ *         description: Logged out
+ */
 router.post('/whatsapp/logout', (req, res) => {
   res.json({ success: true, message: 'Logged out' });
 });
+
+/**
+ * @openapi
+ * /whatsapp/send-test:
+ *   post:
+ *     tags: [Mock]
+ *     summary: Mock send test WhatsApp message
+ *     description: Simulates sending a test WhatsApp message. Only available when USE_MOCK_DB=true.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [phone, message]
+ *             properties:
+ *               phone:
+ *                 type: string
+ *               message:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Message sent
+ */
 router.post('/whatsapp/send-test', (req, res) => {
   res.json({ success: true, message: 'Message sent' });
 });

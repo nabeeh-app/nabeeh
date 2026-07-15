@@ -30,6 +30,7 @@ import AttendanceCalendar from '@/components/dashboard/attendance/AttendanceCale
 import AttendanceBulkEntry from '@/components/dashboard/attendance/AttendanceBulkEntry';
 import AttendanceList from '@/components/dashboard/attendance/AttendanceList';
 import AttendanceStatsModal from '@/components/dashboard/attendance/AttendanceStatsModal';
+import { getStatusBadge } from '@/lib/utils';
 
 interface DailyAttendance {
   date: string;
@@ -42,7 +43,9 @@ interface DailyAttendance {
 }
 
 export default function AttendancePage() {
-  const t = useTranslations();
+  const t = useTranslations('attendance');
+  const tCommon = useTranslations('common');
+  const tErrors = useTranslations('errors');
   const locale = useLocale();
   const router = useRouter();
 
@@ -187,8 +190,8 @@ export default function AttendancePage() {
       logger.error('Error saving attendance:', err);
       setAlertDialog({
         open: true,
-        title: t('errors.generic'),
-        description: message || t('errors.generic'),
+        title: tErrors('generic'),
+        description: message || tErrors('generic'),
         onConfirm: () => setAlertDialog(prev => ({ ...prev, open: false })),
       });
     } finally {
@@ -231,18 +234,8 @@ export default function AttendancePage() {
     });
   }, [attendanceRecords, statusFilter, studentFilter, dateRange]);
 
-  const getStatusBadge = (status: string) => {
-    const statusMap = {
-      present: { variant: 'default' as const, label: t('attendance.status.present'), color: 'bg-surface-sage text-ink' },
-      absent: { variant: 'destructive' as const, label: t('attendance.status.absent'), color: 'bg-destructive/10 text-destructive' },
-      late: { variant: 'outline' as const, label: t('attendance.status.late'), color: 'bg-surface-cool text-ink/70' },
-      excused: { variant: 'secondary' as const, label: t('attendance.status.excused'), color: 'bg-primary/10 text-primary' }
-    };
-    return statusMap[status as keyof typeof statusMap] || statusMap.present;
-  };
-
   if (offeringsLoading || !effectiveSelectedGroupId) {
-    return <LoadingSpinner message={t('attendance.loading')} />;
+    return <LoadingSpinner message={t('loading')} />;
   }
 
   if (groups.length === 0) {
@@ -250,11 +243,11 @@ export default function AttendancePage() {
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink/20 bg-surface-sage p-4 text-ink">
           <div className="space-y-1">
-            <p className="text-sm font-semibold">{t('attendance.noGroups')}</p>
-            <p className="text-sm text-ink/70">{t('attendance.noGroupsDescription')}</p>
+            <p className="text-sm font-semibold">{t('noGroups')}</p>
+            <p className="text-sm text-ink/70">{t('noGroupsDescription')}</p>
           </div>
           <Button asChild variant="outline" className="border-ink/20 text-ink hover:bg-surface-cool">
-            <Link href={`/${locale}/dashboard/classes?setup=required`}>{t('attendance.setUpGroups')}</Link>
+            <Link href={`/${locale}/dashboard/classes?setup=required`}>{t('setUpGroups')}</Link>
           </Button>
         </div>
       </div>
@@ -262,20 +255,20 @@ export default function AttendancePage() {
   }
 
   const viewModes = [
-    { id: 'calendar', label: t('attendance.calendar'), icon: CalendarDays },
-    { id: 'bulk', label: t('attendance.bulkEntry'), icon: Users },
-    { id: 'list', label: t('attendance.listView'), icon: FileText },
+    { id: 'calendar', label: t('calendar'), icon: CalendarDays },
+    { id: 'bulk', label: t('bulkEntry'), icon: Users },
+    { id: 'list', label: t('listView'), icon: FileText },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('attendance.title')}
-        description={t('attendance.description')}
+        title={t('title')}
+        description={t('description')}
       >
         <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
           <SelectTrigger className="min-w-[250px]">
-            <SelectValue placeholder={t('attendance.selectClass')} />
+            <SelectValue placeholder={t('selectClass')} />
           </SelectTrigger>
           <SelectContent>
             {offerings.flatMap((offering) =>
@@ -289,15 +282,15 @@ export default function AttendancePage() {
         </Select>
         <Button variant="outline" size="sm">
           <Download className="w-4 h-4 mr-2" />
-          {t('common.export')}
+          {tCommon('export')}
         </Button>
         <Button variant="outline" size="sm">
           <Upload className="w-4 h-4 mr-2" />
-          {t('common.import')}
+          {tCommon('import')}
         </Button>
         <Button size="sm" onClick={() => setStatsModalOpen(true)}>
           <BarChart3 className="w-4 h-4 mr-2" />
-          {t('attendance.statsTitle')}
+          {t('statsTitle')}
         </Button>
       </PageHeader>
 
@@ -312,8 +305,8 @@ export default function AttendancePage() {
           {!effectiveSelectedGroupId ? (
             <div className="text-center p-12 bg-surface-cool rounded-lg border border-dashed border-ink/20">
               <AlertCircle className="h-12 w-12 text-ink/40 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-ink">{t('attendance.pleaseSelectClass')}</h3>
-              <p className="text-ink/60">{t('attendance.pleaseSelectClassDescription')}</p>
+              <h3 className="text-lg font-medium text-ink">{t('pleaseSelectClass')}</h3>
+              <p className="text-ink/60">{t('pleaseSelectClassDescription')}</p>
             </div>
           ) : (
             <AttendanceCalendar
@@ -333,8 +326,8 @@ export default function AttendancePage() {
           {!effectiveSelectedGroupId ? (
             <div className="text-center p-12 bg-surface-cool rounded-lg border border-dashed border-ink/20">
               <AlertCircle className="h-12 w-12 text-ink/40 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-ink">{t('attendance.pleaseSelectClass')}</h3>
-              <p className="text-ink/60">{t('attendance.pleaseSelectClassDescription')}</p>
+              <h3 className="text-lg font-medium text-ink">{t('pleaseSelectClass')}</h3>
+              <p className="text-ink/60">{t('pleaseSelectClassDescription')}</p>
             </div>
           ) : (
             <AttendanceBulkEntry
@@ -376,8 +369,8 @@ export default function AttendancePage() {
         description={alertDialog.description}
         onConfirm={alertDialog.onConfirm}
         variant={alertDialog.variant}
-        cancelLabel={t('common.cancel')}
-        confirmLabel={t('common.confirm')}
+        cancelLabel={tCommon('cancel')}
+        confirmLabel={tCommon('confirm')}
       />
     </div>
   );

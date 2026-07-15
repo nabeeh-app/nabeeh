@@ -37,7 +37,8 @@ import { FilterBar } from '@/components/ui/FilterBar';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function CoursesPage() {
-  const t = useTranslations();
+  const t = useTranslations('courses');
+  const tCommon = useTranslations('common');
   const locale = useLocale();
 
   const { data: offerings = [], isLoading: loading } = useOfferings();
@@ -76,7 +77,7 @@ export default function CoursesPage() {
   const handleAddGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOfferingId || !newGroupName.trim()) {
-      setFormError(t('courses.groupName') + ' is required');
+      setFormError(t('groupName') + ' is required');
       return;
     }
 
@@ -105,7 +106,7 @@ export default function CoursesPage() {
   const handleDeleteOffering = (offering: Offering) => {
     setAlertDialog({
       open: true,
-      title: t('common.delete'),
+      title: tCommon('delete'),
       description: locale === 'ar'
         ? `هل أنت متأكد من حذف عرض ${offering.subject.name_ar}؟`
         : `Are you sure you want to delete ${offering.subject.name_en}?`,
@@ -120,20 +121,20 @@ export default function CoursesPage() {
   };
 
   if (loading) {
-    return <LoadingSpinner message={t('courses.loading')} />;
+    return <LoadingSpinner message={t('loading')} />;
   }
 
   const stats = [
-    { icon: BookOpen, value: offerings.length, label: t('courses.totalOfferings'), color: 'primary' as const },
-    { icon: GraduationCap, value: totalGroups, label: t('courses.totalGroups'), color: 'accent' as const },
-    { icon: Users, value: totalEnrolled, label: t('courses.totalEnrolled'), color: 'success' as const },
+    { icon: BookOpen, value: offerings.length, label: t('totalOfferings'), color: 'primary' as const },
+    { icon: GraduationCap, value: totalGroups, label: t('totalGroups'), color: 'accent' as const },
+    { icon: Users, value: totalEnrolled, label: t('totalEnrolled'), color: 'success' as const },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('courses.title')}
-        description={t('courses.description')}
+        title={t('title')}
+        description={t('description')}
       />
 
       <StatCards stats={stats} />
@@ -141,7 +142,7 @@ export default function CoursesPage() {
       <FilterBar
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder={t('courses.searchPlaceholder')}
+        searchPlaceholder={t('searchPlaceholder')}
         resultCount={filteredOfferings.length}
         totalCount={offerings.length}
         resultLabel={locale === 'ar'
@@ -152,7 +153,7 @@ export default function CoursesPage() {
       {filteredOfferings.length === 0 ? (
         <EmptyState
           icon={BookOpen}
-          message={searchTerm ? t('courses.noOfferings') : t('courses.noOfferingsDescription')}
+          message={searchTerm ? t('noOfferings') : t('noOfferingsDescription')}
         />
       ) : (
         <div className="space-y-3">
@@ -185,10 +186,10 @@ export default function CoursesPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge variant={offering.is_active ? 'default' : 'secondary'}>
-                      {offering.is_active ? t('courses.active') : t('courses.inactive')}
+                      {offering.is_active ? t('active') : t('inactive')}
                     </Badge>
                     <Badge variant="outline">
-                      {offering.groups.length} {t('courses.groups')}
+                      {offering.groups.length} {t('groups')}
                     </Badge>
                     <div className="flex items-center gap-1">
                       <Button
@@ -221,16 +222,16 @@ export default function CoursesPage() {
                   <div className="border-t px-4 pb-4">
                     {offering.groups.length === 0 ? (
                       <div className="py-6 text-center text-ink/60">
-                        <p className="font-body">{t('courses.noGroups')}</p>
-                        <p className="text-sm mt-1">{t('courses.noGroupsDescription')}</p>
+                        <p className="font-body">{t('noGroups')}</p>
+                        <p className="text-sm mt-1">{t('noGroupsDescription')}</p>
                       </div>
                     ) : (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>{t('courses.groupName')}</TableHead>
-                            <TableHead>{t('courses.schedule')}</TableHead>
-                            <TableHead>{t('courses.students')}</TableHead>
+                            <TableHead>{t('groupName')}</TableHead>
+                            <TableHead>{t('schedule')}</TableHead>
+                            <TableHead>{t('students')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -263,26 +264,26 @@ export default function CoursesPage() {
       <Dialog open={isAddGroupOpen} onOpenChange={setAddGroupOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('courses.addGroup')}</DialogTitle>
+            <DialogTitle>{t('addGroup')}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleAddGroup} className="space-y-4">
             <div>
-              <Label htmlFor="groupName">{t('courses.groupName')} *</Label>
+              <Label htmlFor="groupName">{t('groupName')} *</Label>
               <Input
                 id="groupName"
                 value={newGroupName}
                 onChange={(e) => setNewGroupName(e.target.value)}
-                placeholder={t('courses.groupNamePlaceholder')}
+                placeholder={t('groupNamePlaceholder')}
                 required
               />
             </div>
             <div>
-              <Label htmlFor="schedule">{t('courses.schedule')}</Label>
+              <Label htmlFor="schedule">{t('schedule')}</Label>
               <Input
                 id="schedule"
                 value={newGroupSchedule}
                 onChange={(e) => setNewGroupSchedule(e.target.value)}
-                placeholder={t('courses.schedulePlaceholder')}
+                placeholder={t('schedulePlaceholder')}
               />
             </div>
             {formError && (
@@ -297,10 +298,10 @@ export default function CoursesPage() {
                 onClick={() => setAddGroupOpen(false)}
                 disabled={submitting}
               >
-                {t('common.cancel')}
+                {tCommon('cancel')}
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? t('common.saving') : t('common.save')}
+                {submitting ? tCommon('saving') : tCommon('save')}
               </Button>
             </div>
           </form>
@@ -314,8 +315,8 @@ export default function CoursesPage() {
         description={alertDialog.description}
         onConfirm={alertDialog.onConfirm}
         variant="destructive"
-        cancelLabel={t('common.cancel')}
-        confirmLabel={t('common.confirm')}
+        cancelLabel={tCommon('cancel')}
+        confirmLabel={tCommon('confirm')}
       />
     </div>
   );

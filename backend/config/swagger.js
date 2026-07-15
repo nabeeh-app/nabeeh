@@ -180,6 +180,7 @@ const options = {
       { name: 'Notifications', description: 'In-app notifications' },
       { name: 'Reports', description: 'AI-generated report comments' },
       { name: 'Grade Analysis', description: 'Analytics, distributions & trends' },
+      { name: 'Mock', description: 'Mock data endpoints (USE_MOCK_DB=true only)' },
     ],
   },
   apis: [

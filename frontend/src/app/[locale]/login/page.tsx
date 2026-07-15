@@ -74,7 +74,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className={cn("min-h-screen flex", isRTL && "font-arabic")} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen flex" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Left Side — Login Form */}
       <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-20 bg-canvas relative">
         <GridPattern
