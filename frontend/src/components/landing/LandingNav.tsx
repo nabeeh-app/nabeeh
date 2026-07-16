@@ -22,8 +22,8 @@ export function LandingNav() {
 
   const navLinks = [
     { href: `/${locale}/features`, label: t('features') },
-    { href: `/${locale}/about`, label: t('about', { defaultValue: 'About' }) },
-    { href: `/${locale}/blog`, label: t('blog', { defaultValue: 'Blog' }) },
+    { href: `/${locale}/about`, label: t('about') },
+    { href: `/${locale}/blog`, label: t('blog') },
     { href: '#pricing', label: t('pricing') },
     { href: '#faq', label: t('faq') },
   ];

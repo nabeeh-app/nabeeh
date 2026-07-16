@@ -1050,6 +1050,8 @@
   "landing": {
     "nav": {
       "features": "Features",
+      "about": "About",
+      "blog": "Blog",
       "pricing": "Pricing",
       "faq": "FAQ",
       "login": "Sign In",
