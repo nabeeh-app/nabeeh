@@ -36,13 +36,7 @@ const productData = {
     lowPrice: "0",
     highPrice: "99",
   },
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: "4.8",
-    ratingCount: "150",
-    bestRating: "5",
-    worstRating: "1",
-  },
+
   author: {
     "@type": "Organization",
     name: "Nabeeh",
