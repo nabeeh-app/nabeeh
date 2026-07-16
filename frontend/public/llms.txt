@@ -1,0 +1,27 @@
+# Nabeeh - Smart Teaching Assistant
+
+> Bilingual (AR/EN) teaching assistant with WhatsApp bot for student management, attendance tracking, grade management, and automated parent communication.
+
+## About
+
+Nabeeh is a SaaS tool for private tutors and tutoring centers in Egypt/MENA. It replaces spreadsheets with a modern web app that handles students, attendance, grades, and parent communication via WhatsApp.
+
+## Key Pages
+
+- [Home](https://nabeeh.app/ar) - Main landing page
+- [Features](https://nabeeh.app/ar/features) - Full feature list
+- [About](https://nabeeh.app/ar/about) - About Nabeeh
+- [Pricing](https://nabeeh.app/ar#pricing) - Free and Pro plans
+- [Blog](https://nabeeh.app/ar/blog) - Tutorials and guides
+- [Login](https://nabeeh.app/ar/login) - Sign in
+- [Register](https://nabeeh.app/ar/register) - Create free account
+
+## Contact
+
+- Website: https://nabeeh.app
+- Email: hello@nabeeh.app
+- WhatsApp: https://wa.me/201211310357
+
+## API
+
+Nabeeh does not currently offer a public API.

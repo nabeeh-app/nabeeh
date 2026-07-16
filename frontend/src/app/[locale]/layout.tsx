@@ -35,14 +35,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: meta.title,
     description: meta.description,
     openGraph: {
+      type: 'website',
       title: meta.title,
       description: meta.description,
       locale: meta.ogLocale,
       url: `https://nabeeh.app/${locale}`,
+      siteName: 'Nabeeh',
+      images: [
+        {
+          url: 'https://nabeeh.app/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: meta.title,
+        },
+      ],
     },
     twitter: {
+      card: 'summary_large_image',
       title: meta.title,
       description: meta.description,
+      images: ['https://nabeeh.app/og-image.png'],
     },
     alternates: {
       canonical: `https://nabeeh.app/${locale}`,
