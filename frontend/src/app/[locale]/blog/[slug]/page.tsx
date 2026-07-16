@@ -3,11 +3,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { posts } from '@/lib/blog-data';
 
-type Props = { params: Promise<{ locale: string; slug: string }> };
+export const dynamic = 'force-dynamic';
 
-export async function generateStaticParams() {
-  return posts.map((post) => ({ slug: post.slug }));
-}
+type Props = { params: Promise<{ locale: string; slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
