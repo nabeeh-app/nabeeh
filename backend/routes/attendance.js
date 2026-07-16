@@ -3,6 +3,7 @@ const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, markAttendanceSchema, updateAttendanceSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
+const { batchResolveEnrollments } = require('../lib/enrollmentChain');
 const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
@@ -106,17 +107,7 @@ const markAttendance = async (req, res) => {
   const groupIds = [...new Set(attendance_records.map(r => r.group_id))];
   const studentIds = attendance_records.map(r => r.student_id);
 
-  const { data: enrollments } = await supabase
-    .from('enrollments')
-    .select('id, student_id, group_id, teacher_id')
-    .in('group_id', groupIds)
-    .in('student_id', studentIds)
-    .eq('teacher_id', req.user.id);
-
-  const enrollmentMap = {};
-  enrollments?.forEach(e => {
-    enrollmentMap[`${e.student_id}_${e.group_id}`] = e.id;
-  });
+  const enrollmentMap = await batchResolveEnrollments(studentIds, groupIds, req.user.id);
 
   const activeRecords = [];
   const missingEnrollments = [];

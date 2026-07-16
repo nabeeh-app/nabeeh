@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -23,8 +23,6 @@ import { ViewModeTabs } from '@/components/ui/ViewModeTabs';
 import { useOfferings } from '@/hooks/useOfferings';
 import { useStudents } from '@/hooks/useStudents';
 import { useAttendanceRecords, useAttendanceSummary, useCreateAttendance } from '@/hooks/useAttendance';
-import logger from '@/lib/logger';
-import { apiClient } from '@/lib/client';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import AttendanceCalendar from '@/components/dashboard/attendance/AttendanceCalendar';
 import AttendanceBulkEntry from '@/components/dashboard/attendance/AttendanceBulkEntry';
@@ -54,8 +52,8 @@ export default function AttendancePage() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'bulk'>('calendar');
   const [isStatsModalOpen, setStatsModalOpen] = useState(false);
-  const [dailyAttendance, setDailyAttendance] = useState<DailyAttendance | null>(null);
   const [saving, setSaving] = useState(false);
+  const [attendanceEdits, setAttendanceEdits] = useState<Map<string, 'present' | 'absent' | 'late' | 'excused'>>(new Map());
 
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [studentFilter, setStudentFilter] = useState<string>('');
@@ -112,59 +110,43 @@ export default function AttendancePage() {
   const { data: attendanceStats } = useAttendanceSummary(summaryParams);
   const createAttendance = useCreateAttendance();
 
-  useEffect(() => {
-    if (!selectedDate || !effectiveSelectedGroupId || students.length === 0) return;
+  const dailyAttendanceParams = useMemo(() => selectedDate && effectiveSelectedGroupId ? {
+    start_date: selectedDate,
+    end_date: selectedDate,
+    limit: 100,
+    group_id: effectiveSelectedGroupId,
+  } : undefined, [selectedDate, effectiveSelectedGroupId]);
 
-    let cancelled = false;
+  const { data: dailyAttendanceResponse } = useAttendanceRecords(dailyAttendanceParams);
 
-    apiClient.getAttendance({
-      start_date: selectedDate,
-      end_date: selectedDate,
-      limit: 100,
-      group_id: effectiveSelectedGroupId
-    }).then((response: { data: Attendance[] }) => {
-      if (cancelled) return;
-      setDailyAttendance({
-        date: selectedDate,
-        students: students.map(student => {
-          const attendanceRecord = response.data.find((record: Attendance) => record.student_id === student.id);
-          return {
-            student_id: student.id,
-            name: student.name,
-            status: attendanceRecord?.status || null,
-            notes: attendanceRecord?.notes || undefined
-          };
-        })
-      });
-    }).catch((err: unknown) => {
-      if (cancelled) return;
-      logger.error('Error loading daily attendance:', err);
-      setDailyAttendance({
-        date: selectedDate,
-        students: students.map(student => ({
+  const dailyAttendance: DailyAttendance | null = useMemo(() => {
+    if (!selectedDate || students.length === 0 || !dailyAttendanceResponse?.data) return null;
+    return {
+      date: selectedDate,
+      students: students.map(student => {
+        const editKey = `${selectedDate}_${student.id}`;
+        const editStatus = attendanceEdits.get(editKey);
+        if (editStatus) {
+          return { student_id: student.id, name: student.name, status: editStatus, notes: undefined };
+        }
+        const record = dailyAttendanceResponse.data.find((r: Attendance) => r.student_id === student.id);
+        return {
           student_id: student.id,
           name: student.name,
-          status: null,
-          notes: undefined
-        }))
-      });
-    });
+          status: record?.status || null,
+          notes: record?.notes || undefined
+        };
+      })
+    };
+  }, [selectedDate, students, dailyAttendanceResponse, attendanceEdits]);
 
-    return () => { cancelled = true; };
-  }, [selectedDate, students, effectiveSelectedGroupId]);
-
-  const handleAttendanceChange = (studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
-    if (!dailyAttendance) return;
-    setDailyAttendance(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        students: prev.students.map(student =>
-          student.student_id === studentId ? { ...student, status } : student
-        )
-      };
+  const handleAttendanceChange = useCallback((studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
+    setAttendanceEdits(prev => {
+      const next = new Map(prev);
+      next.set(`${selectedDate}_${studentId}`, status);
+      return next;
     });
-  };
+  }, [selectedDate]);
 
   const handleBulkAttendanceSave = async () => {
     if (!dailyAttendance) return;
@@ -182,9 +164,9 @@ export default function AttendancePage() {
           }))
       };
       await createAttendance.mutateAsync(attendanceData);
+      setAttendanceEdits(new Map());
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      logger.error('Error saving attendance:', err);
       setAlertDialog({
         open: true,
         title: tErrors('generic'),

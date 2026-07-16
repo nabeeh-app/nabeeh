@@ -18,7 +18,7 @@ const textMap: Record<StatColor, string> = {
   accent: 'text-ink/70',
 };
 
-interface StatCard {
+interface StatCardData {
   icon: LucideIcon;
   value: string | number;
   label: string;
@@ -26,7 +26,7 @@ interface StatCard {
 }
 
 interface StatCardsProps {
-  stats: StatCard[];
+  stats: StatCardData[];
 }
 
 export function StatCards({ stats }: StatCardsProps) {

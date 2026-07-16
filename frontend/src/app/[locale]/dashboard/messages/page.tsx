@@ -13,6 +13,7 @@ import { getStatusBadge } from '@/lib/utils';
 import { useWhatsAppStatus } from '@/hooks/useWhatsAppStatus';
 import { Conversation, Message } from '@/types';
 import { MessageCircle, RefreshCw, Search, Send } from 'lucide-react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 type SendStatus = {
   type: 'success' | 'error';
@@ -101,36 +102,34 @@ export default function MessagesPage() {
     ? getStatusBadge(selectedConversation.is_active ? 'active' : 'inactive', badgeLocale)
     : null;
 
-  const loadConversationsRef = useRef<() => Promise<void>>(undefined);
+  const loadConversations = useCallback(async () => {
+    try {
+      setIsLoadingConversations(true);
+      setError(null);
+
+      const response = await apiClient.getConversations({ page: 1, limit: 50 });
+      const nextConversations = response.data ?? [];
+      setConversations(nextConversations);
+
+      setSelectedConversationId(prev => {
+        if (prev && nextConversations.some(conversation => conversation.id === prev)) {
+          return prev;
+        }
+        return nextConversations[0]?.id ?? null;
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load conversations';
+      setError(message);
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  }, []);
+
+  const loadConversationsRef = useRef(loadConversations);
 
   useEffect(() => {
-    loadConversationsRef.current = async () => {
-      try {
-        setIsLoadingConversations(true);
-        setError(null);
-
-        const response = await apiClient.getConversations({ page: 1, limit: 50 });
-        const nextConversations = response.data ?? [];
-        setConversations(nextConversations);
-
-        setSelectedConversationId(prev => {
-          if (prev && nextConversations.some(conversation => conversation.id === prev)) {
-            return prev;
-          }
-          return nextConversations[0]?.id ?? null;
-        });
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Failed to load conversations';
-        setError(message);
-      } finally {
-        setIsLoadingConversations(false);
-      }
-    };
-  }, []);
-
-  const loadConversations = useCallback(() => {
-    loadConversationsRef.current?.();
-  }, []);
+    loadConversationsRef.current = loadConversations;
+  });
 
   const handleSendMessage = async (phone: string, message: string) => {
     setSendStatus(null);
@@ -144,7 +143,7 @@ export default function MessagesPage() {
     }
   };
 
-  useEffect(() => { loadConversationsRef.current?.(); }, []);
+  useEffect(() => { loadConversationsRef.current(); }, []);
 
   useEffect(() => {
     if (!selectedConversationId) {
@@ -173,12 +172,7 @@ export default function MessagesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">{t('title')}</h1>
-          <p className="text-sm text-ink/60">{t('messageHistory')}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <PageHeader title={t('title')} description={t('messageHistory')}>
           <Button
             variant="outline"
             onClick={loadConversations}
@@ -196,8 +190,7 @@ export default function MessagesPage() {
             <Send className="h-4 w-4" />
             {t('sendMessage')}
           </Button>
-        </div>
-      </div>
+      </PageHeader>
 
       {!isWhatsAppConnected && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between bg-surface-sage p-4 rounded-md">

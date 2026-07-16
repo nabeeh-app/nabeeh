@@ -44,7 +44,7 @@ export default function SystemMonitorPage() {
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
 
-  const checkSystemHealthRef = useRef<() => Promise<void>>(undefined);
+  const checkSystemHealthRef = useRef<() => Promise<void>>(null);
 
   useEffect(() => {
     checkSystemHealthRef.current = async () => {
@@ -83,13 +83,12 @@ export default function SystemMonitorPage() {
         setLoading(false);
       }
     };
+    checkSystemHealthRef.current();
   }, []);
 
   const checkSystemHealth = useCallback(() => {
     checkSystemHealthRef.current?.();
   }, []);
-
-  useEffect(() => { checkSystemHealthRef.current?.(); }, []);
 
   const formatTimeDisplay = (date: Date) => {
     return formatTime(date, locale);

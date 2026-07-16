@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
+import { timeAgo } from '@/lib/utils';
 import type { Notification } from '@/types';
 
 const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
@@ -45,19 +46,6 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
 
   const handleMarkRead = (id: string) => {
     markRead.mutate(id);
-  };
-
-  const timeAgo = (dateStr: string) => {
-    const now = new Date();
-    const date = new Date(dateStr);
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 1) return t('timeAgo.justNow');
-    if (diffMins < 60) return t('timeAgo.minutes', { n: diffMins });
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return t('timeAgo.hours', { n: diffHours });
-    const diffDays = Math.floor(diffHours / 24);
-    return t('timeAgo.days', { n: diffDays });
   };
 
   return (
@@ -117,7 +105,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
                     </p>
                   )}
                   <p className="text-xs text-ink/40 mt-1">
-                    {timeAgo(notification.created_at)}
+                    {timeAgo(notification.created_at, undefined, t as unknown as (key: string, params?: Record<string, unknown>) => string)}
                   </p>
                 </div>
                 {!notification.is_read && (

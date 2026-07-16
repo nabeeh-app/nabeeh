@@ -3,6 +3,7 @@ const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createGradeSchema, bulkGradeSchema, updateGradeSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
+const { batchResolveEnrollmentsWithOfferings } = require('../lib/enrollmentChain');
 const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
@@ -224,21 +225,7 @@ const createBulkGrades = async (req, res) => {
   ).values()];
 
   const studentIds = [...new Set(uniquePairs.map(p => p.student_id))];
-  const { data: allEnrollments } = await supabase
-    .from('enrollments')
-    .select(`
-      id,
-      student_id,
-      group:groups!inner(
-        offering:offerings!inner(
-          id,
-          teacher_id,
-          subject:subjects!inner(id, name_en, name_ar, code)
-        )
-      )
-    `)
-    .in('student_id', studentIds)
-    .eq('groups.offerings.teacher_id', teacherId);
+  const allEnrollments = await batchResolveEnrollmentsWithOfferings(studentIds, teacherId);
 
   const enrollmentLookup = {};
   allEnrollments?.forEach(e => {

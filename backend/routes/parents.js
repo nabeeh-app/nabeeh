@@ -2,7 +2,7 @@ const express = require('express');
 const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate, createParentSchema, updateParentSchema } = require('../middleware/validate');
-const { verifyStudentAccess, getTeacherEnrollmentIds } = require('../lib/enrollmentChain');
+const { verifyStudentAccess, getTeacherEnrollments } = require('../lib/enrollmentChain');
 const logger = require('../lib/logger');
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -15,7 +15,7 @@ const getParents = async (req, res) => {
   const { student_id, search } = req.query;
   const teacher_id = req.user.id;
 
-  const enrollments = await getTeacherEnrollmentIds(teacher_id);
+  const enrollments = await getTeacherEnrollments(teacher_id);
   const studentIds = new Set(enrollments.map(e => e.student_id));
 
   if (studentIds.size === 0) {

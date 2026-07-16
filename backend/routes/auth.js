@@ -431,7 +431,7 @@ router.post('/register', registerLimiter, validate(registerSchema), asyncHandler
 
     sendEmail({
         to: teacher.email,
-        from: 'Mustafa <mustafa@nabeeh.app>',
+        from: 'Nabeeh <noreply@nabeeh.app>',
         subject: welcomeEmail.subject,
         html: welcomeEmail.html,
     }).catch(() => {});

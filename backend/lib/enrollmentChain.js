@@ -1,4 +1,5 @@
 const { supabase } = require('../config/database');
+const logger = require('./logger');
 
 /**
  * Verify that a student belongs to the authenticated teacher via enrollment.
@@ -14,7 +15,10 @@ async function verifyStudentAccess(studentId, teacherId) {
     .limit(1)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error || !data) {
+    if (error) logger.error('verifyStudentAccess query failed', { error: error.message, studentId, teacherId });
+    return null;
+  }
   return data;
 }
 
@@ -30,7 +34,10 @@ async function verifyOfferingAccess(offeringId, teacherId) {
     .eq('teacher_id', teacherId)
     .single();
 
-  if (error || !data) return null;
+  if (error || !data) {
+    if (error) logger.error('verifyOfferingAccess query failed', { error: error.message, offeringId, teacherId });
+    return null;
+  }
   return data;
 }
 
@@ -46,22 +53,28 @@ async function verifyGroupAccess(groupId, teacherId) {
     .eq('offerings.teacher_id', teacherId)
     .single();
 
-  if (error || !data) return null;
+  if (error || !data) {
+    if (error) logger.error('verifyGroupAccess query failed', { error: error.message, groupId, teacherId });
+    return null;
+  }
   return data;
 }
 
 /**
- * Get all enrollment IDs for a teacher's students.
+ * Get all enrollments for a teacher's students.
  * Returns minimal enrollment records (id, student_id, group_id).
  */
-async function getTeacherEnrollmentIds(teacherId) {
+async function getTeacherEnrollments(teacherId) {
   const { data, error } = await supabase
     .from('enrollments')
     .select('id, student_id, group_id')
     .eq('teacher_id', teacherId)
     .not('student_id', 'is', null);
 
-  if (error) return [];
+  if (error) {
+    logger.error('getTeacherEnrollments query failed', { error: error.message, teacherId });
+    return [];
+  }
   return data || [];
 }
 
@@ -101,7 +114,10 @@ async function getTeacherStudents(teacherId) {
     .eq('enrollments.teacher_id', teacherId)
     .order('created_at', { ascending: false });
 
-  if (error) return [];
+  if (error) {
+    logger.error('getTeacherStudents query failed', { error: error.message, teacherId });
+    return [];
+  }
   return data || [];
 }
 
@@ -131,7 +147,10 @@ async function getStudentEnrollmentsForTeacher(studentId, teacherId) {
     .eq('student_id', studentId)
     .eq('teacher_id', teacherId);
 
-  if (error) return [];
+  if (error) {
+    logger.error('getStudentEnrollmentsForTeacher query failed', { error: error.message, studentId, teacherId });
+    return [];
+  }
   return data || [];
 }
 
@@ -172,12 +191,69 @@ function createStudentsQuery(teacherId) {
     .order('created_at', { ascending: false });
 }
 
+/**
+ * Batch resolve enrollment IDs for student/group pairs under a teacher.
+ * Accepts arrays of student IDs and group IDs.
+ * Returns a Map keyed by "studentId_groupId" → enrollment ID.
+ */
+async function batchResolveEnrollments(studentIds, groupIds, teacherId) {
+  const { data: enrollments, error } = await supabase
+    .from('enrollments')
+    .select('id, student_id, group_id')
+    .in('group_id', groupIds)
+    .in('student_id', studentIds)
+    .eq('teacher_id', teacherId);
+
+  if (error) {
+    logger.error('batchResolveEnrollments query failed', { error: error.message, teacherId });
+    return new Map();
+  }
+
+  const map = new Map();
+  (enrollments || []).forEach(e => {
+    map.set(`${e.student_id}_${e.group_id}`, e.id);
+  });
+  return map;
+}
+
+/**
+ * Batch resolve enrollments with offering and subject info for a teacher.
+ * Accepts an array of student IDs.
+ * Returns enrollment records with enrollment_id, offering_id, and subject details.
+ * Used by grades bulk import.
+ */
+async function batchResolveEnrollmentsWithOfferings(studentIds, teacherId) {
+  const { data: enrollments, error } = await supabase
+    .from('enrollments')
+    .select(`
+      id,
+      student_id,
+      group:groups!inner(
+        offering:offerings!inner(
+          id,
+          teacher_id,
+          subject:subjects!inner(id, name_en, name_ar, code)
+        )
+      )
+    `)
+    .in('student_id', studentIds)
+    .eq('groups.offerings.teacher_id', teacherId);
+
+  if (error) {
+    logger.error('batchResolveEnrollmentsWithOfferings query failed', { error: error.message, teacherId });
+    return [];
+  }
+  return enrollments || [];
+}
+
 module.exports = {
   verifyStudentAccess,
   verifyOfferingAccess,
   verifyGroupAccess,
-  getTeacherEnrollmentIds,
+  getTeacherEnrollments,
   getTeacherStudents,
   getStudentEnrollmentsForTeacher,
   createStudentsQuery,
+  batchResolveEnrollments,
+  batchResolveEnrollmentsWithOfferings,
 };

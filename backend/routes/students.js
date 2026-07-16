@@ -331,13 +331,13 @@ const getStudentStats = async (req, res) => {
       academicStats.average_score = Math.round((totalPct / grades.length) * 100) / 100;
     }
 
-  res.status(200).json({
-    success: true,
-    data: {
-      attendance: attendanceStats,
-      academic: academicStats
-    }
-  });
+    res.status(200).json({
+      success: true,
+      data: {
+        attendance: attendanceStats,
+        academic: academicStats
+      }
+    });
 };
 
 // ============================================================

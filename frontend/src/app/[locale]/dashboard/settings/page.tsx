@@ -63,10 +63,10 @@ export default function SettingsPage() {
 
   const [settings, setSettings] = useState<TeacherSettings>(() => mapTeacherToSettings(null));
 
-  // Reset form when teacher loads or changes (React render-phase reset pattern)
-  const [trackedTeacherId, setTrackedTeacherId] = useState<string | null>(null);
-  if (teacher?.id !== trackedTeacherId) {
-    setTrackedTeacherId(teacher?.id ?? null);
+  // Reset form when teacher loads or changes (render-phase reset)
+  const [prevTeacherId, setPrevTeacherId] = useState<string | null>(null);
+  if (teacher?.id !== prevTeacherId) {
+    setPrevTeacherId(teacher?.id ?? null);
     setSettings(mapTeacherToSettings(teacher));
   }
 

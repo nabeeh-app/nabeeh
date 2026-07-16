@@ -30,7 +30,7 @@ const {
   verifyStudentAccess,
   verifyOfferingAccess,
   verifyGroupAccess,
-  getTeacherEnrollmentIds,
+  getTeacherEnrollments,
   getTeacherStudents,
   getStudentEnrollmentsForTeacher,
   createStudentsQuery
@@ -148,7 +148,7 @@ describe('enrollmentChain', () => {
     });
   });
 
-  describe('getTeacherEnrollmentIds', () => {
+  describe('getTeacherEnrollments', () => {
     it('should return enrollment records for teacher', async () => {
       const enrollments = [
         { id: 'e1', student_id: 's1', group_id: 'g1' },
@@ -156,7 +156,7 @@ describe('enrollmentChain', () => {
       ];
       supabase.from.mockReturnValue(createChainable({ data: enrollments, error: null }));
 
-      const result = await getTeacherEnrollmentIds('teacher-1');
+      const result = await getTeacherEnrollments('teacher-1');
 
       expect(result).toEqual(enrollments);
       expect(result).toHaveLength(2);
@@ -165,7 +165,7 @@ describe('enrollmentChain', () => {
     it('should return empty array on error', async () => {
       supabase.from.mockReturnValue(createChainable({ data: null, error: { message: 'DB error' } }));
 
-      const result = await getTeacherEnrollmentIds('teacher-1');
+      const result = await getTeacherEnrollments('teacher-1');
 
       expect(result).toEqual([]);
     });
@@ -173,7 +173,7 @@ describe('enrollmentChain', () => {
     it('should return empty array when no enrollments found', async () => {
       supabase.from.mockReturnValue(createChainable({ data: [], error: null }));
 
-      const result = await getTeacherEnrollmentIds('teacher-1');
+      const result = await getTeacherEnrollments('teacher-1');
 
       expect(result).toEqual([]);
     });
@@ -182,7 +182,7 @@ describe('enrollmentChain', () => {
       const chain = createChainable({ data: [], error: null });
       supabase.from.mockReturnValue(chain);
 
-      await getTeacherEnrollmentIds('teacher-1');
+      await getTeacherEnrollments('teacher-1');
 
       expect(chain.eq).toHaveBeenCalledWith('teacher_id', 'teacher-1');
       expect(chain.not).toHaveBeenCalledWith('student_id', 'is', null);

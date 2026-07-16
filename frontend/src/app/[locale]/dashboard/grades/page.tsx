@@ -144,14 +144,16 @@ export default function GradesPage() {
   const students: Student[] = useMemo(() => studentsResponse?.data ?? [], [studentsResponse]);
 
   const { data: gradesResponse, isLoading: gradesLoading } = useGrades(gradesParams);
-  const rawGrades = gradesResponse?.data ?? [];
-  const studentIds = new Set(students.map(s => s.id));
-  const grades: GradeWithStudent[] = rawGrades
-    .filter((g: Grade) => studentIds.has(g.student_id))
-    .map((grade: Grade) => ({
-      ...grade,
-      student: students.find(s => s.id === grade.student_id) || {} as Student
-    }));
+  const grades: GradeWithStudent[] = useMemo(() => {
+    const rawGrades = gradesResponse?.data ?? [];
+    const studentIds = new Set(students.map(s => s.id));
+    return rawGrades
+      .filter((g: Grade) => studentIds.has(g.student_id))
+      .map((grade: Grade) => ({
+        ...grade,
+        student: students.find(s => s.id === grade.student_id) || {} as Student
+      }));
+  }, [gradesResponse, students]);
 
   const createGrade = useCreateGrade();
   const updateGrade = useUpdateGrade();
