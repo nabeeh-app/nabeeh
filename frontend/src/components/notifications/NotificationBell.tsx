@@ -11,7 +11,7 @@ import { useUnreadNotificationCount } from '@/hooks/useNotifications';
 export function NotificationBell() {
   const t = useTranslations('notifications');
   const { data: countResponse } = useUnreadNotificationCount();
-  const unreadCount = countResponse?.data?.count ?? 0;
+  const unreadCount = countResponse?.count ?? 0;
   const [isOpen, setIsOpen] = useState(false);
 
   return (

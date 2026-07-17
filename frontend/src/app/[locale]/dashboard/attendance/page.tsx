@@ -98,8 +98,7 @@ export default function AttendancePage() {
     group_id: effectiveSelectedGroupId,
   } : undefined, [effectiveSelectedGroupId, dateRange.from, dateRange.to]);
 
-  const { data: attendanceResponse } = useAttendanceRecords(attendanceParams);
-  const attendanceRecords = attendanceResponse?.data ?? [];
+  const { data: attendanceRecords = [] } = useAttendanceRecords(attendanceParams);
 
   const summaryParams = useMemo(() => effectiveSelectedGroupId ? {
     start_date: dateRange.from,
@@ -117,10 +116,10 @@ export default function AttendancePage() {
     group_id: effectiveSelectedGroupId,
   } : undefined, [selectedDate, effectiveSelectedGroupId]);
 
-  const { data: dailyAttendanceResponse } = useAttendanceRecords(dailyAttendanceParams);
+  const { data: dailyAttendanceRecords = [] } = useAttendanceRecords(dailyAttendanceParams);
 
   const dailyAttendance: DailyAttendance | null = useMemo(() => {
-    if (!selectedDate || students.length === 0 || !dailyAttendanceResponse?.data) return null;
+    if (!selectedDate || students.length === 0) return null;
     return {
       date: selectedDate,
       students: students.map(student => {
@@ -129,7 +128,7 @@ export default function AttendancePage() {
         if (editStatus) {
           return { student_id: student.id, name: student.name, status: editStatus, notes: undefined };
         }
-        const record = dailyAttendanceResponse.data.find((r: Attendance) => r.student_id === student.id);
+        const record = dailyAttendanceRecords.find((r: Attendance) => r.student_id === student.id);
         return {
           student_id: student.id,
           name: student.name,
@@ -138,7 +137,7 @@ export default function AttendancePage() {
         };
       })
     };
-  }, [selectedDate, students, dailyAttendanceResponse, attendanceEdits]);
+  }, [selectedDate, students, dailyAttendanceRecords, attendanceEdits]);
 
   const handleAttendanceChange = useCallback((studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
     setAttendanceEdits(prev => {

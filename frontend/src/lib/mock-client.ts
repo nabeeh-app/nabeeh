@@ -170,7 +170,7 @@ class MockApiClient extends ApiClient {
     end_date?: string;
     status?: string;
     group_id?: string;
-  }): Promise<ApiResponse<Attendance[]>> {
+  }): Promise<Attendance[]> {
     await delay();
     let filtered = [...mockAttendance];
     if (params?.student_id) {
@@ -188,7 +188,7 @@ class MockApiClient extends ApiClient {
     if (params?.group_id) {
       filtered = filtered.filter((a) => a.group_id === params.group_id);
     }
-    return ok(filtered);
+    return filtered;
   }
 
   async createAttendance(data: BulkAttendanceRequest): Promise<Attendance[]> {
@@ -370,9 +370,9 @@ class MockApiClient extends ApiClient {
     page?: number;
     limit?: number;
     search?: string;
-  }): Promise<ApiResponse<ParentProfile[]>> {
+  }): Promise<ParentProfile[]> {
     await delay();
-    return ok(mockParents);
+    return mockParents;
   }
 
   async createParent(data: CreateParentRequest): Promise<ParentProfile> {
