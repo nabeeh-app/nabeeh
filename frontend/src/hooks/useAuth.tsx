@@ -117,6 +117,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setTeacher(null);
     setError(null);
     if (typeof window !== 'undefined') {
+      localStorage.removeItem('nabeeh_token');
+      document.cookie = 'nabeeh_token_client=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       const currentLocale = window.location.pathname.split('/')[1] || 'en';
       window.location.href = `/${currentLocale}/login`;
     }

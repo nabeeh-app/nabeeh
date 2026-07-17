@@ -39,6 +39,24 @@ class ApiClient {
     return match ? decodeURIComponent(match[1]) : null;
   }
 
+  private getToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    const fromStorage = localStorage.getItem('nabeeh_token');
+    if (fromStorage) return fromStorage;
+
+    const match = document.cookie.match(/(?:^|;\s*)nabeeh_token_client=([^;]+)/);
+    if (match) {
+      const token = decodeURIComponent(match[1]);
+      try {
+        localStorage.setItem('nabeeh_token', token);
+      } catch {
+        // Ignore quota/private mode errors
+      }
+      return token;
+    }
+    return null;
+  }
+
   constructor() {
     this.api = axios.create({
       baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
@@ -50,6 +68,11 @@ class ApiClient {
     });
 
     this.api.interceptors.request.use((config) => {
+      const token = this.getToken();
+      if (token && !config.headers['Authorization']) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const method = config.method?.toUpperCase();
       if (method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
         const csrfToken = this.getCsrfToken();
@@ -71,11 +94,14 @@ class ApiClient {
           const path = window.location.pathname;
           const isDashboardPage = path.includes('/dashboard');
           if (isDashboardPage) {
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('nabeeh_token');
+            }
             const locale = path.split('/')[1] || 'ar';
             window.location.href = `/${locale}/login`;
           }
         }
-        
+
         // Retry logic for 5xx errors and network errors
         if (!config || config.__retryCount) {
           return Promise.reject(error);
@@ -110,11 +136,17 @@ class ApiClient {
   // Authentication API
   async login(data: LoginRequest): Promise<AuthResponse> {
     const response: AxiosResponse<ApiResponse<AuthResponse>> = await this.api.post('/auth/login', data);
+    if (response.data.data?.token && typeof window !== 'undefined') {
+      localStorage.setItem('nabeeh_token', response.data.data.token);
+    }
     return response.data.data;
   }
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
     const response: AxiosResponse<ApiResponse<AuthResponse>> = await this.api.post('/auth/register', data);
+    if (response.data.data?.token && typeof window !== 'undefined') {
+      localStorage.setItem('nabeeh_token', response.data.data.token);
+    }
     return response.data.data;
   }
 
