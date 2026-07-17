@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { randomBytes } from 'crypto';
+import logger from '@/lib/logger';
 
 function getOrigin(request: Request): string {
   const forwardedHost = request.headers.get('x-forwarded-host');
@@ -27,8 +28,6 @@ export async function GET(request: Request) {
   }
 
   const cookieStore = await cookies();
-
-  // Create the redirect response first so setAll can write cookies on it.
   const response = NextResponse.redirect(`${origin}/${locale}/dashboard`);
 
   const supabase = createServerClient(
@@ -40,9 +39,14 @@ export async function GET(request: Request) {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            try {
+              cookieStore.set(name, value, options);
+            } catch {
+              // Ignore if immutable in specific server context
+            }
+            response.cookies.set(name, value, options);
+          });
         },
       },
     }
@@ -50,6 +54,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   if (error || !data?.session) {
+    logger.error('OAuth exchangeCodeForSession failed', { error: error?.message, code: error?.code });
     return NextResponse.redirect(`${origin}/${locale}/login?error=oauth_exchange_failed`);
   }
 

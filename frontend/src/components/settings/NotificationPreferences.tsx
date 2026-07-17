@@ -79,11 +79,9 @@ export function NotificationPreferences() {
     setSaving(true);
     setSaved(false);
     try {
-      const res = await apiClient.updateNotificationPreferences(prefs);
-      if (res.success) {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
-      }
+      await apiClient.updateNotificationPreferences(prefs);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     } catch {
       // silent
     } finally {

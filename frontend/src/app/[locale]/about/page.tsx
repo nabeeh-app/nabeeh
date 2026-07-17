@@ -1,6 +1,17 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Mail, MessageCircle } from 'lucide-react';
+import {
+  Mail,
+  MessageCircle,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Zap,
+  Smartphone,
+  Globe,
+  Database,
+  Shield,
+} from 'lucide-react';
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -26,13 +37,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: { canonical: `https://nabeeh.app/${locale}/about` },
     openGraph: { title: m.title, description: m.description },
   };
-};
+}
 
 const content = {
   en: {
     home: 'Home',
     about: 'About',
-    hero: 'About Nabeeh',
+    heroLabel: 'ABOUT NABEEH',
+    hero: 'Built for Tutors Who Care',
     heroDesc:
       'Nabeeh was built to solve a real problem for private tutors in Egypt and the MENA region: managing students, attendance, and parent communication in one place.',
     problemTitle: 'The Problem',
@@ -46,7 +58,8 @@ const content = {
     solution2:
       'The result: tutors save 4+ hours per week, parents get instant answers, and students are tracked better.',
     numbersTitle: 'By the Numbers',
-    techTitle: 'Technology',
+    techLabel: 'TECHNOLOGY',
+    techTitle: 'Built on Modern Tech',
     techDesc:
       'Nabeeh is built on modern tech: Next.js frontend, Express API, Supabase (PostgreSQL) database, and Baileys for WhatsApp integration. Enterprise-grade security with JWT authentication and encrypted data.',
     contactTitle: 'Get in Touch',
@@ -59,7 +72,8 @@ const content = {
   ar: {
     home: 'الرئيسية',
     about: 'من نحن',
-    hero: 'من نحن',
+    heroLabel: 'عن نبيه',
+    hero: 'اتبنى للمدرسين اللي بيهتموا',
     heroDesc:
       'نبيه اتعمل عشان يحل مشكلة المدرسين الخصوصيين في مصر والمنطقة العربية: إدارة الطلاب والحضور والتواصل مع أولياء الأمور في مكان واحد.',
     problemTitle: 'المشكلة',
@@ -73,7 +87,8 @@ const content = {
     solution2:
       'النتيجة: المدرس بيوفر 4 ساعات أو أكتر أسبوعياً، أولياء الأمور بيحصلوا على رد فوري، والطلاب بيتتابعوا بشكل أفضل.',
     numbersTitle: 'بالأرقام',
-    techTitle: 'التقنية',
+    techLabel: 'التقنية',
+    techTitle: 'مبنية على أحدث التقنيات',
     techDesc:
       'نبيه مبني على أحدث التقنيات: Next.js للواجهة الأمامية، Express للـ API، Supabase (PostgreSQL) لقاعدة البيانات، وBaileys لربط الواتساب. الأمان على مستوى المؤسسات مع مصادقة JWT وتشفير البيانات.',
     contactTitle: 'تواصل معانا',
@@ -86,9 +101,16 @@ const content = {
 };
 
 const numbers = [
-  { value: '5+', en: 'Hours saved per week', ar: 'ساعات توفرها أسبوعياً' },
-  { value: '5 min', en: 'Setup time', ar: 'وقت الإعداد' },
-  { value: '< 5s', en: 'Bot response time', ar: 'زمن رد البوت' },
+  { value: '5+', en: 'Hours saved per week', ar: 'ساعات توفرها أسبوعياً', icon: Clock },
+  { value: '5 min', en: 'Setup time', ar: 'وقت الإعداد', icon: Zap },
+  { value: '< 5s', en: 'Bot response time', ar: 'زمن رد البوت', icon: Smartphone },
+];
+
+const techStack = [
+  { en: 'Next.js', ar: 'Next.js', desc_en: 'Modern React framework', desc_ar: 'واجهة React حديثة', icon: Globe },
+  { en: 'Express', ar: 'Express', desc_en: 'Fast API layer', desc_ar: 'طبقة API سريعة', icon: Zap },
+  { en: 'Supabase', ar: 'Supabase', desc_en: 'PostgreSQL database', desc_ar: 'قاعدة بيانات PostgreSQL', icon: Database },
+  { en: 'Baileys', ar: 'Baileys', desc_en: 'WhatsApp integration', desc_ar: 'ربط الواتساب', icon: MessageCircle },
 ];
 
 export default async function AboutPage({ params }: Props) {
@@ -100,75 +122,121 @@ export default async function AboutPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <nav className="text-sm text-ink/50 mb-8 font-body">
-          <Link href={`/${locale}`} className="hover:text-ink transition-colors">
-            {c.home}
-          </Link>
-          <span className="mx-2">/</span>
-          <span className="text-ink">{c.about}</span>
-        </nav>
+      {/* Hero Band — deep teal */}
+      <section className="bg-ink text-canvas">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+          <nav className="text-sm text-canvas/40 mb-8 font-mono uppercase tracking-wider">
+            <Link href={`/${locale}`} className="hover:text-canvas transition-colors">
+              {c.home}
+            </Link>
+            <span className="mx-2">/</span>
+            <span className="text-canvas/70">{c.about}</span>
+          </nav>
 
-        <header className="mb-16">
-          <h1 className="text-4xl sm:text-5xl font-bold text-ink font-display mb-6">
+          <p className="font-mono text-sm uppercase tracking-wider text-accent mb-4">
+            {c.heroLabel}
+          </p>
+          <h1 className="text-4xl sm:text-5xl font-bold text-canvas font-display mb-6 leading-tight">
             {c.hero}
           </h1>
-          <p className="text-lg text-ink/70 font-body max-w-2xl leading-relaxed">
+          <p className="text-lg text-canvas/70 font-body max-w-2xl leading-relaxed">
             {c.heroDesc}
           </p>
-        </header>
+        </div>
+      </section>
 
-        <section className="mb-16">
-          <h2 className="text-2xl font-bold text-ink font-display mb-6">
-            {c.problemTitle}
-          </h2>
-          <div className="text-ink/70 font-body leading-relaxed space-y-4">
-            <p>{c.problem1}</p>
-            <p>{c.problem2}</p>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Problem & Solution — side by side */}
+        <section className="py-16 lg:py-20">
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="bg-destructive/5 border border-destructive/10 rounded-xl p-8">
+              <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+              </div>
+              <h2 className="text-2xl font-bold text-ink font-display mb-4">
+                {c.problemTitle}
+              </h2>
+              <div className="text-ink/70 font-body leading-relaxed space-y-3">
+                <p>{c.problem1}</p>
+                <p>{c.problem2}</p>
+              </div>
+            </div>
+
+            <div className="bg-primary/5 border border-primary/10 rounded-xl p-8">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <CheckCircle className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold text-ink font-display mb-4">
+                {c.solutionTitle}
+              </h2>
+              <div className="text-ink/70 font-body leading-relaxed space-y-3">
+                <p>{c.solution1}</p>
+                <p>{c.solution2}</p>
+              </div>
+            </div>
           </div>
         </section>
 
-        <section className="mb-16">
-          <h2 className="text-2xl font-bold text-ink font-display mb-6">
-            {c.solutionTitle}
-          </h2>
-          <div className="text-ink/70 font-body leading-relaxed space-y-4">
-            <p>{c.solution1}</p>
-            <p>{c.solution2}</p>
-          </div>
-        </section>
-
-        <section className="mb-16">
-          <h2 className="text-2xl font-bold text-ink font-display mb-6">
+        {/* By the Numbers */}
+        <section className="pb-16 lg:pb-20">
+          <h2 className="text-2xl font-bold text-ink font-display mb-8">
             {c.numbersTitle}
           </h2>
-          <div className="grid sm:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-3 gap-4">
             {numbers.map((s) => (
               <div
                 key={s.value}
-                className="bg-surface border border-ink/10 rounded-xl p-6 text-center"
+                className="bg-surface-sage p-5 rounded-md"
               >
-                <div className="text-3xl font-bold text-primary font-display mb-2">
-                  {s.value}
-                </div>
-                <div className="text-ink/70 font-body text-sm">
-                  {isAr ? s.ar : s.en}
+                <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0 w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                    <s.icon className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-ink/50 truncate font-body uppercase tracking-wider">
+                      {isAr ? s.ar : s.en}
+                    </p>
+                    <p className="text-3xl font-bold text-ink font-display leading-tight">
+                      {s.value}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="mb-16">
-          <h2 className="text-2xl font-bold text-ink font-display mb-6">
+        {/* Technology */}
+        <section className="pb-16 lg:pb-20">
+          <p className="font-mono text-sm uppercase tracking-wider text-ink/40 mb-3">
+            {c.techLabel}
+          </p>
+          <h2 className="text-2xl font-bold text-ink font-display mb-4">
             {c.techTitle}
           </h2>
-          <div className="text-ink/70 font-body leading-relaxed">
-            <p>{c.techDesc}</p>
+          <p className="text-ink/70 font-body leading-relaxed mb-8 max-w-2xl">
+            {c.techDesc}
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {techStack.map((t) => (
+              <div
+                key={t.en}
+                className="bg-surface-cool border border-ink/5 rounded-lg p-5 text-center"
+              >
+                <div className="w-10 h-10 rounded-full bg-canvas border border-ink/10 flex items-center justify-center mx-auto mb-3">
+                  <t.icon className="w-5 h-5 text-primary" />
+                </div>
+                <p className="font-bold text-ink font-display text-sm">{t.en}</p>
+                <p className="text-xs text-ink/50 font-body mt-1">
+                  {isAr ? t.desc_ar : t.desc_en}
+                </p>
+              </div>
+            ))}
           </div>
         </section>
 
-        <section className="mb-16">
+        {/* Contact */}
+        <section className="pb-16 lg:pb-20">
           <h2 className="text-2xl font-bold text-ink font-display mb-6">
             {c.contactTitle}
           </h2>
@@ -177,7 +245,7 @@ export default async function AboutPage({ params }: Props) {
               href={`https://wa.me/${phone}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg font-body font-medium hover:bg-primary/90 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-ink rounded-lg font-body font-medium hover:bg-accent/90 transition-colors"
             >
               <MessageCircle className="w-5 h-5" />
               {c.whatsapp}
@@ -192,17 +260,20 @@ export default async function AboutPage({ params }: Props) {
           </div>
         </section>
 
-        <section className="text-center py-12 border-t border-ink/10">
-          <h2 className="text-2xl font-bold text-ink font-display mb-4">
-            {c.tryFree}
-          </h2>
-          <p className="text-ink/70 font-body mb-6">{c.tryFreeDesc}</p>
-          <Link
-            href={`/${locale}/register`}
-            className="inline-block px-8 py-3 bg-primary text-white rounded-lg font-body font-medium hover:bg-primary/90 transition-colors"
-          >
-            {c.getStarted}
-          </Link>
+        {/* CTA Section */}
+        <section className="pb-16 lg:pb-20">
+          <div className="bg-ink text-canvas rounded-xl p-10 text-center">
+            <h2 className="text-2xl font-bold font-display mb-3">
+              {c.tryFree}
+            </h2>
+            <p className="text-canvas/60 font-body mb-6">{c.tryFreeDesc}</p>
+            <Link
+              href={`/${locale}/register`}
+              className="inline-block px-8 py-3 bg-accent text-ink rounded-lg font-body font-medium hover:bg-accent/90 transition-colors"
+            >
+              {c.getStarted}
+            </Link>
+          </div>
         </section>
       </div>
     </div>

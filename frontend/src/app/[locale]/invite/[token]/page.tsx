@@ -43,11 +43,11 @@ export default function InviteAcceptPage() {
 
     const fetchInvite = async () => {
       try {
-        const res = await apiClient.getInviteByToken(token);
-        if (res.success && res.data) {
-          setInvite(res.data as InviteData);
+        const data = await apiClient.getInviteByToken(token);
+        if (data) {
+          setInvite(data as InviteData);
         } else {
-          setError(res.message || 'Invalid invitation');
+          setError('Invalid invitation');
         }
       } catch {
         setError('Failed to load invitation');
@@ -62,12 +62,8 @@ export default function InviteAcceptPage() {
   const handleAccept = async () => {
     setAccepting(true);
     try {
-      const res = await apiClient.acceptInvite(token);
-      if (res.success) {
-        setAccepted(true);
-      } else {
-        setError(res.message || 'Failed to accept invitation');
-      }
+      await apiClient.acceptInvite(token);
+      setAccepted(true);
     } catch {
       setError('Failed to accept invitation');
     } finally {

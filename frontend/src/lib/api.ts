@@ -271,9 +271,9 @@ class ApiClient {
     end_date?: string;
     status?: string;
     group_id?: string;
-  }): Promise<ApiResponse<Attendance[]>> {
+  }): Promise<Attendance[]> {
     const response: AxiosResponse<ApiResponse<Attendance[]>> = await this.api.get('/attendance', { params });
-    return response.data;
+    return response.data.data;
   }
 
   async createAttendance(data: BulkAttendanceRequest): Promise<Attendance[]> {
@@ -377,9 +377,8 @@ class ApiClient {
     return response.data.data;
   }
 
-  async logoutWhatsApp(): Promise<{ success: boolean; message: string }> {
-    const response = await this.api.post('/whatsapp/logout');
-    return response.data;
+  async logoutWhatsApp(): Promise<void> {
+    await this.api.post('/whatsapp/logout');
   }
 
   async createTeacherAccount(data: {
@@ -453,9 +452,9 @@ class ApiClient {
     page?: number;
     limit?: number;
     search?: string;
-  }): Promise<ApiResponse<ParentProfile[]>> {
+  }): Promise<ParentProfile[]> {
     const response: AxiosResponse<ApiResponse<ParentProfile[]>> = await this.api.get('/parents', { params });
-    return response.data;
+    return response.data.data;
   }
 
   async createParent(data: CreateParentRequest): Promise<ParentProfile> {
@@ -473,7 +472,7 @@ class ApiClient {
   }
 
   // Assistants API
-  async getAssistants(): Promise<ApiResponse<Array<{
+  async getAssistants(): Promise<Array<{
     id: string;
     name: string;
     email: string;
@@ -481,44 +480,44 @@ class ApiClient {
     permissions: Record<string, boolean>;
     created_at: string;
     updated_at: string;
-  }>>> {
+  }>> {
     const response = await this.api.get('/assistants');
-    return response.data;
+    return response.data.data;
   }
 
-  async inviteAssistant(email: string, permissions?: Record<string, boolean>): Promise<ApiResponse<{ id: string; email: string; expires_at: string }>> {
+  async inviteAssistant(email: string, permissions?: Record<string, boolean>): Promise<{ id: string; email: string; expires_at: string }> {
     const response = await this.api.post('/assistants/invite', { email, permissions });
-    return response.data;
+    return response.data.data;
   }
 
-  async inviteAssistantDual(params: { email?: string; phone?: string; deliveryMethod: string; permissions?: Record<string, boolean> }): Promise<ApiResponse<{ id: string; email: string; phone: string; expires_at: string }>> {
+  async inviteAssistantDual(params: { email?: string; phone?: string; deliveryMethod: string; permissions?: Record<string, boolean> }): Promise<{ id: string; email: string; phone: string; expires_at: string }> {
     const response = await this.api.post('/assistants/invite', params);
-    return response.data;
+    return response.data.data;
   }
 
-  async getInviteByToken(token: string): Promise<ApiResponse<{ id: string; teacherName: string; permissions: Record<string, boolean>; expires_at: string }>> {
+  async getInviteByToken(token: string): Promise<{ id: string; teacherName: string; permissions: Record<string, boolean>; expires_at: string }> {
     const response = await this.api.get(`/assistants/invites/${token}`);
-    return response.data;
+    return response.data.data;
   }
 
-  async acceptInvite(token: string): Promise<ApiResponse<{ assistantId: string }>> {
+  async acceptInvite(token: string): Promise<{ assistantId: string }> {
     const response = await this.api.post('/assistants/accept', { token });
-    return response.data;
+    return response.data.data;
   }
 
-  async listPendingInvites(): Promise<ApiResponse<Array<{ id: string; email: string; phone: string; status: string; expires_at: string; created_at: string }>>> {
+  async listPendingInvites(): Promise<Array<{ id: string; email: string; phone: string; status: string; expires_at: string; created_at: string }>> {
     const response = await this.api.get('/assistants/invites');
-    return response.data;
+    return response.data.data;
   }
 
-  async updateAssistantPermissions(id: string, permissions: Record<string, boolean>): Promise<ApiResponse<{ id: string; permissions: Record<string, boolean> }>> {
+  async updateAssistantPermissions(id: string, permissions: Record<string, boolean>): Promise<{ id: string; permissions: Record<string, boolean> }> {
     const response = await this.api.put(`/assistants/${id}/permissions`, { permissions });
-    return response.data;
+    return response.data.data;
   }
 
-  async updateAssistantStatus(id: string, status: 'active' | 'inactive'): Promise<ApiResponse<{ id: string; status: string }>> {
+  async updateAssistantStatus(id: string, status: 'active' | 'inactive'): Promise<{ id: string; status: string }> {
     const response = await this.api.put(`/assistants/${id}/status`, { status });
-    return response.data;
+    return response.data.data;
   }
 
   async removeAssistant(id: string): Promise<void> {
@@ -526,14 +525,14 @@ class ApiClient {
   }
 
   // Reports API
-  async generateReportComment(studentId: string, groupId?: string): Promise<ApiResponse<{
+  async generateReportComment(studentId: string, groupId?: string): Promise<{
     id: string;
     draft_text: string;
     status: string;
     created_at: string;
-  }>> {
+  }> {
     const response = await this.api.post('/reports/generate-comment', { student_id: studentId, group_id: groupId });
-    return response.data;
+    return response.data.data;
   }
 
   async getReportDrafts(params?: { page?: number; limit?: number; status?: string }): Promise<PaginatedResponse<{
@@ -551,32 +550,32 @@ class ApiClient {
     return response.data;
   }
 
-  async updateReportDraft(id: string, data: { edited_text?: string; status?: string }): Promise<ApiResponse<{ id: string; status: string }>> {
+  async updateReportDraft(id: string, data: { edited_text?: string; status?: string }): Promise<{ id: string; status: string }> {
     const response = await this.api.put(`/reports/drafts/${id}`, data);
-    return response.data;
+    return response.data.data;
   }
 
-  async approveReportDraft(id: string): Promise<ApiResponse<{ id: string; status: string }>> {
+  async approveReportDraft(id: string): Promise<{ id: string; status: string }> {
     const response = await this.api.post(`/reports/drafts/${id}/approve`);
-    return response.data;
+    return response.data.data;
   }
 
-  async rejectReportDraft(id: string): Promise<ApiResponse<{ id: string; status: string }>> {
+  async rejectReportDraft(id: string): Promise<{ id: string; status: string }> {
     const response = await this.api.post(`/reports/drafts/${id}/reject`);
-    return response.data;
+    return response.data.data;
   }
 
-  async bulkGenerateComments(groupId: string): Promise<ApiResponse<{ job_id: string; status: string }>> {
+  async bulkGenerateComments(groupId: string): Promise<{ job_id: string; status: string }> {
     const response = await this.api.post('/reports/bulk-generate', { group_id: groupId });
-    return response.data;
+    return response.data.data;
   }
 
-  async getJobStatus(jobId: string): Promise<ApiResponse<{ id: string; status: string; result: unknown; error: string | null }>> {
+  async getJobStatus(jobId: string): Promise<{ id: string; status: string; result: unknown; error: string | null }> {
     const response = await this.api.get(`/reports/jobs/${jobId}`);
-    return response.data;
+    return response.data.data;
   }
 
-  async getLatestDigest(): Promise<ApiResponse<{
+  async getLatestDigest(): Promise<{
     id: string;
     week_start: string;
     week_end: string;
@@ -586,20 +585,20 @@ class ApiClient {
       action_items: string[];
     };
     created_at: string;
-  }>> {
+  }> {
     const response = await this.api.get('/reports/weekly-digest');
-    return response.data;
+    return response.data.data;
   }
 
-  async getDigestByWeek(weekStart: string): Promise<ApiResponse<{
+  async getDigestByWeek(weekStart: string): Promise<{
     id: string;
     week_start: string;
     week_end: string;
     digest_data: Record<string, unknown>;
     created_at: string;
-  }>> {
+  }> {
     const response = await this.api.get(`/reports/weekly-digest/${weekStart}`);
-    return response.data;
+    return response.data.data;
   }
 
   // Notifications API
@@ -617,9 +616,9 @@ class ApiClient {
     return response.data;
   }
 
-  async getUnreadNotificationCount(): Promise<ApiResponse<{ count: number }>> {
+  async getUnreadNotificationCount(): Promise<{ count: number }> {
     const response = await this.api.get('/notifications/unread-count');
-    return response.data;
+    return response.data.data;
   }
 
   async markNotificationRead(id: string): Promise<void> {
@@ -635,7 +634,7 @@ class ApiClient {
   }
 
   // Alert Rules API
-  async getAlertRules(): Promise<ApiResponse<Array<{
+  async getAlertRules(): Promise<Array<{
     id: string;
     alert_type: string;
     threshold_value: number;
@@ -643,9 +642,9 @@ class ApiClient {
     notification_method: string;
     is_enabled: boolean;
     created_at: string;
-  }>>> {
+  }>> {
     const response = await this.api.get('/alerts/rules');
-    return response.data;
+    return response.data.data;
   }
 
   async createAlertRule(data: {
@@ -653,9 +652,9 @@ class ApiClient {
     threshold_value: number;
     comparison: string;
     notification_method?: string;
-  }): Promise<ApiResponse<{ id: string; alert_type: string }>> {
+  }): Promise<{ id: string; alert_type: string }> {
     const response = await this.api.post('/alerts/rules', data);
-    return response.data;
+    return response.data.data;
   }
 
   async updateAlertRule(id: string, data: Partial<{
@@ -664,18 +663,18 @@ class ApiClient {
     comparison: string;
     notification_method: string;
     is_enabled: boolean;
-  }>): Promise<ApiResponse<{ id: string }>> {
+  }>): Promise<{ id: string }> {
     const response = await this.api.put(`/alerts/rules/${id}`, data);
-    return response.data;
+    return response.data.data;
   }
 
   async deleteAlertRule(id: string): Promise<void> {
     await this.api.delete(`/alerts/rules/${id}`);
   }
 
-  async toggleAlertRule(id: string): Promise<ApiResponse<{ id: string; is_enabled: boolean }>> {
+  async toggleAlertRule(id: string): Promise<{ id: string; is_enabled: boolean }> {
     const response = await this.api.put(`/alerts/rules/${id}/toggle`);
-    return response.data;
+    return response.data.data;
   }
 
   async getAlerts(params?: { page?: number; limit?: number; severity?: string; alert_type?: string }): Promise<PaginatedResponse<{
@@ -702,53 +701,53 @@ class ApiClient {
   }
 
   // Grade Analysis API
-  async getGroupComparison(offeringId: string): Promise<ApiResponse<Array<{
+  async getGroupComparison(offeringId: string): Promise<Array<{
     group_id: string;
     group_name: string;
     average_score: number;
     student_count: number;
-  }>>> {
+  }>> {
     const response = await this.api.get('/grade-analysis/group-comparison', { params: { offering_id: offeringId } });
-    return response.data;
+    return response.data.data;
   }
 
-  async getAtRiskStudents(offeringId: string, params?: { grade_threshold?: number; attendance_threshold?: number }): Promise<ApiResponse<Array<{
+  async getAtRiskStudents(offeringId: string, params?: { grade_threshold?: number; attendance_threshold?: number }): Promise<Array<{
     student_id: string;
     student_name: string;
     average_grade: number;
     attendance_rate: number;
     severity: string;
-  }>>> {
+  }>> {
     const response = await this.api.get('/grade-analysis/at-risk', { params: { offering_id: offeringId, ...params } });
-    return response.data;
+    return response.data.data;
   }
 
-  async getGradeDistribution(assessmentId: string): Promise<ApiResponse<Array<{
+  async getGradeDistribution(assessmentId: string): Promise<Array<{
     range: string;
     count: number;
-  }>>> {
+  }>> {
     const response = await this.api.get(`/grade-analysis/distribution/${assessmentId}`);
-    return response.data;
+    return response.data.data;
   }
 
-  async getGradeTrends(studentId: string): Promise<ApiResponse<Array<{
+  async getGradeTrends(studentId: string): Promise<Array<{
     assessment_name: string;
     score: number;
     date: string;
-  }>>> {
+  }>> {
     const response = await this.api.get(`/grade-analysis/trends/${studentId}`);
-    return response.data;
+    return response.data.data;
   }
 
-  async getGradeOverview(offeringId: string): Promise<ApiResponse<{
+  async getGradeOverview(offeringId: string): Promise<{
     total_students: number;
     average: number;
     highest: number;
     lowest: number;
     total_grades: number;
-  }>> {
+  }> {
     const response = await this.api.get(`/grade-analysis/overview/${offeringId}`);
-    return response.data;
+    return response.data.data;
   }
 
   // Notification Preferences API
@@ -760,20 +759,20 @@ class ApiClient {
     digest?: boolean;
     quiet_hours_start?: string;
     quiet_hours_end?: string;
-  }): Promise<ApiResponse<{ id: string }>> {
+  }): Promise<{ id: string }> {
     const response = await this.api.put('/teachers/notification-preferences', data);
-    return response.data;
+    return response.data.data;
   }
 
   // Password Reset API
-  async requestPasswordReset(email: string): Promise<ApiResponse<{ message: string; messageAr: string }>> {
+  async requestPasswordReset(email: string): Promise<{ message: string; messageAr: string }> {
     const response = await this.api.post('/auth/request-reset', { email });
-    return response.data;
+    return response.data.data;
   }
 
-  async resetPassword(token: string, newPassword: string): Promise<ApiResponse<{ message: string; messageAr: string }>> {
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string; messageAr: string }> {
     const response = await this.api.post('/auth/reset-password', { token, newPassword });
-    return response.data;
+    return response.data.data;
   }
 }
 

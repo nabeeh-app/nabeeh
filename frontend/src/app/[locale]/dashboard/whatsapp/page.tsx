@@ -37,18 +37,15 @@ export default function WhatsAppDashboardPage() {
       onConfirm: async () => {
         setIsLoading(true);
         try {
-          const data = await apiClient.logoutWhatsApp();
-          if (data.success) {
-            refreshStatus();
-          } else {
-            setAlertDialog({
-              open: true,
-              title: t('alerts.logoutFailed'),
-              description: t('alerts.logoutFailed'),
-            });
-          }
+          await apiClient.logoutWhatsApp();
+          refreshStatus();
         } catch (error) {
           logger.error('Logout error:', error);
+          setAlertDialog({
+            open: true,
+            title: t('alerts.logoutFailed'),
+            description: t('alerts.logoutFailed'),
+          });
         } finally {
           setIsLoading(false);
         }

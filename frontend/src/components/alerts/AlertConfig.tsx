@@ -126,10 +126,8 @@ export function AlertConfig() {
   const loadRules = () => {
     apiClient
       .getAlertRules()
-      .then(res => {
-        if (res.success) {
-          setRules(res.data as AlertRule[]);
-        }
+      .then(data => {
+        setRules(data as AlertRule[]);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -139,11 +137,9 @@ export function AlertConfig() {
     let cancelled = false;
     apiClient
       .getAlertRules()
-      .then(res => {
+      .then(data => {
         if (cancelled) return;
-        if (res.success) {
-          setRules(res.data as AlertRule[]);
-        }
+        setRules(data as AlertRule[]);
       })
       .catch(() => {})
       .finally(() => {
@@ -193,17 +189,9 @@ export function AlertConfig() {
     setSaving(true);
     try {
       if (editingRule) {
-        const res = await apiClient.updateAlertRule(editingRule.id, formData);
-        if (!res.success) {
-          setError(res.message || t('saveFailed'));
-          return;
-        }
+        await apiClient.updateAlertRule(editingRule.id, formData);
       } else {
-        const res = await apiClient.createAlertRule(formData);
-        if (!res.success) {
-          setError(res.message || t('saveFailed'));
-          return;
-        }
+        await apiClient.createAlertRule(formData);
       }
       setDialogOpen(false);
       loadRules();
@@ -225,12 +213,10 @@ export function AlertConfig() {
 
   const handleToggle = async (id: string) => {
     try {
-      const res = await apiClient.toggleAlertRule(id);
-      if (res.success) {
-        setRules(prev =>
-          prev.map(r => (r.id === id ? { ...r, is_enabled: res.data.is_enabled } : r))
-        );
-      }
+      const data = await apiClient.toggleAlertRule(id);
+      setRules(prev =>
+        prev.map(r => (r.id === id ? { ...r, is_enabled: data.is_enabled } : r))
+      );
     } catch {
       setError(t('saveFailed'));
     }

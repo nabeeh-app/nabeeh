@@ -2,6 +2,9 @@ const request = require('supertest');
 const express = require('express');
 
 jest.mock('../../config/database', () => ({
+  supabase: {
+    from: jest.fn()
+  },
   supabaseAdmin: {
     from: jest.fn()
   }
@@ -44,11 +47,12 @@ jest.mock('../../lib/sessionManager', () => ({
 }));
 
 const assistantsRouter = require('../assistants');
-const { supabaseAdmin } = require('../../config/database');
+const { supabase, supabaseAdmin } = require('../../config/database');
 
 const app = express();
 app.use(express.json());
 app.use('/api/assistants', assistantsRouter);
+app.use(require('../../middleware/errorHandler'));
 
 function createChainable(resolveWith) {
   const chain = {
@@ -75,7 +79,7 @@ describe('Assistants Routes', () => {
 
   describe('POST /api/assistants/invite', () => {
     it('should return 403 if tier is unsupported', async () => {
-      supabaseAdmin.from
+      supabase.from
         .mockReturnValueOnce(createChainable({ data: { subscription_tier: 'enterprise' }, error: null }))
         .mockReturnValueOnce(createChainable({ count: 0, error: null }))
         .mockReturnValueOnce(createChainable({ data: null }))
@@ -91,7 +95,7 @@ describe('Assistants Routes', () => {
     });
 
     it('should return 403 if invite limit reached', async () => {
-      supabaseAdmin.from
+      supabase.from
         .mockReturnValueOnce(createChainable({ data: { subscription_tier: 'basic' }, error: null }))
         .mockReturnValueOnce(createChainable({ count: 5, error: null }))
         .mockReturnValueOnce(createChainable({ data: null }))
@@ -107,7 +111,7 @@ describe('Assistants Routes', () => {
     });
 
     it('should return 409 if pending invite already exists', async () => {
-      supabaseAdmin.from
+      supabase.from
         .mockReturnValueOnce(createChainable({ data: { subscription_tier: 'basic' }, error: null }))
         .mockReturnValueOnce(createChainable({ count: 0, error: null }))
         .mockReturnValueOnce(createChainable({ data: { id: 'existing' } }))
@@ -122,7 +126,7 @@ describe('Assistants Routes', () => {
     });
 
     it('should return 409 if user is already an assistant', async () => {
-      supabaseAdmin.from
+      supabase.from
         .mockReturnValueOnce(createChainable({ data: { subscription_tier: 'basic' }, error: null }))
         .mockReturnValueOnce(createChainable({ count: 0, error: null }))
         .mockReturnValueOnce(createChainable({ data: null }))

@@ -2,6 +2,9 @@ const request = require('supertest');
 const express = require('express');
 
 jest.mock('../../config/database', () => ({
+  supabase: {
+    from: jest.fn()
+  },
   supabaseAdmin: {
     from: jest.fn()
   }
@@ -30,11 +33,12 @@ jest.mock('../../lib/logger', () => ({
 }));
 
 const parentsRouter = require('../parents');
-const { supabaseAdmin } = require('../../config/database');
+const { supabase, supabaseAdmin } = require('../../config/database');
 
 const app = express();
 app.use(express.json());
 app.use('/api/parents', parentsRouter);
+app.use(require('../../middleware/errorHandler'));
 
 function createChainable(resolveWith) {
   const chain = {
@@ -45,6 +49,7 @@ function createChainable(resolveWith) {
     or: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     single: jest.fn().mockResolvedValue(resolveWith),
+    maybeSingle: jest.fn().mockResolvedValue(resolveWith),
     insert: jest.fn().mockReturnThis(),
     update: jest.fn().mockReturnThis(),
     delete: jest.fn().mockReturnThis(),
@@ -62,7 +67,7 @@ describe('Parents Routes', () => {
 
   describe('GET /api/parents', () => {
     it('should return parents for enrolled students', async () => {
-      supabaseAdmin.from
+      supabase.from
         .mockReturnValueOnce(createChainable({ data: [{ student_id: 's1' }, { student_id: 's2' }], error: null }))
         .mockReturnValueOnce(createChainable({ data: [{ id: 'p1', name: 'Father', phone: '123', student: { id: 's1', name: 'Ahmed' } }], error: null }));
 
@@ -74,7 +79,7 @@ describe('Parents Routes', () => {
     });
 
     it('should return 403 for unauthorized student access', async () => {
-      supabaseAdmin.from
+      supabase.from
         .mockReturnValueOnce(createChainable({ data: [{ student_id: 's1' }], error: null }))
         .mockReturnValueOnce(createChainable({ data: [], error: null }));
 
@@ -85,7 +90,7 @@ describe('Parents Routes', () => {
     });
 
     it('should return empty array when teacher has no students', async () => {
-      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: [], error: null }));
+      supabase.from.mockReturnValueOnce(createChainable({ data: [], error: null }));
 
       const res = await request(app).get('/api/parents');
 
@@ -94,7 +99,7 @@ describe('Parents Routes', () => {
     });
 
     it('should return 400 on database error', async () => {
-      supabaseAdmin.from
+      supabase.from
         .mockReturnValueOnce(createChainable({ data: [{ student_id: 's1' }], error: null }))
         .mockReturnValueOnce(createChainable({ data: null, error: { message: 'DB error' } }));
 
@@ -107,8 +112,9 @@ describe('Parents Routes', () => {
 
   describe('POST /api/parents', () => {
     it('should create a parent successfully', async () => {
+      supabase.from
+        .mockReturnValueOnce(createChainable({ data: { id: 'e1' }, error: null }));
       supabaseAdmin.from
-        .mockReturnValueOnce(createChainable({ data: [{ id: 'e1' }], error: null }))
         .mockReturnValueOnce(createChainable({ data: { id: 'p1', name: 'Mother', phone: '456', student: { name: 'Ahmed' } }, error: null }));
 
       const res = await request(app)
@@ -129,8 +135,9 @@ describe('Parents Routes', () => {
     });
 
     it('should return 400 on database error', async () => {
+      supabase.from
+        .mockReturnValueOnce(createChainable({ data: { id: 'e1' }, error: null }));
       supabaseAdmin.from
-        .mockReturnValueOnce(createChainable({ data: [{ id: 'e1' }], error: null }))
         .mockReturnValueOnce(createChainable({ data: null, error: { message: 'DB error' } }));
 
       const res = await request(app)

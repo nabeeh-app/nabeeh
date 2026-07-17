@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -29,6 +29,7 @@ export function Sidebar() {
   const t = useTranslations('navigation');
   const tCommon = useTranslations('common');
   const tRoles = useTranslations('roles');
+  const locale = useLocale();
   const pathname = usePathname();
   const { logout, teacher } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -86,7 +87,7 @@ export function Sidebar() {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.href === '/dashboard'
-            ? pathname === '/dashboard' || pathname.endsWith('/dashboard')
+            ? pathname === `/${locale}/dashboard` || pathname === '/dashboard' || pathname.endsWith('/dashboard')
             : pathname.includes(item.href);
 
           if (item.disabled) {
@@ -123,7 +124,7 @@ export function Sidebar() {
           return (
             <Link
               key={item.name}
-              href={item.href}
+              href={`/${locale}${item.href}`}
               className={`flex items-center gap-3 px-3 py-3 mx-1 rounded-md text-base font-normal transition-colors font-body uppercase tracking-wider ${
                 isActive
                   ? 'bg-sidebar-primary/20 text-sidebar-primary'

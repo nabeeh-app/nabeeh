@@ -2,6 +2,9 @@ const request = require('supertest');
 const express = require('express');
 
 jest.mock('../../config/database', () => ({
+  supabase: {
+    from: jest.fn()
+  },
   supabaseAdmin: {
     from: jest.fn()
   }
@@ -28,11 +31,12 @@ jest.mock('../../middleware/validate', () => ({
 }));
 
 const alertsRouter = require('../alerts');
-const { supabaseAdmin } = require('../../config/database');
+const { supabase, supabaseAdmin } = require('../../config/database');
 
 const app = express();
 app.use(express.json());
 app.use('/api/alerts', alertsRouter);
+app.use(require('../../middleware/errorHandler'));
 
 function createChainable(resolveWith) {
   const chain = {
@@ -60,7 +64,7 @@ describe('Alerts Routes', () => {
         { id: 'r1', alert_type: 'attendance_threshold', threshold_value: 70, comparison: 'lt', notification_method: 'in_app' }
       ];
 
-      supabaseAdmin.from.mockReturnValue(createChainable({ data: mockRules, error: null }));
+      supabase.from.mockReturnValue(createChainable({ data: mockRules, error: null }));
 
       const res = await request(app).get('/api/alerts/rules');
 
@@ -70,7 +74,7 @@ describe('Alerts Routes', () => {
     });
 
     it('should return empty array when no rules', async () => {
-      supabaseAdmin.from.mockReturnValue(createChainable({ data: [], error: null }));
+      supabase.from.mockReturnValue(createChainable({ data: [], error: null }));
 
       const res = await request(app).get('/api/alerts/rules');
 
@@ -79,7 +83,7 @@ describe('Alerts Routes', () => {
     });
 
     it('should return 500 on database error', async () => {
-      supabaseAdmin.from.mockReturnValue(createChainable({ data: null, error: { message: 'DB error' } }));
+      supabase.from.mockReturnValue(createChainable({ data: null, error: { message: 'DB error' } }));
 
       const res = await request(app).get('/api/alerts/rules');
 
@@ -205,21 +209,20 @@ describe('Alerts Routes', () => {
 
   describe('PUT /api/alerts/rules/:id/toggle', () => {
     it('should toggle alert rule enabled state', async () => {
-      supabaseAdmin.from
-        .mockReturnValueOnce({
-          select: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          single: jest.fn().mockResolvedValue({ data: { is_enabled: true }, error: null })
-        })
-        .mockReturnValueOnce({
-          update: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              select: jest.fn().mockReturnValue({
-                single: jest.fn().mockResolvedValue({ data: { id: 'r1', is_enabled: false }, error: null })
-              })
+      supabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: { is_enabled: true }, error: null })
+      });
+      supabaseAdmin.from.mockReturnValueOnce({
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({ data: { id: 'r1', is_enabled: false }, error: null })
             })
           })
-        });
+        })
+      });
 
       const res = await request(app).put('/api/alerts/rules/r1/toggle');
 
@@ -229,21 +232,20 @@ describe('Alerts Routes', () => {
     });
 
     it('should toggle from disabled to enabled', async () => {
-      supabaseAdmin.from
-        .mockReturnValueOnce({
-          select: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          single: jest.fn().mockResolvedValue({ data: { is_enabled: false }, error: null })
-        })
-        .mockReturnValueOnce({
-          update: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              select: jest.fn().mockReturnValue({
-                single: jest.fn().mockResolvedValue({ data: { id: 'r1', is_enabled: true }, error: null })
-              })
+      supabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: { is_enabled: false }, error: null })
+      });
+      supabaseAdmin.from.mockReturnValueOnce({
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({ data: { id: 'r1', is_enabled: true }, error: null })
             })
           })
-        });
+        })
+      });
 
       const res = await request(app).put('/api/alerts/rules/r1/toggle');
 
@@ -252,7 +254,7 @@ describe('Alerts Routes', () => {
     });
 
     it('should return 404 if rule not found', async () => {
-      supabaseAdmin.from.mockReturnValueOnce({
+      supabase.from.mockReturnValueOnce({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: null, error: null })
@@ -270,7 +272,7 @@ describe('Alerts Routes', () => {
         { id: 'a1', severity: 'high', alert_type: 'attendance_threshold', is_read: false, students: { name: 'Ahmed', student_id: 'ST-001' } }
       ];
 
-      supabaseAdmin.from.mockReturnValue({
+      supabase.from.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
@@ -295,7 +297,7 @@ describe('Alerts Routes', () => {
         range: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => resolve({ data: [], error: null, count: 0 }))
       };
-      supabaseAdmin.from.mockReturnValue(chain);
+      supabase.from.mockReturnValue(chain);
 
       await request(app).get('/api/alerts').query({ severity: 'high' });
 
@@ -310,7 +312,7 @@ describe('Alerts Routes', () => {
         range: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => resolve({ data: [], error: null, count: 0 }))
       };
-      supabaseAdmin.from.mockReturnValue(chain);
+      supabase.from.mockReturnValue(chain);
 
       await request(app).get('/api/alerts').query({ unread_only: 'true' });
 
@@ -322,7 +324,7 @@ describe('Alerts Routes', () => {
         { id: 'a1', severity: 'high', students: { name: 'Ahmed', student_id: 'ST-001' } }
       ];
 
-      supabaseAdmin.from.mockReturnValue({
+      supabase.from.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),

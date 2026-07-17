@@ -33,7 +33,7 @@ export function GoogleSignInButton({ className, mode = 'login' }: GoogleSignInBu
           redirectTo: `${window.location.origin}/${locale}/auth/callback`,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent'
+            prompt: 'select_account'
           }
         }
       });

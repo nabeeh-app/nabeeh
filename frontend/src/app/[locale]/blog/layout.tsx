@@ -24,5 +24,5 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function BlogLayout({ children }: Props) {
-  return children;
+  return <>{children}</>;
 }

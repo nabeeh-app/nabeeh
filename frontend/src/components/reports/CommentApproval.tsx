@@ -22,11 +22,9 @@ export function CommentApproval() {
 
   const handleApprove = useCallback(async (draft: ReportDraft) => {
     try {
-      const res = await apiClient.approveReportDraft(draft.id);
-      if (res.success) {
-        setSelectedDraft(null);
-        setRefreshKey(prev => prev + 1);
-      }
+      await apiClient.approveReportDraft(draft.id);
+      setSelectedDraft(null);
+      setRefreshKey(prev => prev + 1);
     } catch {
       setError(t('saveFailed'));
     }
@@ -34,11 +32,9 @@ export function CommentApproval() {
 
   const handleReject = useCallback(async (draft: ReportDraft) => {
     try {
-      const res = await apiClient.rejectReportDraft(draft.id);
-      if (res.success) {
-        setSelectedDraft(null);
-        setRefreshKey(prev => prev + 1);
-      }
+      await apiClient.rejectReportDraft(draft.id);
+      setSelectedDraft(null);
+      setRefreshKey(prev => prev + 1);
     } catch {
       setError(t('saveFailed'));
     }

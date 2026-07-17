@@ -42,16 +42,12 @@ export function AssistantManager() {
 
   const fetchAssistants = useCallback(async () => {
     try {
-      const [assistantsRes, invitesRes] = await Promise.all([
+      const [assistantsData, invitesData] = await Promise.all([
         apiClient.getAssistants(),
         apiClient.listPendingInvites(),
       ]);
-      if (assistantsRes.success && assistantsRes.data) {
-        setAssistants(assistantsRes.data as Assistant[]);
-      }
-      if (invitesRes.success && invitesRes.data) {
-        setPendingInvites(invitesRes.data as Array<{ id: string; email: string; phone: string; status: string; expires_at: string; created_at: string }>);
-      }
+      setAssistants(assistantsData as Assistant[]);
+      setPendingInvites(invitesData as Array<{ id: string; email: string; phone: string; status: string; expires_at: string; created_at: string }>);
     } catch {
       // error handled by apiClient
     } finally {

@@ -5,7 +5,7 @@ const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
 const logger = require('../lib/logger');
-const { verifyOfferingAccess } = require('../lib/enrollmentChain');
+const { verifyOfferingAccess, getStudentEnrollmentsForTeacher } = require('../lib/enrollmentChain');
 
 const router = express.Router();
 
@@ -239,16 +239,21 @@ const getTrends = async (req, res) => {
   const teacherId = req.user.teacherId || req.user.id;
   const { studentId } = req.validated.params;
 
-  // Get grades for this student, joined through enrollment -> offering -> teacher
+  // Enforce enrollment chain access control
+  const enrollments = await getStudentEnrollmentsForTeacher(studentId, teacherId);
+  if (!enrollments || enrollments.length === 0) {
+    return res.json({ success: true, data: { student_id: studentId, trends: [] } });
+  }
+
+  const enrollmentIds = enrollments.map(e => e.id);
+
   const { data: grades } = await supabase
     .from('grades')
     .select(`
       score,
-      assessment:assessments(name, date, max_score, offering:offerings(teacher_id))
+      assessment:assessments(name, date, max_score)
     `)
-    .eq('enrollment.student_id', studentId)
-    .eq('assessment.offerings.teacher_id', teacherId)
-    .order('assessment.date', { ascending: true });
+    .in('enrollment_id', enrollmentIds);
 
   if (!grades || grades.length === 0) {
     return res.json({ success: true, data: { student_id: studentId, trends: [] } });
@@ -262,7 +267,8 @@ const getTrends = async (req, res) => {
       score: g.score,
       max_score: g.assessment.max_score,
       percentage: Math.round((g.score / g.assessment.max_score) * 100 * 10) / 10,
-    }));
+    }))
+    .sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0));
 
   res.json({ success: true, data: { student_id: studentId, trends } });
 };

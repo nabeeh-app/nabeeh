@@ -54,18 +54,18 @@ export function ReportGenerator() {
     setGenerating(true);
     setDraft(null);
     try {
-      const res = await apiClient.generateReportComment(selectedStudent, selectedOffering || undefined);
-      if (res.success && res.data) {
+      const data = await apiClient.generateReportComment(selectedStudent, selectedOffering || undefined);
+      if (data) {
         setDraft({
-          id: res.data.id,
+          id: data.id,
           student_id: selectedStudent,
           group_id: selectedOffering || null,
-          draft_text: res.data.draft_text,
+          draft_text: data.draft_text,
           data_sources: null,
           status: 'pending',
           edited_text: null,
           sent_at: null,
-          created_at: res.data.created_at,
+          created_at: data.created_at,
           student: students.find(s => s.id === selectedStudent) ? { name: students.find(s => s.id === selectedStudent)!.name } : undefined,
         });
       }
@@ -79,11 +79,9 @@ export function ReportGenerator() {
   const handleSaveEdit = async () => {
     if (!draft) return;
     try {
-      const res = await apiClient.updateReportDraft(draft.id, { edited_text: editText, status: 'edited' });
-      if (res.success) {
-        setDraft(prev => prev ? { ...prev, edited_text: editText, status: 'edited' } : null);
-        setEditing(false);
-      }
+      await apiClient.updateReportDraft(draft.id, { edited_text: editText, status: 'edited' });
+      setDraft(prev => prev ? { ...prev, edited_text: editText, status: 'edited' } : null);
+      setEditing(false);
     } catch {
       // silent
     }

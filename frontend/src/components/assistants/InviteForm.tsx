@@ -72,19 +72,15 @@ export function InviteForm({ onClose, onSuccess }: InviteFormProps) {
 
     setLoading(true);
     try {
-      const res = await apiClient.inviteAssistantDual({
+      await apiClient.inviteAssistantDual({
         email: needsEmail ? email : undefined,
         phone: needsPhone ? phone : undefined,
         deliveryMethod,
         permissions,
       });
-      if (res.success) {
-        const target = needsEmail ? email : phone;
-        setSuccess(t('inviteSent', { email: target }));
-        setTimeout(() => onSuccess(), 1500);
-      } else {
-        setError(res.message || t('inviteFailed'));
-      }
+      const target = needsEmail ? email : phone;
+      setSuccess(t('inviteSent', { email: target }));
+      setTimeout(() => onSuccess(), 1500);
     } catch {
       setError(t('inviteFailed'));
     } finally {

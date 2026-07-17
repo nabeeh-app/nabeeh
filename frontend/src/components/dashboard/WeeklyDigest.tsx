@@ -22,9 +22,9 @@ export function WeeklyDigest() {
 
   const fetchDigest = useCallback(async () => {
     try {
-      const res = await apiClient.getLatestDigest();
-      if (res.success && res.data) {
-        setDigest(res.data as WeeklyDigest);
+      const data = await apiClient.getLatestDigest();
+      if (data) {
+        setDigest(data as WeeklyDigest);
       }
     } catch {
       // silent

@@ -113,7 +113,8 @@ const markAttendance = async (req, res) => {
   const missingEnrollments = [];
 
   attendance_records.forEach(record => {
-    const enrollmentId = enrollmentMap[`${record.student_id}_${record.group_id}`];
+    const key = `${record.student_id}_${record.group_id}`;
+    const enrollmentId = enrollmentMap instanceof Map ? enrollmentMap.get(key) : enrollmentMap[key];
     if (enrollmentId) {
       activeRecords.push({
         enrollment_id: enrollmentId,

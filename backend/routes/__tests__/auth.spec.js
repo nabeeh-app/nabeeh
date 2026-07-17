@@ -72,6 +72,7 @@ const { supabase, supabaseAdmin } = require('../../config/database');
 const app = express();
 app.use(express.json());
 app.use('/api/auth', authRouter);
+app.use(require('../../middleware/errorHandler'));
 
 describe('Auth Routes', () => {
   beforeEach(() => {
@@ -897,6 +898,8 @@ describe('Auth Routes', () => {
     });
 
     it('should return 500 when password update fails', async () => {
+      mockValidatePasswordStrength.mockReturnValueOnce({ isValid: true, errors: [] });
+
       supabaseAdmin.from.mockReturnValueOnce({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({

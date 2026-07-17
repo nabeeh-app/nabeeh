@@ -803,7 +803,17 @@ router.get('/verify-token', asyncHandler(async (req, res) => {
         });
     }
 
-    const decoded = authService.tokenService.verifyToken(token);
+    let decoded;
+    try {
+        decoded = authService.tokenService.verifyToken(token);
+    } catch (err) {
+        return res.status(401).json({
+            success: false,
+            message: 'Invalid token',
+            messageAr: 'رمز غير صالح',
+            code: 'UNAUTHORIZED'
+        });
+    }
 
     // Check if token has been revoked
     if (decoded.jti && await authService.tokenService.isTokenRevoked(decoded.jti)) {

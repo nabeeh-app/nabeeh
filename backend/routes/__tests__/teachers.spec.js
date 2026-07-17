@@ -36,6 +36,7 @@ const { supabase } = require('../../config/database');
 const app = express();
 app.use(express.json());
 app.use('/api/teachers', teachersRouter);
+app.use(require('../../middleware/errorHandler'));
 
 function createChainable(resolveWith) {
   const chain = {

@@ -1,4 +1,7 @@
 jest.mock('../../config/database', () => ({
+  supabase: {
+    from: jest.fn()
+  },
   supabaseAdmin: {
     from: jest.fn()
   }
@@ -67,11 +70,12 @@ jest.mock('../../lib/auditLog', () => ({
 const request = require('supertest');
 const express = require('express');
 const { router, normalizePhoneNumber } = require('../whatsapp');
-const { supabaseAdmin } = require('../../config/database');
+const { supabase, supabaseAdmin } = require('../../config/database');
 
 const app = express();
 app.use(express.json());
 app.use('/api/whatsapp', router);
+app.use(require('../../middleware/errorHandler'));
 
 describe('WhatsApp Routes', () => {
   beforeEach(() => {
@@ -209,7 +213,7 @@ describe('WhatsApp Routes', () => {
         })
       };
 
-      supabaseAdmin.from
+      supabase.from
         .mockReturnValueOnce(countChain)
         .mockReturnValueOnce(chainable);
 
@@ -241,7 +245,7 @@ describe('WhatsApp Routes', () => {
         })
       };
 
-      supabaseAdmin.from
+      supabase.from
         .mockReturnValueOnce(countChain)
         .mockReturnValueOnce(chainable);
 
@@ -273,7 +277,7 @@ describe('WhatsApp Routes', () => {
         })
       };
 
-      supabaseAdmin.from
+      supabase.from
         .mockReturnValueOnce(countChain)
         .mockReturnValueOnce(chainable);
 
@@ -316,9 +320,8 @@ describe('WhatsApp Routes', () => {
         })
       };
 
-      supabaseAdmin.from
-        .mockReturnValueOnce(fetchChain)
-        .mockReturnValueOnce(updateChain);
+      supabase.from.mockReturnValueOnce(fetchChain);
+      supabaseAdmin.from.mockReturnValueOnce(updateChain);
 
       const res = await request(app)
         .post('/api/whatsapp/bot/resume')
@@ -348,7 +351,7 @@ describe('WhatsApp Routes', () => {
         single: jest.fn().mockResolvedValue({ data: null, error: null })
       };
 
-      supabaseAdmin.from.mockReturnValueOnce(fetchChain);
+      supabase.from.mockReturnValueOnce(fetchChain);
 
       const res = await request(app)
         .post('/api/whatsapp/bot/resume')
@@ -368,7 +371,7 @@ describe('WhatsApp Routes', () => {
         })
       };
 
-      supabaseAdmin.from.mockReturnValueOnce(fetchChain);
+      supabase.from.mockReturnValueOnce(fetchChain);
 
       const res = await request(app)
         .post('/api/whatsapp/bot/resume')
@@ -636,9 +639,10 @@ describe('WhatsApp Routes', () => {
         eq: jest.fn().mockResolvedValue({ error: null })
       };
 
-      supabaseAdmin.from
+      supabase.from
         .mockReturnValueOnce(parentChain)
-        .mockReturnValueOnce(convChain)
+        .mockReturnValueOnce(convChain);
+      supabaseAdmin.from
         .mockReturnValueOnce(updateChain);
 
       const res = await request(app)
@@ -662,7 +666,7 @@ describe('WhatsApp Routes', () => {
       });
 
       // Parent lookup throws
-      supabaseAdmin.from.mockImplementation(() => {
+      supabase.from.mockImplementation(() => {
         throw new Error('DB error');
       });
 
@@ -690,7 +694,7 @@ describe('WhatsApp Routes', () => {
   describe('GET /api/whatsapp/conversations - error paths', () => {
     it('should return 500 on DB error', async () => {
       const { supabaseAdmin } = require('../../config/database');
-      supabaseAdmin.from.mockImplementation(() => {
+      supabase.from.mockImplementation(() => {
         throw new Error('DB failure');
       });
 
@@ -703,7 +707,7 @@ describe('WhatsApp Routes', () => {
 
     it('should handle empty conversations', async () => {
       const { supabaseAdmin } = require('../../config/database');
-      supabaseAdmin.from.mockReset();
+      supabase.from.mockReset();
 
       const countChain = {
         select: jest.fn().mockReturnThis(),
@@ -721,7 +725,7 @@ describe('WhatsApp Routes', () => {
           resolve({ data: [], error: null });
         })
       };
-      supabaseAdmin.from
+      supabase.from
         .mockReturnValueOnce(countChain)
         .mockReturnValueOnce(dataChain);
 

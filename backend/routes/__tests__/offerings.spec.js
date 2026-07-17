@@ -2,6 +2,9 @@ const request = require('supertest');
 const express = require('express');
 
 jest.mock('../../config/database', () => ({
+  supabase: {
+    from: jest.fn()
+  },
   supabaseAdmin: {
     from: jest.fn()
   }
@@ -32,11 +35,12 @@ jest.mock('../../lib/logger', () => ({
 }));
 
 const offeringsRouter = require('../offerings');
-const { supabaseAdmin } = require('../../config/database');
+const { supabase, supabaseAdmin } = require('../../config/database');
 
 const app = express();
 app.use(express.json());
 app.use('/api/offerings', offeringsRouter);
+app.use(require('../../middleware/errorHandler'));
 
 function createChainable(resolveWith) {
   const chain = {
@@ -59,10 +63,8 @@ describe('Offerings Routes', () => {
 
   describe('PUT /api/offerings/:offeringId/groups/:groupId', () => {
     it('should update group successfully', async () => {
-      // First: offering ownership check
-      supabaseAdmin.from
-        .mockReturnValueOnce(createChainable({ data: { id: 'o1' }, error: null }))
-        .mockReturnValueOnce(createChainable({ data: { id: 'g1', name: 'Updated Group' }, error: null }));
+      supabase.from.mockReturnValueOnce(createChainable({ data: { id: 'o1' }, error: null }));
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: { id: 'g1', name: 'Updated Group' }, error: null }));
 
       const res = await request(app)
         .put('/api/offerings/o1/groups/g1')
@@ -74,7 +76,7 @@ describe('Offerings Routes', () => {
     });
 
     it('should return 403 if offering not found', async () => {
-      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: null, error: null }));
+      supabase.from.mockReturnValueOnce(createChainable({ data: null, error: null }));
 
       const res = await request(app)
         .put('/api/offerings/o1/groups/g1')
@@ -84,7 +86,7 @@ describe('Offerings Routes', () => {
     });
 
     it('should return 400 if no valid fields', async () => {
-      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: { id: 'o1' }, error: null }));
+      supabase.from.mockReturnValueOnce(createChainable({ data: { id: 'o1' }, error: null }));
 
       const res = await request(app)
         .put('/api/offerings/o1/groups/g1')

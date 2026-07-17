@@ -30,15 +30,13 @@ export function ReportSendDialog({ open, onOpenChange, draftId, studentName, onS
   const handleSend = async () => {
     setSending(true);
     try {
-      const res = await apiClient.approveReportDraft(draftId);
-      if (res.success) {
-        setSent(true);
-        setTimeout(() => {
-          setSent(false);
-          onOpenChange(false);
-          onSuccess?.();
-        }, 1500);
-      }
+      await apiClient.approveReportDraft(draftId);
+      setSent(true);
+      setTimeout(() => {
+        setSent(false);
+        onOpenChange(false);
+        onSuccess?.();
+      }, 1500);
     } catch {
       // silent
     } finally {

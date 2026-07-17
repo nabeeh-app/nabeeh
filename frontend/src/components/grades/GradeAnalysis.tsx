@@ -48,14 +48,14 @@ export function GradeAnalysis() {
         apiClient.getAtRiskStudents(offeringId),
       ]);
 
-      if (overviewRes.status === 'fulfilled' && overviewRes.value.success) {
-        setOverview(overviewRes.value.data as GradeOverview);
+      if (overviewRes.status === 'fulfilled') {
+        setOverview(overviewRes.value as GradeOverview);
       }
-      if (groupRes.status === 'fulfilled' && groupRes.value.success) {
-        setGroupData(groupRes.value.data as GroupComparisonType[]);
+      if (groupRes.status === 'fulfilled') {
+        setGroupData(groupRes.value as GroupComparisonType[]);
       }
-      if (atRiskRes.status === 'fulfilled' && atRiskRes.value.success) {
-        setAtRisk(atRiskRes.value.data as AtRiskStudent[]);
+      if (atRiskRes.status === 'fulfilled') {
+        setAtRisk(atRiskRes.value as AtRiskStudent[]);
       }
     } catch {
       // silent

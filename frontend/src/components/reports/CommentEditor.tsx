@@ -23,10 +23,8 @@ export function CommentEditor({ draft, onSaved, onCancel }: CommentEditorProps) 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await apiClient.updateReportDraft(draft.id, { edited_text: text, status: 'edited' });
-      if (res.success) {
-        onSaved({ ...draft, edited_text: text, status: 'edited' });
-      }
+      await apiClient.updateReportDraft(draft.id, { edited_text: text, status: 'edited' });
+      onSaved({ ...draft, edited_text: text, status: 'edited' });
     } catch {
       setError(t('saveFailed'));
     } finally {

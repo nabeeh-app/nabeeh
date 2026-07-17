@@ -2,6 +2,9 @@ const request = require('supertest');
 const express = require('express');
 
 jest.mock('../../config/database', () => ({
+  supabase: {
+    from: jest.fn()
+  },
   supabaseAdmin: {
     from: jest.fn()
   }
@@ -36,11 +39,12 @@ jest.mock('../../lib/logger', () => ({
 }));
 
 const notificationsRouter = require('../notifications');
-const { supabaseAdmin } = require('../../config/database');
+const { supabase, supabaseAdmin } = require('../../config/database');
 
 const app = express();
 app.use(express.json());
 app.use('/api/notifications', notificationsRouter);
+app.use(require('../../middleware/errorHandler'));
 
 function createChainable(resolveWith) {
   const chain = {
@@ -65,7 +69,7 @@ describe('Notifications Routes', () => {
 
   describe('GET /api/notifications', () => {
     it('should return notifications with pagination', async () => {
-      supabaseAdmin.from.mockReturnValueOnce(createChainable({
+      supabase.from.mockReturnValueOnce(createChainable({
         data: [{ id: 'n1', title: 'Test', is_read: false }],
         error: null,
         count: 1
@@ -83,7 +87,7 @@ describe('Notifications Routes', () => {
     });
 
     it('should use default pagination when no params', async () => {
-      supabaseAdmin.from.mockReturnValueOnce(createChainable({
+      supabase.from.mockReturnValueOnce(createChainable({
         data: [],
         error: null,
         count: 0
@@ -100,7 +104,7 @@ describe('Notifications Routes', () => {
 
   describe('GET /api/notifications/unread-count', () => {
     it('should return unread count', async () => {
-      supabaseAdmin.from.mockReturnValueOnce(createChainable({ count: 3, error: null }));
+      supabase.from.mockReturnValueOnce(createChainable({ count: 3, error: null }));
 
       const res = await request(app).get('/api/notifications/unread-count');
 
@@ -116,7 +120,7 @@ describe('Notifications Routes', () => {
           return Promise.reject(new Error('DB error')).then(onFulfilled, onRejected);
         }
       };
-      supabaseAdmin.from.mockReturnValueOnce(errorChain);
+      supabase.from.mockReturnValueOnce(errorChain);
 
       const res = await request(app).get('/api/notifications/unread-count');
 
