@@ -37,6 +37,7 @@ COPY --from=base /app/node_modules ./node_modules
 COPY --from=base /app/package.json ./package.json
 COPY --from=base /app/public ./public
 COPY --from=base /app/next.config.ts ./next.config.ts
+COPY --from=base /app/i18n.ts ./i18n.ts
 
 # Create non-root user
 RUN addgroup -g 1001 -S nabeeh && \

@@ -89,17 +89,9 @@ class ApiClient {
       async (error) => {
         const config = error.config;
         
-        // Only redirect to login on 401 for dashboard (protected) pages
-        if (error.response?.status === 401) {
-          const path = window.location.pathname;
-          const isDashboardPage = path.includes('/dashboard');
-          if (isDashboardPage) {
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem('nabeeh_token');
-            }
-            const locale = path.split('/')[1] || 'ar';
-            window.location.href = `/${locale}/login`;
-          }
+        // Clear local token storage on 401 to prevent stale Authorization header calls
+        if (error.response?.status === 401 && typeof window !== 'undefined') {
+          localStorage.removeItem('nabeeh_token');
         }
 
         // Retry logic for 5xx errors and network errors
