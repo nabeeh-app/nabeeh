@@ -96,14 +96,6 @@ export async function GET(request: Request) {
         path: '/',
       });
 
-      response.cookies.set('nabeeh_token_client', data.data.token, {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 24 * 60 * 60,
-        path: '/',
-      });
-
       const csrfToken = randomBytes(32).toString('hex');
       response.cookies.set('csrf_token', csrfToken, {
         httpOnly: false,
