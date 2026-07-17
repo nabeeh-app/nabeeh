@@ -67,7 +67,12 @@ export async function GET(request: Request) {
 
   // Exchange Supabase session for backend JWT — all server-side, no intermediate page
   try {
-    const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    let backendUrl = process.env.BACKEND_URL;
+    if (!backendUrl) {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      backendUrl = apiUrl.startsWith('http') ? apiUrl : `${origin}${apiUrl}`;
+    }
+
     const backendRes = await fetch(`${backendUrl}/auth/oauth/callback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -111,9 +116,11 @@ export async function GET(request: Request) {
       return response;
     }
 
+    logger.error('Backend OAuth exchange returned non-success', { data });
     // Backend exchange failed — redirect to login with error
     return NextResponse.redirect(`${origin}/${locale}/login?error=oauth_backend_failed`);
-  } catch {
+  } catch (err) {
+    logger.error('Backend unreachable during OAuth callback', { error: err });
     // Backend unreachable — redirect to login with error
     return NextResponse.redirect(`${origin}/${locale}/login?error=oauth_backend_unreachable`);
   }
