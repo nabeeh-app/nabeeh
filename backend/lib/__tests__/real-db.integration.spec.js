@@ -9,14 +9,14 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '..', '.e
 
 const { createClient } = require('@supabase/supabase-js');
 
+const hasDbCreds = !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+const describeOrSkip = hasDbCreds ? describe : describe.skip;
+
 let supabaseAdmin;
 const T1 = '0b8d8f5e-8053-4229-9435-261ef9f12ade';
 const T2 = '6e4d2e23-7cf9-4a82-9335-33c835728b89';
 
 beforeAll(() => {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-  }
   supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 });
 
@@ -31,7 +31,7 @@ afterAll(async () => {
 // ============================================================
 // whatsapp_sessions table
 // ============================================================
-describe('Real DB — whatsapp_sessions', () => {
+describeOrSkip('Real DB — whatsapp_sessions', () => {
   afterEach(async () => {
     await supabaseAdmin.from('whatsapp_sessions').delete().eq('teacher_id', T1);
   });
@@ -119,7 +119,7 @@ describe('Real DB — whatsapp_sessions', () => {
 // whatsapp_auth_keys — schema: (type TEXT, id TEXT, data JSONB, teacher_id UUID)
 // PK after migration 016: (type, id, teacher_id)
 // ============================================================
-describe('Real DB — whatsapp_auth_keys', () => {
+describeOrSkip('Real DB — whatsapp_auth_keys', () => {
   afterEach(async () => {
     await supabaseAdmin.from('whatsapp_auth_keys').delete().eq('teacher_id', T1);
   });
@@ -189,7 +189,7 @@ describe('Real DB — whatsapp_auth_keys', () => {
 // whatsapp_auth_creds — schema: (id TEXT PK, creds JSONB, teacher_id UUID)
 // No unique constraint on (id, teacher_id) — PK is just (id)
 // ============================================================
-describe('Real DB — whatsapp_auth_creds', () => {
+describeOrSkip('Real DB — whatsapp_auth_creds', () => {
   afterEach(async () => {
     await supabaseAdmin.from('whatsapp_auth_creds').delete().eq('teacher_id', T1);
   });
@@ -231,7 +231,7 @@ describe('Real DB — whatsapp_auth_creds', () => {
 // ============================================================
 // whatsappQuery — real queries against real DB
 // ============================================================
-describe('Real DB — whatsappQuery', () => {
+describeOrSkip('Real DB — whatsappQuery', () => {
   const whatsappQuery = require('../whatsappQuery');
 
   it('getParentByPhone should query without error', async () => {
@@ -264,7 +264,7 @@ describe('Real DB — whatsappQuery', () => {
 // ============================================================
 // Cross-table: full lifecycle simulation
 // ============================================================
-describe('Real DB — full session lifecycle', () => {
+describeOrSkip('Real DB — full session lifecycle', () => {
   afterEach(async () => {
     await supabaseAdmin.from('whatsapp_sessions').delete().eq('teacher_id', T1);
     await supabaseAdmin.from('whatsapp_auth_keys').delete().eq('teacher_id', T1);
