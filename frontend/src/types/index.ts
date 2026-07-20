@@ -1,3 +1,13 @@
+// Clarity Analytics
+declare global {
+  interface Window {
+    clarity?: {
+      q: unknown[][];
+      (...args: unknown[]): void;
+    };
+  }
+}
+
 // API Response Types
 export interface ApiResponse<T> {
   success: boolean;

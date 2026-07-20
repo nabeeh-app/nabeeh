@@ -45,13 +45,7 @@ export function ProblemSection() {
         <div className="text-center bg-canvas rounded-xl border border-ink/10 p-8 max-w-2xl mx-auto">
           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <svg viewBox="0 0 200 240" fill="none" className="w-8 h-10">
-              <defs>
-                <linearGradient id="solBodyGrad" x1="100" y1="40" x2="100" y2="200" gradientUnits="userSpaceOnUse">
-                  <stop offset="0" stopColor="#05c4b8" />
-                  <stop offset="1" stopColor="#026370" />
-                </linearGradient>
-              </defs>
-              <ellipse cx="100" cy="112" rx="74" ry="82" fill="url(#solBodyGrad)" />
+              <ellipse cx="100" cy="112" rx="74" ry="82" fill="url(#eyeball-grad)" />
               <circle cx="70" cy="110" r="32" stroke="white" strokeWidth="6" fill="none" />
               <circle cx="130" cy="110" r="32" stroke="white" strokeWidth="6" fill="none" />
               <ellipse cx="70" cy="112" rx="11" ry="12" fill="#083d44" />

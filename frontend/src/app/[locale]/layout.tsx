@@ -1,11 +1,6 @@
 import type { Metadata } from 'next';
-import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
-import { AuthProvider } from '@/hooks/useAuth';
-import { LocaleProvider } from '@/components/locale-provider';
-import QueryProvider from '@/components/QueryProvider';
-import LocaleErrorBoundary from '@/components/LocaleErrorBoundary';
-import { CookieNotice } from '@/components/CookieNotice';
+import Providers from '@/components/providers';
 import { notFound } from 'next/navigation';
 
 type Props = {
@@ -84,17 +79,8 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <NextIntlClientProvider messages={messages}>
-      <QueryProvider>
-        <LocaleProvider>
-          <AuthProvider>
-            <LocaleErrorBoundary>
-              {children}
-            </LocaleErrorBoundary>
-            <CookieNotice />
-          </AuthProvider>
-        </LocaleProvider>
-      </QueryProvider>
-    </NextIntlClientProvider>
+    <Providers locale={locale} messages={messages}>
+      {children}
+    </Providers>
   );
 }

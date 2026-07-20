@@ -16,9 +16,8 @@ export function PricingSection() {
   const locale = useLocale();
 
   return (
-    <section id="pricing" className="py-20 scroll-mt-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+    <section id="pricing" className="py-20 scroll-mt-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-ink font-display mb-4">
             {t('title')}
           </h2>
@@ -97,7 +96,6 @@ export function PricingSection() {
               </Card>
             );
           })}
-        </div>
       </div>
     </section>
   );

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { DM_Mono } from "next/font/google";
 import "./globals.css";
 import ErrorBoundary from "@/components/error-boundary";
+import ClarityScript from "@/components/ClarityScript";
+import IconDefs from "@/components/IconDefs";
 
 const dmMono = DM_Mono({
   variable: "--font-mono",
@@ -84,20 +86,20 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning>
       <head>
-        <script
-          type="text/javascript"
-          dangerouslySetInnerHTML={{
-            __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window, document, "clarity", "script", "x86kzi0f6e");`,
-          }}
-        />
+        <link rel="preload" href="/fonts/thmanyahsans-Black.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/thmanyahsans-Medium.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/thmanyahsans-Regular.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/thmanyahserifdisplay-Black.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       </head>
       <body
         className={`${dmMono.variable} antialiased`}
         suppressHydrationWarning
       >
+        <IconDefs />
         <ErrorBoundary>
           {children}
         </ErrorBoundary>
+        <ClarityScript />
       </body>
     </html>
   );

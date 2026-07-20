@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { setConsent } from '@/lib/consent';
 
 export function CookieNotice() {
   const [isVisible, setIsVisible] = useState(false);
@@ -16,12 +17,12 @@ export function CookieNotice() {
   }, []);
 
   const accept = () => {
-    localStorage.setItem('nabeeh-cookie-consent', 'accepted');
+    setConsent('accepted');
     setIsVisible(false);
   };
 
   const reject = () => {
-    localStorage.setItem('nabeeh-cookie-consent', 'rejected');
+    setConsent('rejected');
     setIsVisible(false);
   };
 

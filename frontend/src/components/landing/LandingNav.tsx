@@ -43,15 +43,9 @@ export function LandingNav() {
           {/* Logo */}
           <Link href={`/${locale}`} className="flex items-center gap-2">
             <svg viewBox="0 0 200 240" fill="none" className="w-8 h-10">
-              <defs>
-                <linearGradient id="navBodyGrad" x1="100" y1="40" x2="100" y2="200" gradientUnits="userSpaceOnUse">
-                  <stop offset="0" stopColor="#05c4b8" />
-                  <stop offset="1" stopColor="#026370" />
-                </linearGradient>
-              </defs>
               <path d="M93 44Q85 15 68 12Q82 20 90 40" fill="#05c4b8" />
               <path d="M100 40Q108 8 128 8Q112 16 105 38" fill="#05c4b8" />
-              <ellipse cx="100" cy="112" rx="74" ry="82" fill="url(#navBodyGrad)" />
+              <ellipse cx="100" cy="112" rx="74" ry="82" fill="url(#eyeball-grad)" />
               <ellipse cx="100" cy="108" rx="60" ry="68" fill="#05c4b8" opacity="0.25" />
               <circle cx="70" cy="110" r="32" stroke="white" strokeWidth="6" fill="none" />
               <circle cx="130" cy="110" r="32" stroke="white" strokeWidth="6" fill="none" />

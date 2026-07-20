@@ -228,25 +228,21 @@ export function WhatsAppDemo() {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={cn('flex', msg.sender === 'parent' ? 'justify-end' : 'justify-start')}
+            className={cn(
+              'max-w-[85%] rounded-xl px-3 py-2 shadow-sm',
+              msg.sender === 'parent'
+                ? 'bg-primary text-white rounded-br-sm ml-auto'
+                : 'bg-white border border-ink/5 text-ink rounded-bl-sm'
+            )}
           >
-            <div
-              className={cn(
-                'max-w-[85%] rounded-xl px-3 py-2 shadow-sm',
-                msg.sender === 'parent'
-                  ? 'bg-primary text-white rounded-br-sm'
-                  : 'bg-white border border-ink/5 text-ink rounded-bl-sm'
+            <p className="text-sm font-body whitespace-pre-line leading-relaxed">{msg.text}</p>
+            <div className={cn('flex items-center gap-1 mt-1', msg.sender === 'parent' ? 'justify-end' : 'justify-start')}>
+              <span className={cn('text-[10px]', msg.sender === 'parent' ? 'text-white/60' : 'text-ink/40')}>
+                {msg.time}
+              </span>
+              {msg.sender === 'parent' && (
+                <CheckCheck className="w-3 h-3 text-white/60" />
               )}
-            >
-              <p className="text-sm font-body whitespace-pre-line leading-relaxed">{msg.text}</p>
-              <div className={cn('flex items-center gap-1 mt-1', msg.sender === 'parent' ? 'justify-end' : 'justify-start')}>
-                <span className={cn('text-[10px]', msg.sender === 'parent' ? 'text-white/60' : 'text-ink/40')}>
-                  {msg.time}
-                </span>
-                {msg.sender === 'parent' && (
-                  <CheckCheck className="w-3 h-3 text-white/60" />
-                )}
-              </div>
             </div>
           </div>
         ))}

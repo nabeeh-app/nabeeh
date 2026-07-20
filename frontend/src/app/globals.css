@@ -2,12 +2,16 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ── Thmanyah Sans (body) ──────────────────────────────────────── */
+/* ── Thmanyah Sans (body) — fallback: sans-serif ──────────────── */
 @font-face {
   font-family: "Thmanyah Sans";
   font-style: normal;
   font-weight: 300;
   font-display: swap;
+  size-adjust: 102%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahsans-Light.woff2") format("woff2");
 }
 @font-face {
@@ -15,6 +19,10 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
+  size-adjust: 102%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahsans-Regular.woff2") format("woff2");
 }
 @font-face {
@@ -22,6 +30,10 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
+  size-adjust: 102%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahsans-Medium.woff2") format("woff2");
 }
 @font-face {
@@ -29,6 +41,10 @@
   font-style: normal;
   font-weight: 600;
   font-display: swap;
+  size-adjust: 102%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahsans-Bold.woff2") format("woff2");
 }
 @font-face {
@@ -36,15 +52,23 @@
   font-style: normal;
   font-weight: 900;
   font-display: swap;
+  size-adjust: 102%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahsans-Black.woff2") format("woff2");
 }
 
-/* ── Thmanyah Serif Display (headlines) ────────────────────────── */
+/* ── Thmanyah Serif Display (headlines) — fallback: serif ─────── */
 @font-face {
   font-family: "Thmanyah Serif Display";
   font-style: normal;
   font-weight: 300;
   font-display: swap;
+  size-adjust: 100%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahserifdisplay-Light.woff2") format("woff2");
 }
 @font-face {
@@ -52,6 +76,10 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
+  size-adjust: 100%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahserifdisplay-Regular.woff2") format("woff2");
 }
 @font-face {
@@ -59,6 +87,10 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
+  size-adjust: 100%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahserifdisplay-Medium.woff2") format("woff2");
 }
 @font-face {
@@ -66,6 +98,10 @@
   font-style: normal;
   font-weight: 600;
   font-display: swap;
+  size-adjust: 100%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahserifdisplay-Bold.woff2") format("woff2");
 }
 @font-face {
@@ -73,15 +109,23 @@
   font-style: normal;
   font-weight: 900;
   font-display: swap;
+  size-adjust: 100%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahserifdisplay-Black.woff2") format("woff2");
 }
 
-/* ── Thmanyah Serif Text (Arabic fallback) ─────────────────────── */
+/* ── Thmanyah Serif Text (Arabic fallback) — fallback: serif ──── */
 @font-face {
   font-family: "Thmanyah Serif Text";
   font-style: normal;
   font-weight: 300;
   font-display: swap;
+  size-adjust: 100%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahseriftext-Light.woff2") format("woff2");
 }
 @font-face {
@@ -89,6 +133,10 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
+  size-adjust: 100%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahseriftext-Regular.woff2") format("woff2");
 }
 @font-face {
@@ -96,6 +144,10 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
+  size-adjust: 100%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahseriftext-Medium.woff2") format("woff2");
 }
 @font-face {
@@ -103,6 +155,10 @@
   font-style: normal;
   font-weight: 600;
   font-display: swap;
+  size-adjust: 100%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahseriftext-Bold.woff2") format("woff2");
 }
 @font-face {
@@ -110,6 +166,10 @@
   font-style: normal;
   font-weight: 900;
   font-display: swap;
+  size-adjust: 100%;
+  ascent-override: 90%;
+  descent-override: 25%;
+  line-gap-override: 0%;
   src: url("/fonts/thmanyahseriftext-Black.woff2") format("woff2");
 }
 
@@ -179,14 +239,14 @@ body {
   font-family: var(--font-body);
 }
 
-/* ── Arabic override — blanket override for ALL elements in RTL mode */
-html[dir="rtl"] *,
-html[dir="rtl"] *::before,
-html[dir="rtl"] *::after,
-.font-arabic *,
-.font-arabic *::before,
-.font-arabic *::after {
-  font-family: var(--font-arabic) !important;
+/* ── Arabic font — set at root so it cascades naturally via inheritance ── */
+html[dir="rtl"],
+html[dir="rtl"] body {
+  font-family: var(--font-arabic), serif;
+}
+
+.font-arabic {
+  font-family: var(--font-arabic), serif;
 }
 
 /* Mono labels — archival notation */

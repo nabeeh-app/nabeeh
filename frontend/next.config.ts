@@ -7,17 +7,47 @@ const securityHeaders = [
   {
     key: 'Content-Security-Policy',
     value: [
+      // Base: only same-origin by default
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.clarity.ms",
+
+      // Scripts: self + Clarity (consent-gated).
+      // 'unsafe-inline' required for Next.js bootstrap (__NEXT_DATA__, chunks, hydration).
+      // 'unsafe-eval' intentionally omitted — no frontend code uses eval/new Function().
+      // Clarity loaded dynamically via consent-gated component.
+      "script-src 'self' 'unsafe-inline' https://www.clarity.ms",
+
+      // Element-level <script> control (overrides script-src for script elements).
+      'script-src-elem \'self\' \'unsafe-inline\' https://www.clarity.ms',
+
+      // Styles: self + Tailwind/CSS-in-JS inline styles.
       "style-src 'self' 'unsafe-inline'",
+
+      // Images: self, data: (inline icons/placeholders), https: (OG images, uploads).
       "img-src 'self' data: https:",
+
+      // Fonts: self-hosted only (thmanyah fonts, no external CDNs).
+      // next/font/google downloads at build time and serves from same origin.
       "font-src 'self'",
-      "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in https://www.clarity.ms",
-      "frame-src 'none'",
+
+      // API connections: backend (self via rewrite), Supabase, Clarity analytics beacon.
+      // *.supabase.in removed (legacy deprecated domain — not used).
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.clarity.ms",
+
+      // Media: self-hosted only.
+      "media-src 'self'",
+
+      // No plugins, no frames, no form hijacking, no base injection.
       "object-src 'none'",
+      "frame-src 'none'",
+      "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
-      "frame-ancestors 'none'",
+
+      // Web Workers: same-origin only (none currently used).
+      "worker-src 'self'",
+
+      // Web app manifest: same-origin only (none currently used).
+      'manifest-src \'self\'',
     ].join('; '),
   },
   {
