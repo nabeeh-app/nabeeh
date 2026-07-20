@@ -66,9 +66,10 @@ export default function MessagesPage() {
   const t = useTranslations('messages');
   const tWhatsApp = useTranslations('whatsapp');
   const locale = useLocale();
+  const tRoot = useTranslations();
   const badgeLocale = locale === 'ar' ? 'ar' : 'en';
 
-  const { whatsappStatus } = useWhatsAppStatus(undefined, true);
+  const { whatsappStatus } = useWhatsAppStatus(undefined, true, tRoot);
   const isWhatsAppConnected = whatsappStatus.status === 'connected';
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -99,7 +100,7 @@ export default function MessagesPage() {
 
   const selectedConversation = conversations.find(conversation => conversation.id === selectedConversationId) || null;
   const selectedStatusBadge = selectedConversation
-    ? getStatusBadge(selectedConversation.is_active ? 'active' : 'inactive', badgeLocale)
+    ? getStatusBadge(selectedConversation.is_active ? 'active' : 'inactive', badgeLocale, tRoot)
     : null;
 
   const loadConversations = useCallback(async () => {

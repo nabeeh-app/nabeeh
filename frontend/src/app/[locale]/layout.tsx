@@ -4,6 +4,7 @@ import { getMessages } from 'next-intl/server';
 import { AuthProvider } from '@/hooks/useAuth';
 import { LocaleProvider } from '@/components/locale-provider';
 import QueryProvider from '@/components/QueryProvider';
+import LocaleErrorBoundary from '@/components/LocaleErrorBoundary';
 import { CookieNotice } from '@/components/CookieNotice';
 import { notFound } from 'next/navigation';
 
@@ -87,7 +88,9 @@ export default async function LocaleLayout({
       <QueryProvider>
         <LocaleProvider>
           <AuthProvider>
-            {children}
+            <LocaleErrorBoundary>
+              {children}
+            </LocaleErrorBoundary>
             <CookieNotice />
           </AuthProvider>
         </LocaleProvider>

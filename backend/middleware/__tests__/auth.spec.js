@@ -50,11 +50,12 @@ describe('authenticateToken', () => {
   it('should set req.user and call next for valid token', async () => {
     const token = generateToken({ user_id: 'teacher-1', email: 't@test.com', role: 'teacher' });
 
+    // Mock the .or() query for teacher lookup (single query by id OR auth_id)
     supabaseAdmin.from.mockReturnValue({
       select: jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
+        or: jest.fn().mockReturnValue({
           single: jest.fn().mockResolvedValue({
-            data: { id: 'teacher-1', email: 't@test.com', role: 'teacher', is_active: true },
+            data: { id: 'teacher-1', email: 't@test.com', name: 'Test Teacher', role: 'teacher', preferred_language: 'en', is_active: true, auth_id: null },
             error: null
           })
         })
@@ -120,12 +121,14 @@ describe('authenticateToken', () => {
   it('should return 401 if user not found in database', async () => {
     const token = generateToken({ user_id: 'teacher-1', email: 't@test.com', role: 'teacher' });
 
-    // Mock both teacher and assistant queries to return not found
+    // Mock teacher .or() query to return not found, then assistant query to return not found
+    let callCount = 0;
     supabaseAdmin.from.mockImplementation((table) => {
+      callCount++;
       if (table === 'teachers') {
         return {
           select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
+            or: jest.fn().mockReturnValue({
               single: jest.fn().mockResolvedValue({ data: null, error: null })
             })
           })
@@ -152,7 +155,7 @@ describe('authenticateToken', () => {
     await authenticateToken(req, res, next);
 
     expect(res.statusCode).toBe(401);
-    expect(res.body.message).toContain('user not found');
+    expect(res.body.message).toBe('Invalid token - user not found');
   });
 
   it('should return 401 if user is inactive', async () => {
@@ -160,9 +163,9 @@ describe('authenticateToken', () => {
 
     supabaseAdmin.from.mockReturnValue({
       select: jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
+        or: jest.fn().mockReturnValue({
           single: jest.fn().mockResolvedValue({
-            data: { id: 'teacher-1', email: 't@test.com', role: 'teacher', is_active: false },
+            data: { id: 'teacher-1', email: 't@test.com', name: 'Test Teacher', role: 'teacher', preferred_language: 'en', is_active: false, auth_id: null },
             error: null
           })
         })

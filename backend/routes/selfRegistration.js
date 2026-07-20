@@ -2,6 +2,7 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
+const { selfRegLimiter } = require('../middleware/security');
 const asyncHandler = require('../middleware/asyncHandler');
 const { logAudit } = require('../lib/auditLog');
 const logger = require('../lib/logger');
@@ -240,7 +241,7 @@ router.post('/link', authenticateToken, requirePermission('manage_students'), as
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/form/:token', asyncHandler(async (req, res) => {
+router.get('/form/:token', selfRegLimiter, asyncHandler(async (req, res) => {
   const { token } = req.params;
 
   const { data: tokenRecord, error: tokenError } = await supabaseAdmin
@@ -349,7 +350,7 @@ router.get('/form/:token', asyncHandler(async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/submit/:token', asyncHandler(async (req, res) => {
+router.post('/submit/:token', selfRegLimiter, asyncHandler(async (req, res) => {
   const { token } = req.params;
   const { name, phone, parent_phone } = req.body;
 

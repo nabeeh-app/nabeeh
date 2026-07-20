@@ -87,15 +87,29 @@ async function checkAttendanceThreshold(rule, teacherId) {
 
   if (!enrollments || enrollments.length === 0) return;
 
+  const enrollmentIds = enrollments.map(e => e.id);
+
+  // Batch query: get ALL attendance records for these enrollments in one query
+  const { data: allAttendance } = await supabaseAdmin
+    .from('attendance')
+    .select('enrollment_id, status')
+    .in('enrollment_id', enrollmentIds);
+
+  if (!allAttendance || allAttendance.length === 0) return;
+
+  // Group attendance by enrollment_id in-memory
+  const attendanceByEnrollment = {};
+  for (const a of allAttendance) {
+    if (!attendanceByEnrollment[a.enrollment_id]) {
+      attendanceByEnrollment[a.enrollment_id] = [];
+    }
+    attendanceByEnrollment[a.enrollment_id].push(a);
+  }
+
   for (const enrollment of enrollments) {
     const studentId = enrollment.student_id;
     const studentName = enrollment.students?.name || 'Student';
-
-    // Count total sessions and absences
-    const { data: attendanceData } = await supabaseAdmin
-      .from('attendance')
-      .select('status')
-      .eq('enrollment_id', enrollment.id);
+    const attendanceData = attendanceByEnrollment[enrollment.id];
 
     if (!attendanceData || attendanceData.length === 0) continue;
 

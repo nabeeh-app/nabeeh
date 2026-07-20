@@ -107,9 +107,7 @@ export default function CoursesPage() {
     setAlertDialog({
       open: true,
       title: tCommon('delete'),
-      description: locale === 'ar'
-        ? `هل أنت متأكد من حذف عرض ${offering.subject.name_ar}؟`
-        : `Are you sure you want to delete ${offering.subject.name_en}?`,
+      description: t('confirmDelete', { name: locale === 'ar' ? offering.subject.name_ar : offering.subject.name_en }),
       onConfirm: async () => {
         try {
           await deleteOffering.mutateAsync(offering.id);
@@ -145,9 +143,7 @@ export default function CoursesPage() {
         searchPlaceholder={t('searchPlaceholder')}
         resultCount={filteredOfferings.length}
         totalCount={offerings.length}
-        resultLabel={locale === 'ar'
-          ? `عرض ${filteredOfferings.length} من ${offerings.length} عرض`
-          : `Showing ${filteredOfferings.length} of ${offerings.length} offerings`}
+        resultLabel={t('resultCount', { shown: filteredOfferings.length, total: offerings.length })}
       />
 
       {filteredOfferings.length === 0 ? (

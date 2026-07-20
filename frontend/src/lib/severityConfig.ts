@@ -11,7 +11,7 @@ export const SEVERITY_CONFIG = {
     icon: AlertTriangle,
     color: 'text-warning',
     bg: 'bg-warning/100/10',
-    variant: 'warning' as const,
+    variant: 'outline' as const,
   },
   critical: {
     icon: AlertCircle,

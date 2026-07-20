@@ -25,6 +25,7 @@ import type { Alert } from '@/types';
 export function AlertDisplay() {
   const t = useTranslations('alerts');
   const tCommon = useTranslations('common');
+  const tRoot = useTranslations();
   const locale = useLocale();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,7 +178,7 @@ export function AlertDisplay() {
                         {t(`severity.${alert.severity}`)}
                       </Badge>
                       <span className="text-xs text-ink/50 font-body">
-                        {timeAgo(alert.created_at, locale)}
+                        {timeAgo(alert.created_at, locale, tRoot)}
                       </span>
                     </div>
                   </div>

@@ -24,8 +24,8 @@ const TEACHER_DEFAULT_PERMISSIONS = {
 const authenticateToken = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
-        const token = authHeader && authHeader.startsWith('Bearer ') 
-            ? authHeader.substring(7) 
+        const token = authHeader && authHeader.startsWith('Bearer ')
+            ? authHeader.substring(7)
             : req.cookies?.nabeeh_token || null;
 
         if (!token) {
@@ -48,109 +48,22 @@ const authenticateToken = async (req, res, next) => {
             });
         }
 
-        // First, try to find the user as a teacher by ID or auth_id
-        let teacher = null;
-        let teacherError = null;
+        // Resolve user (teacher or assistant) with single teacher query
+        const { user, error } = await resolveUser(decoded);
 
-        // Try by primary key first
-        const byId = await supabaseAdmin
-            .from('teachers')
-            .select('id, email, name, role, preferred_language, is_active')
-            .eq('id', decoded.user_id)
-            .single();
-
-        if (byId.data && !byId.error) {
-            teacher = byId.data;
-        } else {
-            // Try by auth_id (OAuth-linked accounts)
-            const byAuthId = await supabaseAdmin
-                .from('teachers')
-                .select('id, email, name, role, preferred_language, is_active')
-                .eq('auth_id', decoded.user_id)
-                .single();
-
-            if (byAuthId.data && !byAuthId.error) {
-                teacher = byAuthId.data;
-            } else {
-                teacherError = byId.error || byAuthId.error;
-            }
+        if (error) {
+            return res.status(401).json({
+                success: false,
+                message: error,
+                messageAr: error === 'User account is deactivated' ? 'حساب المستخدم معطل'
+                    : error === 'Associated teacher account is deactivated' ? 'حساب المعلم المرتبط معطل'
+                    : 'رمز غير صالح - المستخدم غير موجود'
+            });
         }
 
-        if (teacher && !teacherError) {
-            if (!teacher.is_active) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'User account is deactivated',
-                    messageAr: 'حساب المستخدم معطل'
-                });
-            }
-
-            // Teacher found - set full permissions
-            req.user = {
-                ...teacher,
-                role: 'teacher',
-                permissions: TEACHER_DEFAULT_PERMISSIONS,
-                teacherId: teacher.id
-            };
-            req.token = decoded;
-            return next();
-        }
-
-        // Not found as teacher - check if assistant via teacher_assistants junction
-        const { data: assistantLink, error: assistantError } = await supabaseAdmin
-            .from('teacher_assistants')
-            .select(`
-                id,
-                teacher_id,
-                permissions,
-                status,
-                teachers!teacher_id (
-                    id,
-                    email,
-                    name,
-                    is_active
-                )
-            `)
-            .eq('assistant_id', decoded.user_id)
-            .eq('status', 'active')
-            .single();
-
-        if (assistantLink && !assistantError) {
-            const ownerTeacher = assistantLink.teachers;
-
-            if (!ownerTeacher || !ownerTeacher.is_active) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Associated teacher account is deactivated',
-                    messageAr: 'حساب المعلم المرتبط معطل'
-                });
-            }
-
-            // Merge default permissions with stored permissions
-            const permissions = {
-                ...TEACHER_DEFAULT_PERMISSIONS,
-                ...assistantLink.permissions
-            };
-
-            req.user = {
-                id: decoded.user_id,
-                email: ownerTeacher.email,
-                name: ownerTeacher.name,
-                role: 'assistant',
-                permissions,
-                teacherId: assistantLink.teacher_id,
-                assistantLinkId: assistantLink.id
-            };
-            req.token = decoded;
-            return next();
-        }
-
-        // Neither teacher nor active assistant found
-        return res.status(401).json({
-            success: false,
-            message: 'Invalid token - user not found',
-            messageAr: 'رمز غير صالح - المستخدم غير موجود'
-        });
+        req.user = user;
+        req.token = decoded;
+        return next();
 
     } catch (error) {
         logger.error('Authentication middleware error', { error: error.message });
@@ -169,6 +82,86 @@ const authenticateToken = async (req, res, next) => {
             messageAr: 'رمز غير صالح'
         });
     }
+};
+
+/**
+ * Resolve user from decoded JWT token
+ * Single query for teacher (by id OR auth_id), then assistant fallback
+ * @param {Object} decoded - Decoded JWT payload with user_id, jti
+ * @returns {Promise<{user: Object|null, error: string|null}>}
+ */
+const resolveUser = async (decoded) => {
+    const userId = decoded.user_id;
+
+    // Single query: teacher by id OR auth_id
+    const { data: teacher, error: teacherError } = await supabaseAdmin
+        .from('teachers')
+        .select('id, email, name, role, preferred_language, is_active, auth_id')
+        .or(`id.eq.${userId},auth_id.eq.${userId}`)
+        .single();
+
+    if (teacher && !teacherError) {
+        if (!teacher.is_active) {
+            return { user: null, error: 'User account is deactivated' };
+        }
+
+        return {
+            user: {
+                ...teacher,
+                role: 'teacher',
+                permissions: TEACHER_DEFAULT_PERMISSIONS,
+                teacherId: teacher.id
+            },
+            error: null
+        };
+    }
+
+    // Not a teacher — check assistant link
+    const { data: assistantLink, error: assistantError } = await supabaseAdmin
+        .from('teacher_assistants')
+        .select(`
+            id,
+            teacher_id,
+            permissions,
+            status,
+            teachers!teacher_id (
+                id,
+                email,
+                name,
+                is_active
+            )
+        `)
+        .eq('assistant_id', userId)
+        .eq('status', 'active')
+        .single();
+
+    if (assistantLink && !assistantError) {
+        const ownerTeacher = assistantLink.teachers;
+
+        if (!ownerTeacher || !ownerTeacher.is_active) {
+            return { user: null, error: 'Associated teacher account is deactivated' };
+        }
+
+        const permissions = {
+            ...TEACHER_DEFAULT_PERMISSIONS,
+            ...assistantLink.permissions
+        };
+
+        return {
+            user: {
+                id: userId,
+                email: ownerTeacher.email,
+                name: ownerTeacher.name,
+                role: 'assistant',
+                permissions,
+                teacherId: assistantLink.teacher_id,
+                assistantLinkId: assistantLink.id
+            },
+            error: null
+        };
+    }
+
+    return { user: null, error: 'Invalid token - user not found' };
 };
 
 /**
@@ -236,89 +229,6 @@ const requireTeacherOwnership = (req, res, next) => {
 };
 
 /**
- * Optional authentication middleware
- * Adds user info if token is present but doesn't require it
- */
-const optionalAuth = async (req, res, next) => {
-    try {
-        const authHeader = req.headers.authorization;
-        const token = authHeader && authHeader.startsWith('Bearer ') 
-            ? authHeader.substring(7) 
-            : req.cookies?.nabeeh_token || null;
-
-        if (token) {
-            try {
-                const decoded = tokenService.verifyToken(token);
-
-                // Check if token has been revoked
-                if (decoded.jti && await tokenService.isTokenRevoked(decoded.jti)) {
-                    return res.status(401).json({
-                        success: false,
-                        message: 'Token has been revoked',
-                        messageAr: 'تم إلغاء الرمز'
-                    });
-                }
-
-                // Try teacher first
-                const { data: teacher } = await supabaseAdmin
-                    .from('teachers')
-                    .select('id, email, name, role, preferred_language, is_active')
-                    .eq('id', decoded.user_id)
-                    .single();
-
-                if (teacher && teacher.is_active) {
-                    req.user = {
-                        ...teacher,
-                        role: 'teacher',
-                        permissions: TEACHER_DEFAULT_PERMISSIONS,
-                        teacherId: teacher.id
-                    };
-                    req.token = decoded;
-                    return next();
-                }
-
-                // Try assistant
-                const { data: assistantLink } = await supabaseAdmin
-                    .from('teacher_assistants')
-                    .select(`
-                        id,
-                        teacher_id,
-                        permissions,
-                        status,
-                        teachers!teacher_id ( id, is_active )
-                    `)
-                    .eq('assistant_id', decoded.user_id)
-                    .eq('status', 'active')
-                    .single();
-
-                if (assistantLink && assistantLink.teachers?.is_active) {
-                    const permissions = {
-                        ...TEACHER_DEFAULT_PERMISSIONS,
-                        ...assistantLink.permissions
-                    };
-                    req.user = {
-                        id: decoded.user_id,
-                        role: 'assistant',
-                        permissions,
-                        teacherId: assistantLink.teacher_id
-                    };
-                    req.token = decoded;
-                }
-            } catch (error) {
-                // Ignore token errors for optional auth
-                logger.info('Optional auth token error', { error: error.message });
-            }
-        }
-
-        next();
-
-    } catch (error) {
-        logger.error('Optional auth middleware error', { error: error.message });
-        next(); // Continue without authentication
-    }
-};
-
-/**
  * Permission-based authorization middleware for assistants
  * @param {string|Array} requiredPermissions - Single permission or array of required permissions
  */
@@ -359,6 +269,5 @@ module.exports = {
     authenticateToken,
     requireRole,
     requireTeacherOwnership,
-    requirePermission,
-    optionalAuth
+    requirePermission
 };

@@ -7,7 +7,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function timeAgo(dateStr: string, locale: string = 'ar', t?: (key: string, params?: Record<string, unknown>) => string): string {
+type TFunction = (key: string, params?: Record<string, string | number | Date>) => string;
+
+export function timeAgo(dateStr: string, locale: string = 'ar', t?: TFunction): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   const diffMs = now - then;
@@ -35,7 +37,7 @@ export function timeAgo(dateStr: string, locale: string = 'ar', t?: (key: string
 }
 
 // Unified status badge utility
-export const getStatusBadge = (status: string, locale: 'en' | 'ar' = 'ar', t?: (key: string) => string) => {
+export const getStatusBadge = (status: string, locale: 'en' | 'ar' = 'ar', t?: TFunction) => {
   const statusMap: Record<string, { variant: 'default' | 'destructive' | 'secondary' | 'outline', label: string, labelAr: string, color: string }> = {
     // Common statuses
     active: { variant: 'default', label: 'Active', labelAr: 'نشط', color: 'bg-surface-sage text-ink' },
@@ -84,17 +86,20 @@ export const getStatusBadge = (status: string, locale: 'en' | 'ar' = 'ar', t?: (
 };
 
 // Unified WhatsApp status checker
-export const checkWhatsAppStatus = async (_phone?: string) => {
+export const checkWhatsAppStatus = async (_phone?: string, t?: TFunction) => {
   try {
     const data = await apiClient.getWhatsAppStatus();
+    const message = t
+      ? (data.status === 'connected' ? t('whatsapp.status.connected')
+        : data.status === 'qr_ready' ? t('whatsapp.status.scanQr')
+        : t('whatsapp.status.disconnected'))
+      : (data.status === 'connected' ? 'Connected'
+        : data.status === 'qr_ready' ? 'Scan QR Code'
+        : 'Disconnected');
     return {
       success: true,
       status: (data.status || 'disconnected') as 'connected' | 'disconnected' | 'qr_ready' | 'connecting' | 'error',
-      message: data.status === 'connected'
-        ? 'Connected'
-        : data.status === 'qr_ready'
-          ? 'Scan QR Code'
-          : 'Disconnected',
+      message,
       qr: data.qr || null,
       phone: data.phone || null,
       pairingCodeMode: data.pairingCodeMode || false
@@ -104,7 +109,7 @@ export const checkWhatsAppStatus = async (_phone?: string) => {
     return {
       success: false,
       status: 'disconnected' as const,
-      message: 'Error checking WhatsApp status',
+      message: t ? t('whatsapp.status.error') : 'Error checking WhatsApp status',
       qr: null,
       phone: null,
       pairingCodeMode: false
@@ -113,19 +118,21 @@ export const checkWhatsAppStatus = async (_phone?: string) => {
 };
 
 // Unified message sending
-export const sendWhatsAppMessage = async (phone: string, message: string) => {
+export const sendWhatsAppMessage = async (phone: string, message: string, t?: TFunction) => {
   try {
     const response = await apiClient.api.post('/whatsapp/send-to-number', { phone, message });
     const data = response.data;
     return {
       success: data.success,
-      message: data.message || (data.success ? 'Message sent successfully' : 'Failed to send message')
+      message: data.message || (t
+        ? (data.success ? t('whatsapp.message.sent') : t('whatsapp.message.failed'))
+        : (data.success ? 'Message sent successfully' : 'Failed to send message'))
     };
   } catch (error) {
     logger.error('Send message error:', error);
     return {
       success: false,
-      message: 'Error sending message'
+      message: t ? t('whatsapp.message.error') : 'Error sending message'
     };
   }
 };

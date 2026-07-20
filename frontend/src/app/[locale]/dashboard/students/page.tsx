@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useState, useMemo } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,9 @@ export default function StudentsPage() {
   const t = useTranslations('students');
   const tCommon = useTranslations('common');
   const tErrors = useTranslations('errors');
+  const locale = useLocale();
+  const tRoot = useTranslations();
+  const statusBadge = (status: string) => getStatusBadge(status, locale as 'en' | 'ar', tRoot);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
@@ -316,7 +319,7 @@ export default function StudentsPage() {
           onView={handleViewStudent}
           onEdit={handleEditStudent}
           onDelete={handleDeleteStudent}
-          getStatusBadge={getStatusBadge}
+          getStatusBadge={statusBadge}
         />
       </div>
 
@@ -324,7 +327,7 @@ export default function StudentsPage() {
         student={selectedStudent}
         open={isViewModalOpen}
         onOpenChange={setViewModalOpen}
-        getStatusBadge={getStatusBadge}
+        getStatusBadge={statusBadge}
       />
 
       <StudentFormModal

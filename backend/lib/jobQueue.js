@@ -3,6 +3,31 @@ const logger = require('./logger');
 
 const jobs = new Map();
 
+// How long to keep completed/failed jobs before cleanup (milliseconds)
+const JOB_TTL = 5 * 60 * 1000;
+
+// Periodic cleanup interval for stale entries (every 10 minutes)
+const CLEANUP_INTERVAL = 10 * 60 * 1000;
+
+// Schedule periodic cleanup of stale jobs
+setInterval(() => {
+  const cutoff = Date.now() - JOB_TTL;
+  let cleaned = 0;
+  for (const [id, job] of jobs) {
+    if (new Date(job.updated_at || job.created_at).getTime() < cutoff) {
+      jobs.delete(id);
+      cleaned++;
+    }
+  }
+  if (cleaned > 0) logger.info('Job queue cleanup', { removed: cleaned, remaining: jobs.size });
+}, CLEANUP_INTERVAL).unref();
+
+function scheduleCleanup(id) {
+  setTimeout(() => {
+    jobs.delete(id);
+  }, JOB_TTL).unref();
+}
+
 // Job handlers — add new types here
 const handlers = {
   'bulk-report': async (payload) => {
@@ -67,7 +92,8 @@ const handlers = {
 
 function createJob(type, payload) {
   const id = crypto.randomUUID();
-  const job = { id, type, payload, status: 'pending', result: null, error: null, created_at: new Date().toISOString() };
+  const now = new Date().toISOString();
+  const job = { id, type, payload, status: 'pending', result: null, error: null, created_at: now, updated_at: now };
   jobs.set(id, job);
   processJob(id).catch(err => {
     logger.error('Job processing failed', { jobId: id, error: err.message });
@@ -89,9 +115,13 @@ async function processJob(id) {
     if (!handler) throw new Error(`Unknown job type: ${job.type}`);
     job.result = await handler(job.payload);
     job.status = 'completed';
+    job.updated_at = new Date().toISOString();
+    scheduleCleanup(id);
   } catch (err) {
     job.status = 'failed';
     job.error = err.message;
+    job.updated_at = new Date().toISOString();
+    scheduleCleanup(id);
     logger.error('Job failed', { jobId: id, type: job.type, error: err.message });
   }
 }

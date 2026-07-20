@@ -34,6 +34,11 @@ const whatsappLimiter = isProd
   ? createRateLimit(60 * 1000, 10, 'Too many WhatsApp requests, please try again later.')
   : (req, res, next) => next();
 
+// Self-registration rate limiting — 20 requests per 15 min per IP (public endpoints)
+const selfRegLimiter = isProd
+  ? createRateLimit(15 * 60 * 1000, 20, 'Too many registration attempts, please try again later.')
+  : (req, res, next) => next();
+
 // Per-teacher rate limiting for WhatsApp pairing/sending
 const teacherRateLimits = new Map();
 
@@ -204,6 +209,7 @@ const csrfValidate = (req, res, next) => {
 module.exports = {
   apiLimiter,
   authLimiter,
+  selfRegLimiter,
   whatsappLimiter,
   perTeacherLimiter,
   securityHeaders,

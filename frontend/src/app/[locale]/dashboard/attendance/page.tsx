@@ -45,6 +45,8 @@ export default function AttendancePage() {
   const tCommon = useTranslations('common');
   const tErrors = useTranslations('errors');
   const locale = useLocale();
+  const tRoot = useTranslations();
+  const statusBadge = (status: string) => getStatusBadge(status, locale as 'en' | 'ar', tRoot);
   const router = useRouter();
 
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -328,7 +330,7 @@ export default function AttendancePage() {
           studentFilter={studentFilter}
           onStatusFilterChange={setStatusFilter}
           onStudentFilterChange={setStudentFilter}
-          getStatusBadge={getStatusBadge}
+          getStatusBadge={statusBadge}
         />
       )}
 

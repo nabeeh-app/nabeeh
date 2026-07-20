@@ -11,10 +11,10 @@ export interface WhatsAppStatus {
   pairingCodeMode?: boolean;
 }
 
-export const useWhatsAppStatus = (phone?: string, autoCheck = true) => {
+export const useWhatsAppStatus = (phone?: string, autoCheck = true, t?: (key: string, params?: Record<string, string | number | Date>) => string) => {
   const { data, refetch } = useQuery({
     queryKey: ['whatsapp-status', phone],
-    queryFn: () => checkWhatsAppStatus(phone),
+    queryFn: () => checkWhatsAppStatus(phone, t),
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       if (status === 'connected') return false;

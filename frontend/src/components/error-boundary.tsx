@@ -6,9 +6,19 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import logger from '@/lib/logger';
 
+interface FallbackTexts {
+  title: string;
+  description: string;
+  errorDetailsLabel: string;
+  tryAgain: string;
+  reloadPage: string;
+  goHome: string;
+}
+
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  fallbackTexts?: FallbackTexts;
 }
 
 interface State {
@@ -16,6 +26,15 @@ interface State {
   error?: Error;
   errorInfo?: ErrorInfo;
 }
+
+const defaultTexts: FallbackTexts = {
+  title: 'Something went wrong',
+  description: 'We encountered an unexpected error. Please try again.',
+  errorDetailsLabel: 'Error Details:',
+  tryAgain: 'Try Again',
+  reloadPage: 'Reload Page',
+  goHome: 'Go Home',
+};
 
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
@@ -50,6 +69,8 @@ class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
+      const texts = this.props.fallbackTexts || defaultTexts;
+
       return (
         <div className="min-h-screen flex items-center justify-center bg-canvas p-4">
           <Card className="w-full max-w-md">
@@ -58,34 +79,34 @@ class ErrorBoundary extends Component<Props, State> {
                 <AlertTriangle className="h-6 w-6 text-destructive" />
               </div>
               <CardTitle className="text-xl font-semibold text-ink font-display">
-                Something went wrong
+                {texts.title}
               </CardTitle>
               <CardDescription className="text-ink/70 font-body">
-                We encountered an unexpected error. Please try again.
+                {texts.description}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {process.env.NODE_ENV === 'development' && this.state.error && (
                 <div className="rounded-md bg-destructive/10 p-3">
-                  <h4 className="text-sm font-medium text-destructive mb-2 font-mono uppercase tracking-wider">Error Details:</h4>
+                  <h4 className="text-sm font-medium text-destructive mb-2 font-mono uppercase tracking-wider">{texts.errorDetailsLabel}</h4>
                   <pre className="text-xs text-destructive overflow-auto max-h-32 font-mono">
                     {this.state.error.message}
                     {this.state.errorInfo?.componentStack}
                   </pre>
                 </div>
               )}
-              
+
               <div className="flex flex-col space-y-2">
                 <Button onClick={this.handleReset} className="w-full">
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Try Again
+                  {texts.tryAgain}
                 </Button>
                 <Button variant="outline" onClick={this.handleReload} className="w-full">
-                  Reload Page
+                  {texts.reloadPage}
                 </Button>
                 <Button variant="ghost" onClick={this.handleGoHome} className="w-full">
                   <Home className="mr-2 h-4 w-4" />
-                  Go Home
+                  {texts.goHome}
                 </Button>
               </div>
             </CardContent>

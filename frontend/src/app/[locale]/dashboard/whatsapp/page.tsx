@@ -17,7 +17,8 @@ export default function WhatsAppDashboardPage() {
   const t = useTranslations('whatsapp');
   const tc = useTranslations('common');
   const tSettings = useTranslations('settings');
-  const { whatsappStatus, refreshStatus } = useWhatsAppStatus();
+  const tRoot = useTranslations();
+  const { whatsappStatus, refreshStatus } = useWhatsAppStatus(undefined, true, tRoot);
   const [isLoading, setIsLoading] = useState(false);
 
   const [alertDialog, setAlertDialog] = useState<{
@@ -61,7 +62,8 @@ export default function WhatsAppDashboardPage() {
     try {
       const result = await sendWhatsAppMessage(
         phone,
-        t('alerts.testMessageContent')
+        t('alerts.testMessageContent'),
+        t
       );
 
       if (result.success) {
