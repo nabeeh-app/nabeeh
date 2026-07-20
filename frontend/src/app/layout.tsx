@@ -69,7 +69,6 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: "https://nabeeh.app",
     languages: {
       en: "https://nabeeh.app/en",
       ar: "https://nabeeh.app/ar",

@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       languages: {
         en: "https://nabeeh.app/en",
         ar: "https://nabeeh.app/ar",
-        "x-default": "https://nabeeh.app/ar",
+        "x-default": "https://nabeeh.app/en",
       },
     },
   };
