@@ -73,9 +73,9 @@ services:
     command: >
       zap-full-scan.py
         -t http://frontend:3000
-        -r zap-full-report.html
-        -J zap-full-report.json
-        -x zap-full-report.xml
+        -r reports/zap-full-report.html
+        -J reports/zap-full-report.json
+        -x reports/zap-full-report.xml
         -d
         -I
         -m 10
@@ -101,9 +101,9 @@ services:
       zap-api-scan.py
         -t http://backend:5000/api-docs.json
         -f openapi
-        -r zap-api-report.html
-        -J zap-api-report.json
-        -x zap-api-report.xml
+        -r reports/zap-api-report.html
+        -J reports/zap-api-report.json
+        -x reports/zap-api-report.xml
         -d
         -I
         -m 10
@@ -128,9 +128,9 @@ services:
     command: >
       zap-baseline.py
         -t http://frontend:3000
-        -r zap-baseline-report.html
-        -J zap-baseline-report.json
-        -x zap-baseline-report.xml
+        -r reports/zap-baseline-report.html
+        -J reports/zap-baseline-report.json
+        -x reports/zap-baseline-report.xml
         -d
         -I
         -m 10
