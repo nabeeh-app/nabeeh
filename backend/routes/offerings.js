@@ -6,6 +6,16 @@ const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createOfferingSchema, createGroupSchema, updateGroupSchema } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
 
+async function verifyOfferingAccess(offeringId, teacherId) {
+  const { data: offering } = await supabase
+    .from('offerings')
+    .select('id')
+    .eq('id', offeringId)
+    .eq('teacher_id', teacherId)
+    .single();
+  return offering;
+}
+
 /**
  * @openapi
  * /api/offerings/:
@@ -225,7 +235,7 @@ const unenrollStudentSchema = z.object({
 });
 
 router.post('/', authenticateToken, requirePermission('manage_offerings'), validate(createOfferingSchema), asyncHandler(async (req, res) => {
-    const { subject_id, grade_level_id, academic_year } = req.body;
+    const { subject_id, grade_level_id, academic_year } = req.validated.body;
 
     const { data: offering, error } = await supabaseAdmin
         .from('offerings')
@@ -297,14 +307,9 @@ router.post('/', authenticateToken, requirePermission('manage_offerings'), valid
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.delete('/:id', authenticateToken, requirePermission('manage_offerings'), asyncHandler(async (req, res) => {
-    const { data: offering, error: fetchError } = await supabase
-        .from('offerings')
-        .select('id')
-        .eq('id', req.params.id)
-        .eq('teacher_id', req.user.id)
-        .single();
+    const offering = await verifyOfferingAccess(req.params.id, req.user.id);
 
-    if (fetchError || !offering) {
+    if (!offering) {
         return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
     }
 
@@ -368,12 +373,7 @@ router.delete('/:id', authenticateToken, requirePermission('manage_offerings'), 
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.get('/:offeringId/groups', authenticateToken, asyncHandler(async (req, res) => {
-    const { data: offering } = await supabase
-        .from('offerings')
-        .select('id')
-        .eq('id', req.params.offeringId)
-        .eq('teacher_id', req.user.id)
-        .single();
+    const offering = await verifyOfferingAccess(req.params.offeringId, req.user.id);
 
     if (!offering) {
         return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
@@ -475,15 +475,10 @@ router.get('/:offeringId/groups', authenticateToken, asyncHandler(async (req, re
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/:offeringId/groups', authenticateToken, requirePermission('manage_offerings'), validate(createGroupSchema), asyncHandler(async (req, res) => {
-    const { name, max_capacity, schedule_description } = req.body;
+    const { name, max_capacity, schedule_description } = req.validated.body;
     const { offeringId } = req.params;
 
-    const { data: offering } = await supabase
-        .from('offerings')
-        .select('id')
-        .eq('id', offeringId)
-        .eq('teacher_id', req.user.id)
-        .single();
+    const offering = await verifyOfferingAccess(offeringId, req.user.id);
 
     if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
@@ -582,20 +577,15 @@ router.post('/:offeringId/groups', authenticateToken, requirePermission('manage_
 router.put('/:offeringId/groups/:groupId', authenticateToken, requirePermission('manage_offerings'), validate(updateGroupSchema), asyncHandler(async (req, res) => {
     const { offeringId, groupId } = req.params;
 
-    const { data: offering } = await supabase
-        .from('offerings')
-        .select('id')
-        .eq('id', offeringId)
-        .eq('teacher_id', req.user.id)
-        .single();
+    const offering = await verifyOfferingAccess(offeringId, req.user.id);
 
     if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
     const allowedFields = ['name', 'max_capacity', 'schedule_description'];
     const updates = {};
-    Object.keys(req.body).forEach(key => {
+    Object.keys(req.validated.body).forEach(key => {
         if (allowedFields.includes(key)) {
-            updates[key] = req.body[key];
+            updates[key] = req.validated.body[key];
         }
     });
 
@@ -702,15 +692,10 @@ router.put('/:offeringId/groups/:groupId', authenticateToken, requirePermission(
  */
 router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePermission('manage_offerings'), validate(enrollStudentSchema), asyncHandler(async (req, res) => {
     const { offeringId, groupId } = req.params;
-    const { student_id } = req.body;
+    const { student_id } = req.validated.body;
 
     // Verify ownership
-    const { data: offering } = await supabase
-        .from('offerings')
-        .select('id')
-        .eq('id', offeringId)
-        .eq('teacher_id', req.user.id)
-        .single();
+    const offering = await verifyOfferingAccess(offeringId, req.user.id);
 
     if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
@@ -842,12 +827,7 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
 router.delete('/:offeringId/groups/:groupId/enroll/:studentId', authenticateToken, requirePermission('manage_offerings'), validate(unenrollStudentSchema), asyncHandler(async (req, res) => {
     const { offeringId, groupId, studentId } = req.validated.params;
 
-    const { data: offering } = await supabase
-        .from('offerings')
-        .select('id')
-        .eq('id', offeringId)
-        .eq('teacher_id', req.user.id)
-        .single();
+    const offering = await verifyOfferingAccess(offeringId, req.user.id);
 
     if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 

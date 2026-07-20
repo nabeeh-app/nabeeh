@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const logger = require('./logger');
+const { supabaseAdmin } = require('../config/database');
 
 /**
  * JWT token management utilities
@@ -75,7 +76,7 @@ class TokenService {
     async revokeToken(token) {
         const decoded = this.verifyToken(token);
         const expiresAt = new Date(decoded.exp * 1000);
-        const { error } = await require('../config/database').supabaseAdmin
+        const { error } = await supabaseAdmin
             .from('revoked_tokens')
             .insert({ jti: decoded.jti, expires_at: expiresAt.toISOString() });
         if (error) throw error;
@@ -87,7 +88,7 @@ class TokenService {
      * @returns {boolean} - true if revoked
      */
     async isTokenRevoked(jti) {
-        const { data, error } = await require('../config/database').supabaseAdmin
+        const { data, error } = await supabaseAdmin
             .from('revoked_tokens')
             .select('id')
             .eq('jti', jti)

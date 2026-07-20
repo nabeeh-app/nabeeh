@@ -91,152 +91,115 @@ async function countPendingInvites(teacherId) {
   return count || 0;
 }
 
+async function getAssistantLink(id, teacherId) {
+  const { data: link, error: fetchError } = await supabase
+    .from('teacher_assistants')
+    .select('id, teacher_id')
+    .eq('id', id)
+    .eq('teacher_id', teacherId)
+    .maybeSingle();
+  if (fetchError || !link) return null;
+  return link;
+}
+
+async function checkInviteLimits(teacherId, email) {
+  const [tier, pendingCount, existingInvite, existingUser] = await Promise.all([
+    getTeacherTier(teacherId),
+    countPendingInvites(teacherId),
+    email ? supabase.from('assistant_invites').select('id').eq('teacher_id', teacherId).eq('email', email.toLowerCase()).eq('status', 'pending').maybeSingle().then(r => r.data) : null,
+    email ? supabase.from('teachers').select('id').eq('email', email.toLowerCase()).maybeSingle().then(r => r.data) : null,
+  ]);
+
+  const limit = INVITE_LIMITS[tier] || 0;
+  if (limit === 0) return { error: true, status: 403, code: 'TIER_LIMIT', messageKey: 'planNotSupport' };
+  if (pendingCount >= limit) return { error: true, status: 403, code: 'INVITE_LIMIT', messageKey: 'inviteLimit' };
+  if (existingInvite) return { error: true, status: 409, code: 'INVITE_EXISTS', messageKey: 'inviteExists' };
+
+  if (existingUser) {
+    const { data: existingLink } = await supabase
+      .from('teacher_assistants').select('id')
+      .eq('teacher_id', teacherId).eq('assistant_id', existingUser.id).eq('status', 'active')
+      .maybeSingle();
+    if (existingLink) return { error: true, status: 409, code: 'ALREADY_ASSISTANT', messageKey: 'alreadyAssistant' };
+  }
+
+  return { error: false, data: { tier, limit } };
+}
+
+async function deliverInvite(deliveryMethod, email, phone, teacherId, inviteLink, teacherName, inviteId) {
+  const results = [];
+  if ((deliveryMethod === 'email' || deliveryMethod === 'both') && email) {
+    try {
+      const template = getAssistantInviteTemplate({ teacherName, inviteLink, language: 'en' });
+      const result = await sendEmail({
+        to: email, from: 'Nabeeh <noreply@nabeeh.app>',
+        subject: template.subject, html: template.html,
+        idempotencyKey: `invite-${inviteId}-email`,
+      });
+      results.push({ method: 'email', success: result.success });
+    } catch (err) { logger.error('Failed to send invite email', { error: err.message }); }
+  }
+  if ((deliveryMethod === 'whatsapp' || deliveryMethod === 'both') && phone) {
+    try {
+      const client = sessionManager.getSession(teacherId);
+      if (client) {
+        await client.sendMessage(phone, `🎓 *Nabeeh*\n\n${teacherName} has invited you to join their team as a teaching assistant.\n\nAccept here: ${inviteLink}\n\nThis link expires in 48 hours.`);
+        results.push({ method: 'whatsapp', success: true });
+      }
+    } catch (err) { logger.error('Failed to send WhatsApp invite', { phone, error: err.message }); }
+  }
+  return results;
+}
+
 // --- Route Handlers ---
 
 // POST /api/assistants/invite — Send invite to assistant by email/WhatsApp
 const inviteAssistant = async (req, res) => {
   const teacherId = req.user.id;
-  const { email, phone, deliveryMethod = 'email', permissions } = req.body;
+  const { email, phone, deliveryMethod = 'email', permissions } = req.validated.body;
 
-  // Run independent checks in parallel
-  const [tier, pendingCount, existingInvite, existingUser] = await Promise.all([
-    getTeacherTier(teacherId),
-    countPendingInvites(teacherId),
-    email ? supabase
-      .from('assistant_invites')
-      .select('id')
-      .eq('teacher_id', teacherId)
-      .eq('email', email.toLowerCase())
-      .eq('status', 'pending')
-      .maybeSingle()
-      .then(r => r.data) : null,
-    email ? supabase
-      .from('teachers')
-      .select('id')
-      .eq('email', email.toLowerCase())
-      .maybeSingle()
-      .then(r => r.data) : null,
-  ]);
-
-  // Tier-dependent checks (must wait for tier)
-  const limit = INVITE_LIMITS[tier] || 0;
-  if (limit === 0) {
-    return res.status(403).json({
-      success: false,
-      message: `Your ${tier} plan does not support assistants. Please upgrade.`,
-      messageAr: 'خطتك الحالية لا تدعم المساعدين. يرجى الترقية.',
-      code: 'TIER_LIMIT'
-    });
-  }
-
-  if (pendingCount >= limit) {
-    return res.status(403).json({
-      success: false,
-      message: `You have reached the maximum of ${limit} pending invites for your ${tier} plan.`,
-      messageAr: `لقد وصلت إلى الحد الأقصى من ${limit} دعوات معلقة لخطتك ${tier}.`,
-      code: 'INVITE_LIMIT'
-    });
-  }
-
-  // Check duplicate invite
-  if (existingInvite) {
-    return res.status(409).json({ success: false, message: 'A pending invite already exists for this email.', messageAr: 'توجد دعوة معلقة بالفعل لهذا البريد الإلكتروني.', code: 'INVITE_EXISTS' });
-  }
-
-  // Check existing user → already assistant?
-  if (existingUser) {
-    const { data: existingLink } = await supabase
-      .from('teacher_assistants')
-      .select('id')
-      .eq('teacher_id', teacherId)
-      .eq('assistant_id', existingUser.id)
-      .eq('status', 'active')
-      .maybeSingle();
-
-    if (existingLink) {
-      return res.status(409).json({ success: false, message: 'This user is already your assistant.', messageAr: 'هذا المستخدم مساعدك بالفعل.', code: 'ALREADY_ASSISTANT' });
-    }
+  // Check all limits & duplicate guards
+  const check = await checkInviteLimits(teacherId, email);
+  if (check.error) {
+    const messages = {
+      planNotSupport: { message: `Your ${check.data?.tier || 'free'} plan does not support assistants. Please upgrade.`, messageAr: 'خطتك الحالية لا تدعم المساعدين. يرجى الترقية.' },
+      inviteLimit: { message: `You have reached the maximum of ${check.data?.limit || 0} pending invites for your plan.`, messageAr: `لقد وصلت إلى الحد الأقصى من ${check.data?.limit || 0} دعوات معلقة لخطتك.` },
+      inviteExists: { message: 'A pending invite already exists for this email.', messageAr: 'توجد دعوة معلقة بالفعل لهذا البريد الإلكتروني.' },
+      alreadyAssistant: { message: 'This user is already your assistant.', messageAr: 'هذا المستخدم مساعدك بالفعل.' },
+    };
+    const msg = messages[check.code] || { message: 'Request failed', messageAr: 'فشل الطلب' };
+    return res.status(check.status).json({ success: false, ...msg, code: check.code });
   }
 
   // Create invite
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
-
   const { data: invite, error: inviteError } = await supabaseAdmin
-    .from('assistant_invites')
-    .insert([{
-      teacher_id: teacherId,
-      email: email?.toLowerCase() || null,
-      phone: phone || null,
-      token,
-      permissions: permissions || DEFAULT_PERMISSIONS,
-      status: 'pending',
-      expires_at: expiresAt
-    }])
-    .select()
-    .single();
+    .from('assistant_invites').insert([{
+      teacher_id: teacherId, email: email?.toLowerCase() || null, phone: phone || null,
+      token, permissions: permissions || DEFAULT_PERMISSIONS, status: 'pending', expires_at: expiresAt,
+    }]).select().single();
 
   if (inviteError) throw inviteError;
 
-  // Get teacher name for messages
-  const { data: teacher } = await supabaseAdmin
-    .from('teachers')
-    .select('name')
-    .eq('id', teacherId)
-    .single();
-
-  const teacherName = teacher?.name || 'Your teacher';
+  // Deliver via email/WhatsApp
+  const teacherName = (await supabaseAdmin.from('teachers').select('name').eq('id', teacherId).single().catch(() => ({ data: null })))?.data?.name || 'Your teacher';
   const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invite/${token}`;
+  await deliverInvite(deliveryMethod, email, phone, teacherId, inviteLink, teacherName, invite.id);
 
-  // Send email
-  if ((deliveryMethod === 'email' || deliveryMethod === 'both') && email) {
-    try {
-      const template = getAssistantInviteTemplate({ teacherName, inviteLink, language: 'en' });
-      const result = await sendEmail({
-        to: email,
-        from: 'Nabeeh <noreply@nabeeh.app>',
-        subject: template.subject,
-        html: template.html,
-        idempotencyKey: `invite-${invite.id}-email`,
-      });
-      if (!result.success) {
-        logger.error('Failed to send invite email', { email, error: result.error });
-      }
-    } catch (emailError) {
-      logger.error('Failed to send invite email', { error: emailError.message });
-    }
-  }
-
-  // Send WhatsApp
-  if ((deliveryMethod === 'whatsapp' || deliveryMethod === 'both') && phone) {
-    try {
-      const client = sessionManager.getSession(teacherId);
-      if (client) {
-        const waMessage = `🎓 *Nabeeh*\n\n${teacherName} has invited you to join their team as a teaching assistant.\n\nAccept here: ${inviteLink}\n\nThis link expires in 48 hours.`;
-        await client.sendMessage(phone, waMessage);
-      } else {
-        logger.warn('No WhatsApp session for teacher, skipping invite', { teacherId });
-      }
-    } catch (waError) {
-      logger.error('Failed to send WhatsApp invite', { phone, error: waError.message });
-    }
-  }
-
+  // Audit
   await logAudit({
-    actorId: teacherId,
-    actorType: 'teacher',
-    teacherId,
-    action: 'assistant_invited',
-    entityType: 'assistant',
+    actorId: teacherId, actorType: 'teacher', teacherId,
+    action: 'assistant_invited', entityType: 'assistant',
     entityId: invite.id,
     metadata: { email: email?.toLowerCase(), phone, deliveryMethod },
-    ipAddress: req.ip
+    ipAddress: req.ip,
   });
 
   res.status(201).json({
     success: true,
     data: { id: invite.id, email: invite.email, phone: invite.phone, expires_at: invite.expires_at },
-    message: 'Invitation sent successfully'
+    message: 'Invitation sent successfully',
   });
 };
 
@@ -258,7 +221,7 @@ const listInvites = async (req, res) => {
 
 // POST /api/assistants/accept — Accept invite (by token)
 const acceptInvite = async (req, res) => {
-  const { token } = req.body;
+  const { token } = req.validated.body;
   const assistantId = req.user.id;
 
   // Find valid invite
@@ -373,7 +336,7 @@ const listAssistants = async (req, res) => {
 const updatePermissions = async (req, res) => {
   const teacherId = req.user.id;
   const { id } = req.params;
-  const { permissions } = req.body;
+  const { permissions } = req.validated.body;
 
   // Filter to only valid permission keys
   const filteredPermissions = {};
@@ -384,14 +347,9 @@ const updatePermissions = async (req, res) => {
   }
 
   // Verify ownership
-  const { data: link, error: fetchError } = await supabase
-    .from('teacher_assistants')
-    .select('id, teacher_id, assistant:teachers!assistant_id(name, email)')
-    .eq('id', id)
-    .eq('teacher_id', teacherId)
-    .maybeSingle();
+  const link = await getAssistantLink(id, teacherId);
 
-  if (fetchError || !link) {
+  if (!link) {
     return res.status(404).json({ success: false, message: 'Assistant not found', messageAr: 'لم يتم العثور على المساعد', code: 'NOT_FOUND' });
   }
 
@@ -420,16 +378,11 @@ const updatePermissions = async (req, res) => {
 const updateStatus = async (req, res) => {
   const teacherId = req.user.id;
   const { id } = req.params;
-  const { status } = req.body;
+  const { status } = req.validated.body;
 
-  const { data: link, error: fetchError } = await supabase
-    .from('teacher_assistants')
-    .select('id, teacher_id')
-    .eq('id', id)
-    .eq('teacher_id', teacherId)
-    .maybeSingle();
+  const link = await getAssistantLink(id, teacherId);
 
-  if (fetchError || !link) {
+  if (!link) {
     return res.status(404).json({ success: false, message: 'Assistant not found', messageAr: 'لم يتم العثور على المساعد', code: 'NOT_FOUND' });
   }
 
@@ -461,14 +414,9 @@ const removeAssistant = async (req, res) => {
   const teacherId = req.user.id;
   const { id } = req.params;
 
-  const { data: link, error: fetchError } = await supabase
-    .from('teacher_assistants')
-    .select('id, teacher_id')
-    .eq('id', id)
-    .eq('teacher_id', teacherId)
-    .maybeSingle();
+  const link = await getAssistantLink(id, teacherId);
 
-  if (fetchError || !link) {
+  if (!link) {
     return res.status(404).json({ success: false, message: 'Assistant not found', messageAr: 'لم يتم العثور على المساعد', code: 'NOT_FOUND' });
   }
 

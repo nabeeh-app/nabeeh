@@ -4,7 +4,6 @@ const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
-const logger = require('../lib/logger');
 
 const router = express.Router();
 

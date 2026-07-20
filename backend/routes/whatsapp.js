@@ -12,6 +12,7 @@ const aiResponder = require('../lib/aiResponder');
 const { normalizePhoneNumber } = require('../lib/phone');
 const metrics = require('../lib/metrics');
 const asyncHandler = require('../middleware/asyncHandler');
+const { logAudit } = require('../lib/auditLog');
 
 const router = express.Router();
 
@@ -22,8 +23,11 @@ const sendMessageSchema = z.object({
 
 const getConversationsSchema = z.object({
   query: z.object({
-    page: z.string().regex(/^\d+$/).transform(Number).default("1"),
-    limit: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().min(1).max(100)).default("20"),
+    page: z.string().regex(/^\d+$/).transform(Number).default(1),
+    limit: z.string().regex(/^\d+$/).transform(n => {
+      const num = parseInt(n, 10);
+      return Math.min(Math.max(num, 1), 100);
+    }).default(20),
   })
 });
 
@@ -167,7 +171,6 @@ async function processIncomingMessage(teacherId, phone, messageContent, remoteJi
     await whatsappQuery.saveMessage(conversation.id, 'incoming', messageContent, { whatsapp_message_id: messageId });
 
     try {
-      const { logAudit } = require('../lib/auditLog');
       await logAudit({
         actorId: teacherId,
         actorType: 'system',
@@ -704,7 +707,6 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), perTeacherLim
 
   // Audit log
   try {
-    const { logAudit } = require('../lib/auditLog');
     await logAudit({
       actorId: teacherId,
       actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',

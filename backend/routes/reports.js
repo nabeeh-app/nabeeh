@@ -9,8 +9,11 @@ const aiService = require('../lib/aiService');
 const { createJob, getJob } = require('../lib/jobQueue');
 const logger = require('../lib/logger');
 const { verifyStudentAccess, verifyGroupAccess } = require('../lib/enrollmentChain');
+const whatsappQuery = require('../lib/whatsappQuery');
 
 const router = express.Router();
+
+const getTeacherId = (req) => req.user.teacherId || req.user.id;
 
 const generateCommentSchema = z.object({
   body: z.object({
@@ -42,8 +45,8 @@ const bulkGenerateSchema = z.object({
 });
 
 const generateComment = async (req, res) => {
-  const teacherId = req.user.teacherId || req.user.id;
-  const { student_id, group_id } = req.body;
+  const teacherId = getTeacherId(req);
+  const { student_id, group_id } = req.validated.body;
 
   const { data: student } = await supabase
     .from('students').select('id, name').eq('id', student_id).single();
@@ -57,8 +60,8 @@ const generateComment = async (req, res) => {
   const { data: teacher } = await supabase
     .from('teachers').select('name, business_name, preferred_language').eq('id', teacherId).single();
 
-  const gradesResult = await require('../lib/whatsappQuery').getStudentGrades(student_id);
-  const attendanceRecords = await require('../lib/whatsappQuery').getAllStudentAttendance(student_id);
+  const gradesResult = await whatsappQuery.getStudentGrades(student_id);
+  const attendanceRecords = await whatsappQuery.getAllStudentAttendance(student_id);
   const totalSessions = attendanceRecords.length;
   const presentCount = attendanceRecords.filter(a => a.status === 'present' || a.status === 'late').length;
   const attendanceRate = totalSessions > 0 ? `${Math.round((presentCount / totalSessions) * 100)}%` : 'N/A';
@@ -98,7 +101,7 @@ const generateComment = async (req, res) => {
 };
 
 const getDrafts = async (req, res) => {
-  const teacherId = req.user.teacherId || req.user.id;
+  const teacherId = getTeacherId(req);
   const { page, limit, status } = req.validated.query;
   const offset = (page - 1) * limit;
 
@@ -126,7 +129,7 @@ const getDrafts = async (req, res) => {
 };
 
 const updateDraft = async (req, res) => {
-  const teacherId = req.user.teacherId || req.user.id;
+  const teacherId = getTeacherId(req);
   const { id } = req.validated.params;
   const { edited_text, status } = req.validated.body;
 
@@ -147,7 +150,7 @@ const updateDraft = async (req, res) => {
 };
 
 const approveDraft = async (req, res) => {
-  const teacherId = req.user.teacherId || req.user.id;
+  const teacherId = getTeacherId(req);
   const { id } = req.validated.params;
 
   const { data: draft } = await supabase
@@ -171,7 +174,6 @@ const approveDraft = async (req, res) => {
 
     // Try to send via WhatsApp
     try {
-      const whatsappQuery = require('../lib/whatsappQuery');
       const conversation = await whatsappQuery.findOrCreateConversation(
         parent.id, teacherId, `report_${draft.id}`
       );
@@ -211,7 +213,7 @@ const approveDraft = async (req, res) => {
 };
 
 const rejectDraft = async (req, res) => {
-  const teacherId = req.user.teacherId || req.user.id;
+  const teacherId = getTeacherId(req);
   const { id } = req.validated.params;
   const { error } = await supabaseAdmin
     .from('report_drafts')
@@ -222,8 +224,8 @@ const rejectDraft = async (req, res) => {
 };
 
 const bulkGenerate = async (req, res) => {
-  const teacherId = req.user.teacherId || req.user.id;
-  const { group_id } = req.body;
+  const teacherId = getTeacherId(req);
+  const { group_id } = req.validated.body;
 
   const group = await verifyGroupAccess(group_id, teacherId);
   if (!group) {
@@ -235,7 +237,7 @@ const bulkGenerate = async (req, res) => {
 };
 
 const getLatestDigest = async (req, res) => {
-  const teacherId = req.user.teacherId || req.user.id;
+  const teacherId = getTeacherId(req);
   const { data } = await supabase
     .from('weekly_digests')
     .select('*')
@@ -248,7 +250,7 @@ const getLatestDigest = async (req, res) => {
 };
 
 const getDigestByWeek = async (req, res) => {
-  const teacherId = req.user.teacherId || req.user.id;
+  const teacherId = getTeacherId(req);
   const { weekStart } = req.params;
   const { data } = await supabase
     .from('weekly_digests')

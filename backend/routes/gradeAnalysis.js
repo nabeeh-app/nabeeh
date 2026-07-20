@@ -4,10 +4,17 @@ const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
-const logger = require('../lib/logger');
 const { verifyOfferingAccess, getStudentEnrollmentsForTeacher } = require('../lib/enrollmentChain');
 
 const router = express.Router();
+
+const calculateMedian = (arr) => {
+  if (arr.length === 0) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  return sorted.length % 2 === 0
+    ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+    : sorted[Math.floor(sorted.length / 2)];
+};
 
 // ── Zod Schemas ────────────────────────────────────────────────
 const groupComparisonSchema = z.object({
@@ -214,12 +221,7 @@ const getDistribution = async (req, res) => {
     buckets[idx].count++;
   });
 
-  const sorted = [...percentages].sort((a, b) => a - b);
-  const median = sorted.length > 0
-    ? sorted.length % 2 === 0
-      ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
-      : sorted[Math.floor(sorted.length / 2)]
-    : 0;
+  const median = calculateMedian(percentages);
 
   res.json({
     success: true,
@@ -312,12 +314,7 @@ const getOverview = async (req, res) => {
     ? allPercentages.reduce((a, b) => a + b, 0) / allPercentages.length
     : 0;
 
-  const sorted = [...allPercentages].sort((a, b) => a - b);
-  const median = sorted.length > 0
-    ? sorted.length % 2 === 0
-      ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
-      : sorted[Math.floor(sorted.length / 2)]
-    : 0;
+  const median = calculateMedian(allPercentages);
 
   const passCount = allPercentages.filter(p => p >= 50).length;
   const passRate = allPercentages.length > 0 ? (passCount / allPercentages.length) * 100 : 0;
@@ -333,8 +330,8 @@ const getOverview = async (req, res) => {
       average: Math.round(avg * 10) / 10,
       median: Math.round(median * 10) / 10,
       pass_rate: Math.round(passRate * 10) / 10,
-      highest: sorted.length > 0 ? Math.round(sorted[sorted.length - 1] * 10) / 10 : 0,
-      lowest: sorted.length > 0 ? Math.round(sorted[0] * 10) / 10 : 0,
+      highest: allPercentages.length > 0 ? Math.round(Math.max(...allPercentages) * 10) / 10 : 0,
+      lowest: allPercentages.length > 0 ? Math.round(Math.min(...allPercentages) * 10) / 10 : 0,
     },
   });
 };

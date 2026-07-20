@@ -302,11 +302,11 @@ module.exports = { seedDemoData, removeDemoData };
 if (require.main === module) {
   const teacherId = process.argv[2];
   if (!teacherId) {
-    console.error('Usage: node seed_demo_data.js <teacher_id>');
+    logger.error('Usage: node seed_demo_data.js <teacher_id>');
     process.exit(1);
   }
   seedDemoData(teacherId).then(result => {
-    console.log(result);
+    logger.info(result);
     process.exit(result.success ? 0 : 1);
   });
 }

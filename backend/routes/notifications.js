@@ -3,7 +3,6 @@ const { z } = require('zod');
 const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
-const logger = require('../lib/logger');
 const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();

@@ -6,6 +6,7 @@ const { validate, markAttendanceSchema, updateAttendanceSchema } = require('../m
 const logger = require('../lib/logger');
 const { batchResolveEnrollments } = require('../lib/enrollmentChain');
 const asyncHandler = require('../middleware/asyncHandler');
+const { logAudit } = require('../lib/auditLog');
 
 const getAttendanceSchema = z.object({
   query: z.object({
@@ -17,6 +18,9 @@ const getAttendanceSchema = z.object({
 });
 
 const router = express.Router();
+
+const getActorType = (req) => req.user.role === 'teacher' ? 'teacher' : 'assistant';
+const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
 
 // @desc    Get attendance for date range
 // @route   GET /api/attendance
@@ -88,8 +92,8 @@ const getAttendance = async (req, res) => {
 // @route   POST /api/attendance
 // @access  Private
 const markAttendance = async (req, res) => {
-  const incomingRecords = req.body.attendance_records || req.body.attendance;
-  const requestDate = req.body.date;
+  const incomingRecords = req.validated.body.attendance_records;
+  const requestDate = req.validated.body.date;
 
   if (!incomingRecords || !Array.isArray(incomingRecords)) {
     return res.status(400).json({
@@ -200,7 +204,7 @@ const getAttendanceSummary = async (req, res) => {
 // @route   PATCH /api/attendance/:id
 // @access  Private
 const updateAttendance = async (req, res) => {
-  const { status, notes } = req.body;
+  const { status, notes } = req.validated.body;
 
   const { data: record, error: fetchError } = await supabase
     .from('attendance')
@@ -544,13 +548,12 @@ const markAttendanceOriginal = markAttendance;
 const markAttendanceWithAudit = async (req, res) => {
   await markAttendanceOriginal(req, res);
   if (res.statusCode < 400) {
-    const { logAudit } = require('../lib/auditLog');
-    const records = req.body.attendance_records || req.body.attendance || [];
+    const records = req.validated.body.attendance_records || [];
     for (const record of records) {
       await logAudit({
         actorId: req.user.id,
-        actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
-        teacherId: req.user.teacherId || req.user.id,
+        actorType: getActorType(req),
+        teacherId: getEffectiveTeacherId(req),
         action: 'attendance_marked',
         entityType: 'attendance',
         metadata: { student_id: record.student_id, status: record.status, group_id: record.group_id },
@@ -564,15 +567,14 @@ const updateAttendanceOriginal = updateAttendance;
 const updateAttendanceWithAudit = async (req, res) => {
   await updateAttendanceOriginal(req, res);
   if (res.statusCode < 400) {
-    const { logAudit } = require('../lib/auditLog');
     await logAudit({
       actorId: req.user.id,
-      actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
-      teacherId: req.user.teacherId || req.user.id,
+      actorType: getActorType(req),
+      teacherId: getEffectiveTeacherId(req),
       action: 'attendance_edited',
       entityType: 'attendance',
       entityId: req.params.id,
-      metadata: { status: req.body.status },
+      metadata: { status: req.validated.body.status },
       ipAddress: req.ip
     });
   }

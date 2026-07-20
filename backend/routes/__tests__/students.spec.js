@@ -25,7 +25,10 @@ jest.mock('../../middleware/auth', () => ({
 }));
 
 jest.mock('../../middleware/validate', () => ({
-  validate: () => (req, res, next) => next(),
+  validate: () => (req, res, next) => {
+    req.validated = { body: req.body, query: { page: 1, limit: 10, ...req.query }, params: req.params };
+    next();
+  },
   createStudentSchema: {},
   updateStudentSchema: {}
 }));

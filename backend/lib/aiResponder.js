@@ -21,6 +21,7 @@
 
 const axios = require('axios');
 const logger = require('./logger');
+const aiService = require('./aiService');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
@@ -96,7 +97,6 @@ async function generateResponse(message, { parentName, studentName, teacherName,
   // Delegate to aiService for paid tiers
   if (tier && tier !== 'free' && teacherId) {
     try {
-      const aiService = require('./aiService');
       const result = await aiService.generateWithTools(message, {
         teacherId,
         tier,

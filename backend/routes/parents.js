@@ -95,7 +95,7 @@ const createParent = async (req, res) => {
     relationship,
     is_primary = false,
     preferred_language = 'ar'
-  } = req.body;
+  } = req.validated.body;
 
   if (!student_id || !name || !phone || !relationship) {
     return res.status(400).json({
@@ -159,9 +159,9 @@ const updateParent = async (req, res) => {
   ];
 
   const updates = {};
-  Object.keys(req.body).forEach(key => {
+  Object.keys(req.validated.body).forEach(key => {
     if (allowedFields.includes(key)) {
-      updates[key] = req.body[key];
+      updates[key] = req.validated.body[key];
     }
   });
 

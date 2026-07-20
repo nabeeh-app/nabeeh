@@ -11,6 +11,7 @@ dotenv.config();
 const swaggerSpec = require('./config/swagger');
 const swaggerUi = require('swagger-ui-express');
 const { register: metricsRegister } = require('./lib/metrics');
+const { startCronJobs } = require('./lib/cron');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -237,7 +238,6 @@ const server = app.listen(PORT, async () => {
   winstonLogger.info(`🔗 Health check: http://localhost:${PORT}/health`);
 
   // Start cron jobs
-  const { startCronJobs } = require('./lib/cron');
   startCronJobs();
 
   // Initialize WhatsApp session manager (connects all teacher sessions)

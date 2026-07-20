@@ -5,10 +5,15 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 const { validate, registerSchema, loginSchema, requestResetSchema, resetPasswordSchema, updateProfileSchema, createTeacherSchema, oauthCallbackSchema, checkProfileSchema } = require('../middleware/validate');
 const rateLimit = require('express-rate-limit');
 const logger = require('../lib/logger');
+const crypto = require('crypto');
 const { sendEmail } = require('../lib/email');
+const { getWelcomeTemplate, getPasswordResetTemplate } = require('../lib/emailTemplates');
 const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
+
+const getClientIp = (req) => req.ip || req.connection.remoteAddress;
+const getUserAgent = (req) => req.get('User-Agent');
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -20,7 +25,7 @@ function setAuthCookie(res, token) {
     maxAge: 24 * 60 * 60 * 1000, // 24 hours, matches JWT_EXPIRES_IN default
     path: '/'
   });
-  const csrfToken = require('crypto').randomBytes(32).toString('hex');
+  const csrfToken = crypto.randomBytes(32).toString('hex');
   res.cookie('csrf_token', csrfToken, {
     httpOnly: false,
     secure: isProd,
@@ -328,7 +333,7 @@ async function provisionTeacherAccount(payload) {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/register', registerLimiter, validate(registerSchema), asyncHandler(async (req, res) => {
-    const teacher = await provisionTeacherAccount(req.body);
+    const teacher = await provisionTeacherAccount(req.validated.body);
 
     const token = authService.tokenService.generateToken(teacher);
 
@@ -336,8 +341,8 @@ router.post('/register', registerLimiter, validate(registerSchema), asyncHandler
         teacher.id,
         'register',
         true,
-        req.ip || req.connection.remoteAddress,
-        req.get('User-Agent'),
+        getClientIp(req),
+        getUserAgent(req),
         { email: teacher.email }
     );
 
@@ -355,79 +360,8 @@ router.post('/register', registerLimiter, validate(registerSchema), asyncHandler
 
     // Welcome email to the new user — async, don't block the response
     const lang = teacher.preferred_language || 'ar';
-    const isAr = lang === 'ar';
-    const dir = isAr ? 'rtl' : 'ltr';
-    const align = isAr ? 'right' : 'left';
-    const font = isAr ? "'Segoe UI', Tahoma, Arial, sans-serif" : "Arial, 'Helvetica Neue', Helvetica, sans-serif";
-    const welcomeEmail = {
-        subject: isAr ? 'مرحباً بك في نبيه!' : 'Welcome to Nabeeh!',
-        html: `
-<!DOCTYPE html>
-<html lang="${lang}" dir="${dir}">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:#fcfcf8;font-family:${font};color:#083d44;line-height:1.6;direction:${dir};text-align:${align};">
-<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fcfcf8;padding:20px 0;direction:${dir};">
-<tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;direction:${dir};">
-    <tr>
-        <td style="background-color:#026370;padding:24px 32px;text-align:center;font-family:${font};">
-            <span style="font-size:28px;font-weight:bold;color:#e5ff97;">${isAr ? 'نبيه' : 'Nabeeh'}</span>
-        </td>
-    </tr>
-    <tr>
-        <td style="background-color:#ffffff;padding:32px;border:1px solid #e8eced;border-top:none;text-align:${align};direction:${dir};font-family:${font};">
-            <h2 style="margin:0 0 16px;font-size:22px;color:#083d44;text-align:${align};">
-                ${isAr ? `أهلاً ${teacher.name || ''}،` : `Hey ${teacher.name || ''},`}
-            </h2>
-            <p style="margin:0 0 12px;color:#083d44;opacity:0.8;text-align:${align};">
-                ${isAr
-                    ? 'أنا مصطفى — مؤسس نبيه. بنينا نبيه لأننا عايزين طريقة أسهل للمعلمين يسيروا طلابهم وحضورهم ودرجاتهم — كلهم في مكان واحد.'
-                    : "I'm Mustafa — founder of Nabeeh. We built this because we wanted a better way for teachers to manage students, attendance, and grades — all in one place."}
-            </p>
-            <p style="margin:0 0 12px;color:#083d44;opacity:0.8;text-align:${align};">
-                ${isAr ? 'إليك 3 نصائح للبدء:' : 'Here are 3 tips to get started:'}
-            </p>
-            <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-                <tr><td style="padding:12px 16px;background-color:#f3f6e4;text-align:${align};">
-                    <strong style="color:#026370;">${isAr ? '١.' : '1.'}</strong>
-                    <span style="color:#083d44;"> ${isAr ? '<strong>أضف أول طالب</strong> — روح لصفحة الطلاب وأضف ملف شخصي' : '<strong>Add your first student</strong> — go to Students and create a profile'}</span>
-                </td></tr>
-                <tr><td style="height:8px;"></td></tr>
-                <tr><td style="padding:12px 16px;background-color:#f3f6e4;text-align:${align};">
-                    <strong style="color:#026370;">${isAr ? '٢.' : '2.'}</strong>
-                    <span style="color:#083d44;"> ${isAr ? '<strong>أنشئ دورة</strong> — حضّر العروض والمجموعات بتاعتك' : '<strong>Create a course</strong> — set up your offerings and groups'}</span>
-                </td></tr>
-                <tr><td style="height:8px;"></td></tr>
-                <tr><td style="padding:12px 16px;background-color:#f3f6e4;text-align:${align};">
-                    <strong style="color:#026370;">${isAr ? '٣.' : '3.'}</strong>
-                    <span style="color:#083d44;"> ${isAr ? '<strong>جرّب بوت واتساب</strong> — خلي أولياء الأمور يسألوا عن الدرجات تلقائياً' : '<strong>Try the WhatsApp bot</strong> — let parents ask about grades automatically'}</span>
-                </td></tr>
-            </table>
-            <table width="100%" cellpadding="0" cellspacing="0">
-                <tr><td align="${align}" style="padding:0 0 24px;">
-                    <a href="${process.env.FRONTEND_URL || 'https://nabeeh.app'}/${lang}/login" style="display:inline-block;padding:12px 28px;background-color:#026370;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;font-family:${font};">${isAr ? 'افتح نبيه' : 'Open Nabeeh'}</a>
-                </td></tr>
-            </table>
-            <p style="margin:0 0 20px;color:#083d44;opacity:0.8;text-align:${align};">
-                ${isAr ? 'رد عليا وقولي إيه اللي جابك هنا — أنا بقرأ كل إيميل.' : 'Hit "Reply" and let me know what brought you here — I read every email.'}
-            </p>
-            <p style="margin:0;color:#083d44;opacity:0.7;text-align:${align};">
-                ${isAr ? 'مع تحياتي،<br>مصطفى' : 'Cheers,<br>Mustafa'}
-            </p>
-        </td>
-    </tr>
-    <tr>
-        <td style="background-color:#f3f6e4;padding:20px 32px;text-align:center;border:1px solid #e8eced;border-top:none;font-family:${font};">
-            <p style="margin:0;font-size:13px;color:#083d44;opacity:0.6;">&copy; 2025 ${isAr ? 'نبيه — المساعد الذكي للتدريس' : 'Nabeeh — Smart Teaching Assistant'}</p>
-            <p style="margin:4px 0 0;font-size:12px;color:#083d44;opacity:0.4;">${isAr ? 'هذه رسالة تلقائية، يرجى عدم الرد عليها.' : 'This is an automated message, please do not reply.'}</p>
-        </td>
-    </tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`,
-    };
+    const loginLink = `${process.env.FRONTEND_URL || 'https://nabeeh.app'}/${lang}/login`;
+    const welcomeEmail = getWelcomeTemplate({ name: teacher.name, loginLink, language: lang });
 
     sendEmail({
         to: teacher.email,
@@ -523,7 +457,7 @@ router.post('/register', registerLimiter, validate(registerSchema), asyncHandler
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/admin/create-teacher', authenticateToken, requireRole('admin'), validate(createTeacherSchema), asyncHandler(async (req, res) => {
-    const teacher = await provisionTeacherAccount(req.body);
+    const teacher = await provisionTeacherAccount(req.validated.body);
     res.status(201).json({
         success: true,
         data: formatTeacherResponse(teacher),
@@ -601,7 +535,7 @@ router.post('/admin/create-teacher', authenticateToken, requireRole('admin'), va
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/login', loginLimiter, validate(loginSchema), asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password } = req.validated.body;
     const normalizedEmail = email?.toLowerCase().trim();
     logger.info('Login attempt', { email: normalizedEmail });
 
@@ -632,8 +566,8 @@ router.post('/login', loginLimiter, validate(loginSchema), asyncHandler(async (r
             result.user.id,
             'login',
             true,
-            req.ip || req.connection.remoteAddress,
-            req.get('User-Agent'),
+            getClientIp(req),
+            getUserAgent(req),
             { email: normalizedEmail }
         );
 
@@ -654,8 +588,8 @@ router.post('/login', loginLimiter, validate(loginSchema), asyncHandler(async (r
             null,
             'login',
             false,
-            req.ip || req.connection.remoteAddress,
-            req.get('User-Agent'),
+            getClientIp(req),
+            getUserAgent(req),
             { email: normalizedEmail }
         );
         res.status(401).json({
@@ -705,8 +639,8 @@ router.post('/login', loginLimiter, validate(loginSchema), asyncHandler(async (r
  */
 router.post('/logout', authenticateToken, asyncHandler(async (req, res) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
-    const ipAddress = req.ip || req.connection.remoteAddress;
-    const userAgent = req.get('User-Agent');
+    const ipAddress = getClientIp(req);
+    const userAgent = getUserAgent(req);
 
     if (token) {
         try {
@@ -1012,8 +946,8 @@ router.put('/profile', authenticateToken, validate(updateProfileSchema), asyncHa
 
     const updates = {};
     allowedFields.forEach((field) => {
-        if (req.body[field] !== undefined) {
-            updates[field] = req.body[field];
+        if (req.validated.body[field] !== undefined) {
+            updates[field] = req.validated.body[field];
         }
     });
 
@@ -1104,9 +1038,9 @@ router.put('/profile', authenticateToken, validate(updateProfileSchema), asyncHa
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/request-reset', resetLimiter, validate(requestResetSchema), asyncHandler(async (req, res) => {
-    const { email } = req.body;
-    const ipAddress = req.ip || req.connection.remoteAddress;
-    const userAgent = req.get('User-Agent');
+    const { email } = req.validated.body;
+    const ipAddress = getClientIp(req);
+    const userAgent = getUserAgent(req);
 
     if (!email) {
         return res.status(400).json({
@@ -1146,7 +1080,6 @@ router.post('/request-reset', resetLimiter, validate(requestResetSchema), asyncH
             const frontendUrl = process.env.FRONTEND_URL || 'https://nabeeh.app';
             const resetLink = `${frontendUrl}/reset-password?token=${resetTokenPlain}`;
             const lang = user.preferred_language || 'ar';
-            const { getPasswordResetTemplate } = require('../lib/emailTemplates');
             const resetEmail = getPasswordResetTemplate({ name: user.name, resetLink, language: lang });
 
             sendEmail({
@@ -1306,9 +1239,9 @@ router.get('/reset/:token', asyncHandler(async (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/reset-password', validate(resetPasswordSchema), asyncHandler(async (req, res) => {
-    const { token, newPassword } = req.body;
-    const ipAddress = req.ip || req.connection.remoteAddress;
-    const userAgent = req.get('User-Agent');
+    const { token, newPassword } = req.validated.body;
+    const ipAddress = getClientIp(req);
+    const userAgent = getUserAgent(req);
 
     if (!token || !newPassword) {
         return res.status(400).json({
@@ -1622,8 +1555,8 @@ router.post('/oauth/callback', validate(oauthCallbackSchema), asyncHandler(async
             linkedTeacher.id,
             'oauth_login',
             true,
-            req.ip || req.connection.remoteAddress,
-            req.get('User-Agent'),
+            getClientIp(req),
+            getUserAgent(req),
             { provider, email }
         );
 
@@ -1688,8 +1621,8 @@ router.post('/oauth/callback', validate(oauthCallbackSchema), asyncHandler(async
             existingTeacher.id,
             'oauth_account_linked',
             true,
-            req.ip || req.connection.remoteAddress,
-            req.get('User-Agent'),
+            getClientIp(req),
+            getUserAgent(req),
             { provider, email }
         );
 
@@ -1752,8 +1685,8 @@ router.post('/oauth/callback', validate(oauthCallbackSchema), asyncHandler(async
                 user.id,
                 'oauth_assistant_accepted',
                 true,
-                req.ip || req.connection.remoteAddress,
-                req.get('User-Agent'),
+                getClientIp(req),
+                getUserAgent(req),
                 { provider, email, teacherId: invite.teacher_id }
             );
 
@@ -1808,8 +1741,8 @@ router.post('/oauth/callback', validate(oauthCallbackSchema), asyncHandler(async
                 fallbackTeacher.id,
                 'oauth_login',
                 true,
-                req.ip || req.connection.remoteAddress,
-                req.get('User-Agent'),
+                getClientIp(req),
+                getUserAgent(req),
                 { provider, email }
             );
 
@@ -1836,8 +1769,8 @@ router.post('/oauth/callback', validate(oauthCallbackSchema), asyncHandler(async
         newTeacher.id,
         'oauth_register',
         true,
-        req.ip || req.connection.remoteAddress,
-        req.get('User-Agent'),
+        getClientIp(req),
+        getUserAgent(req),
         { provider, email }
     );
 

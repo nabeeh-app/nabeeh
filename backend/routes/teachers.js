@@ -126,7 +126,7 @@ const getSettings = async (req, res) => {
 // @route   PUT /api/teachers/settings
 // @access  Private
 const updateSettings = async (req, res) => {
-  const { notifications, theme, language } = req.body;
+  const { notifications, theme, language } = req.validated.body;
   const teacherId = req.user.id;
 
   const updates = {};
@@ -177,7 +177,7 @@ const notificationPreferencesSchema = z.object({
 // @access  Private
 const updateNotificationPreferences = async (req, res) => {
   const teacherId = req.user.id;
-  const prefs = req.body;
+  const prefs = req.validated.body;
 
   const { data: existing } = await supabase
     .from('teacher_settings')

@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const multer = require('multer');
 const XLSX = require('xlsx');
 const Papa = require('papaparse');
@@ -48,7 +49,7 @@ const upload = multer({
       'text/tab-separated-values'
     ];
     const allowedExts = ['.csv', '.xls', '.xlsx', '.tsv'];
-    const ext = require('path').extname(file.originalname).toLowerCase();
+    const ext = path.extname(file.originalname).toLowerCase();
     if (allowedTypes.includes(file.mimetype) || allowedExts.includes(ext)) {
       cb(null, true);
     } else {
@@ -58,7 +59,7 @@ const upload = multer({
 });
 
 function parseFile(buffer, originalname) {
-  const ext = require('path').extname(originalname).toLowerCase();
+  const ext = path.extname(originalname).toLowerCase();
 
   if (ext === '.csv' || ext === '.tsv') {
     const text = buffer.toString('utf-8');
@@ -285,14 +286,14 @@ router.post('/validate', authenticateToken, requirePermission('manage_students')
 
   let fieldMapping;
   try {
-    fieldMapping = JSON.parse(req.body.mapping || '{}');
+    fieldMapping = JSON.parse(req.validated.body.mapping || '{}');
   } catch {
     fieldMapping = {};
   }
 
   let requiredFields;
   try {
-    requiredFields = JSON.parse(req.body.requiredFields || 'null');
+    requiredFields = JSON.parse(req.validated.body.requiredFields || 'null');
   } catch {
     requiredFields = null;
   }
@@ -403,7 +404,7 @@ router.post('/validate', authenticateToken, requirePermission('manage_students')
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/execute', authenticateToken, requirePermission('manage_students'), validate(executeImportSchema), asyncHandler(async (req, res) => {
-  const { fieldMapping, rows, groupId, skipErrors = true } = req.body;
+  const { fieldMapping, rows, groupId, skipErrors = true } = req.validated.body;
 
   const { data: groupCheck } = await supabase
     .from('groups')
@@ -568,7 +569,7 @@ router.post('/execute', authenticateToken, requirePermission('manage_students'),
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/paste', authenticateToken, requirePermission('manage_students'), validate(pasteImportSchema), asyncHandler(async (req, res) => {
-  const { text } = req.body;
+  const { text } = req.validated.body;
 
   const result = Papa.parse(text.trim(), {
     header: true,

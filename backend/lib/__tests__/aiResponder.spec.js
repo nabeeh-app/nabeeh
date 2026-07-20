@@ -28,6 +28,14 @@ describe('aiResponder', () => {
       process.env.GEMINI_API_KEY = key;
     }
     jest.resetModules();
+    jest.mock('../../config/database', () => ({
+      supabase: { from: jest.fn() },
+      supabaseAdmin: { from: jest.fn() }
+    }));
+    jest.mock('../aiService', () => ({
+      generateWithTools: jest.fn(),
+      generateReportComment: jest.fn(),
+    }));
     jest.mock('axios');
     jest.mock('../logger', () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
     return require('../aiResponder');

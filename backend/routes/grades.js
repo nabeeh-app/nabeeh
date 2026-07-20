@@ -5,6 +5,7 @@ const { validate, createGradeSchema, bulkGradeSchema, updateGradeSchema } = requ
 const logger = require('../lib/logger');
 const { batchResolveEnrollmentsWithOfferings } = require('../lib/enrollmentChain');
 const asyncHandler = require('../middleware/asyncHandler');
+const { logAudit } = require('../lib/auditLog');
 
 const { z } = require('zod');
 
@@ -19,6 +20,26 @@ const getGradesSchema = z.object({
 });
 
 const router = express.Router();
+
+const getActorType = (req) => req.user.role === 'teacher' ? 'teacher' : 'assistant';
+const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
+
+async function verifyGradeOwnership(gradeId, teacherId) {
+  const { data: grade } = await supabase
+    .from('grades')
+    .select('id, assessment_id, assessment:assessments!inner(offering:offerings!inner(teacher_id))')
+    .eq('id', gradeId)
+    .eq('assessments.offerings.teacher_id', teacherId)
+    .single();
+  return grade;
+}
+
+function computeStatsSummary(scores) {
+  return {
+    count: scores.length,
+    average: Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100
+  };
+}
 
 // @desc    Get grades for students
 // @route   GET /api/grades
@@ -141,14 +162,13 @@ const createGrade = async (req, res) => {
   const {
     student_id,
     subject,
-    assessment_type,
     assessment_name,
     score,
     max_score,
     date,
     notes,
     is_published = false
-  } = req.body;
+  } = req.validated.body;
 
   if (!student_id || !subject || !assessment_name || score === undefined || !max_score) {
     return res.status(400).json({
@@ -216,7 +236,7 @@ const createGrade = async (req, res) => {
 // @route   POST /api/grades/bulk
 // @access  Private
 const createBulkGrades = async (req, res) => {
-  const { grades } = req.body;
+  const { grades } = req.validated.body;
 
   if (!grades || !Array.isArray(grades)) {
     return res.status(400).json({
@@ -366,7 +386,7 @@ const createBulkGrades = async (req, res) => {
 // @access  Private
 const updateGrade = async (req, res) => {
   const allowedFields = [
-    'subject', 'assessment_type', 'assessment_name',
+    'subject', 'assessment_name',
     'score', 'max_score', 'date', 'notes', 'is_published'
   ];
 
@@ -374,34 +394,29 @@ const updateGrade = async (req, res) => {
   const assessmentUpdates = {};
   let hasAssessmentUpdates = false;
 
-  Object.keys(req.body).forEach(key => {
+  Object.keys(req.validated.body).forEach(key => {
     if (allowedFields.includes(key)) {
-      if (key === 'score') gradeUpdates.score = parseFloat(req.body.score);
-      if (key === 'notes') gradeUpdates.notes = req.body.notes;
+      if (key === 'score') gradeUpdates.score = parseFloat(req.validated.body.score);
+      if (key === 'notes') gradeUpdates.notes = req.validated.body.notes;
 
       if (key === 'assessment_name') {
-        assessmentUpdates.name = req.body.assessment_name;
+        assessmentUpdates.name = req.validated.body.assessment_name;
         hasAssessmentUpdates = true;
       }
       if (key === 'max_score') {
-        assessmentUpdates.max_score = parseFloat(req.body.max_score);
+        assessmentUpdates.max_score = parseFloat(req.validated.body.max_score);
         hasAssessmentUpdates = true;
       }
       if (key === 'date') {
-        assessmentUpdates.date = req.body.date;
+        assessmentUpdates.date = req.validated.body.date;
         hasAssessmentUpdates = true;
       }
     }
   });
 
-  const { data: currentGrade, error: fetchError } = await supabase
-    .from('grades')
-    .select('id, assessment_id, assessment:assessments!inner(offering:offerings!inner(teacher_id))')
-    .eq('id', req.params.id)
-    .eq('assessments.offerings.teacher_id', req.user.id)
-    .single();
+  const currentGrade = await verifyGradeOwnership(req.params.id, req.user.id);
 
-  if (fetchError || !currentGrade) {
+  if (!currentGrade) {
     return res.status(404).json({ success: false, message: 'Grade not found or unauthorized', messageAr: 'لم يتم العثور على الدرجة أو غير مصرح', code: 'NOT_FOUND' });
   }
 
@@ -460,12 +475,7 @@ const updateGrade = async (req, res) => {
 // @route   DELETE /api/grades/:id
 // @access  Private
 const deleteGrade = async (req, res) => {
-  const { data: grade } = await supabase
-    .from('grades')
-    .select('id, assessment:assessments!inner(offering:offerings!inner(teacher_id))')
-    .eq('id', req.params.id)
-    .eq('assessments.offerings.teacher_id', req.user.id)
-    .single();
+  const grade = await verifyGradeOwnership(req.params.id, req.user.id);
 
   if (!grade) {
     return res.status(404).json({ success: false, message: 'Grade not found or unauthorized', messageAr: 'لم يتم العثور على الدرجة أو غير مصرح', code: 'NOT_FOUND' });
@@ -555,19 +565,11 @@ const getGradeStats = async (req, res) => {
   }
 
   Object.keys(stats.by_subject).forEach(subj => {
-    const scores = stats.by_subject[subj];
-    stats.by_subject[subj] = {
-      count: scores.length,
-      average: Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100
-    };
+    stats.by_subject[subj] = computeStatsSummary(stats.by_subject[subj]);
   });
 
   Object.keys(stats.by_assessment_type).forEach(type => {
-    const scores = stats.by_assessment_type[type];
-    stats.by_assessment_type[type] = {
-      count: scores.length,
-      average: Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100
-    };
+    stats.by_assessment_type[type] = computeStatsSummary(stats.by_assessment_type[type]);
   });
 
   res.status(200).json({
@@ -584,15 +586,14 @@ const createGradeOriginal = createGrade;
 const createGradeWithAudit = async (req, res) => {
   await createGradeOriginal(req, res);
   if (res.statusCode < 400) {
-    const { logAudit } = require('../lib/auditLog');
     await logAudit({
       actorId: req.user.id,
-      actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
-      teacherId: req.user.teacherId || req.user.id,
+      actorType: getActorType(req),
+      teacherId: getEffectiveTeacherId(req),
       action: 'grade_entered',
       entityType: 'grade',
       entityId: res.locals?.data?.id,
-      metadata: { student_id: req.body.student_id, subject: req.body.subject, score: req.body.score },
+      metadata: { student_id: req.validated.body.student_id, subject: req.validated.body.subject, score: req.validated.body.score },
       ipAddress: req.ip
     });
   }
@@ -602,14 +603,13 @@ const createBulkGradesOriginal = createBulkGrades;
 const createBulkGradesWithAudit = async (req, res) => {
   await createBulkGradesOriginal(req, res);
   if (res.statusCode < 400) {
-    const { logAudit } = require('../lib/auditLog');
     await logAudit({
       actorId: req.user.id,
-      actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
-      teacherId: req.user.teacherId || req.user.id,
+      actorType: getActorType(req),
+      teacherId: getEffectiveTeacherId(req),
       action: 'grade_bulk_import',
       entityType: 'grade',
-      metadata: { count: req.body.grades?.length },
+      metadata: { count: req.validated.body.grades?.length },
       ipAddress: req.ip
     });
   }
@@ -619,15 +619,14 @@ const updateGradeOriginal = updateGrade;
 const updateGradeWithAudit = async (req, res) => {
   await updateGradeOriginal(req, res);
   if (res.statusCode < 400) {
-    const { logAudit } = require('../lib/auditLog');
     await logAudit({
       actorId: req.user.id,
-      actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
-      teacherId: req.user.teacherId || req.user.id,
+      actorType: getActorType(req),
+      teacherId: getEffectiveTeacherId(req),
       action: 'grade_edited',
       entityType: 'grade',
       entityId: req.params.id,
-      metadata: { score: req.body.score },
+      metadata: { score: req.validated.body.score },
       ipAddress: req.ip
     });
   }
@@ -637,11 +636,10 @@ const deleteGradeOriginal = deleteGrade;
 const deleteGradeWithAudit = async (req, res) => {
   await deleteGradeOriginal(req, res);
   if (res.statusCode < 400) {
-    const { logAudit } = require('../lib/auditLog');
     await logAudit({
       actorId: req.user.id,
-      actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
-      teacherId: req.user.teacherId || req.user.id,
+      actorType: getActorType(req),
+      teacherId: getEffectiveTeacherId(req),
       action: 'grade_deleted',
       entityType: 'grade',
       entityId: req.params.id,

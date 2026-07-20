@@ -1,5 +1,8 @@
 const crypto = require('crypto');
 const logger = require('./logger');
+const { supabaseAdmin } = require('../config/database');
+const aiService = require('./aiService');
+const whatsappQuery = require('./whatsappQuery');
 
 const jobs = new Map();
 
@@ -31,9 +34,6 @@ function scheduleCleanup(id) {
 // Job handlers — add new types here
 const handlers = {
   'bulk-report': async (payload) => {
-    const { supabaseAdmin } = require('../config/database');
-    const aiService = require('./aiService');
-
     const { teacherId, group_id } = payload;
 
     const { data: enrollments } = await supabaseAdmin
@@ -50,8 +50,8 @@ const handlers = {
       const batch = enrollments.slice(i, i + CONCURRENCY);
       const batchResults = await Promise.all(batch.map(async (enrollment) => {
         try {
-          const gradesResult = await require('./whatsappQuery').getStudentGrades(enrollment.student_id);
-          const attendanceRecords = await require('./whatsappQuery').getAllStudentAttendance(enrollment.student_id);
+          const gradesResult = await whatsappQuery.getStudentGrades(enrollment.student_id);
+          const attendanceRecords = await whatsappQuery.getAllStudentAttendance(enrollment.student_id);
           const totalSessions = attendanceRecords.length;
           const presentCount = attendanceRecords.filter(a => a.status === 'present' || a.status === 'late').length;
           const attendanceRate = totalSessions > 0 ? `${Math.round((presentCount / totalSessions) * 100)}%` : 'N/A';

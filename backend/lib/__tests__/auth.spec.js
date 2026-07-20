@@ -1,6 +1,11 @@
 process.env.JWT_SECRET = 'test-secret-key-for-testing';
 process.env.JWT_EXPIRES_IN = '24h';
 
+jest.mock('../../config/database', () => ({
+  supabase: { from: jest.fn() },
+  supabaseAdmin: { from: jest.fn() }
+}));
+
 jest.mock('../logger', () => ({
   info: jest.fn(),
   error: jest.fn(),

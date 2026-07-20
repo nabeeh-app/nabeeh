@@ -29,7 +29,10 @@ jest.mock('../../middleware/auth', () => ({
 }));
 
 jest.mock('../../middleware/validate', () => ({
-  validate: () => (req, res, next) => next(),
+  validate: () => (req, res, next) => {
+    req.validated = { body: req.body, query: req.query, params: req.params };
+    next();
+  },
   createGradeSchema: {},
   bulkGradeSchema: {},
   updateGradeSchema: {}

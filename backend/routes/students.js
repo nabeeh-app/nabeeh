@@ -6,6 +6,8 @@ const { validate, createStudentSchema, updateStudentSchema } = require('../middl
 const { createStudentsQuery, verifyStudentAccess, verifyGroupAccess, getStudentEnrollmentsForTeacher } = require('../lib/enrollmentChain');
 const logger = require('../lib/logger');
 const asyncHandler = require('../middleware/asyncHandler');
+const { logAudit } = require('../lib/auditLog');
+const { removeDemoData } = require('../scripts/seed_demo_data');
 
 const getStudentsSchema = z.object({
   query: z.object({
@@ -20,6 +22,9 @@ const getStudentsSchema = z.object({
 
 const router = express.Router();
 
+const getActorType = (req) => req.user.role === 'teacher' ? 'teacher' : 'assistant';
+const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
+
 // @desc    Get all students for a teacher
 // @route   GET /api/students
 // @access  Private
@@ -27,7 +32,7 @@ const router = express.Router();
 // @route   GET /api/students
 // @access  Private
 const getStudents = async (req, res) => {
-  const { page, limit, search, grade, status } = req.validated.query;
+  const { page, limit, search, status } = req.validated.query;
   const offset = (page - 1) * limit;
 
   // Filter by Teacher's Offerings
@@ -134,7 +139,7 @@ const createStudent = async (req, res) => {
     phone,
     group_id, // REQUIRED now
     parents
-  } = req.body;
+  } = req.validated.body;
 
   // Validate required fields
   if (!name || !group_id) {
@@ -206,9 +211,9 @@ const createStudent = async (req, res) => {
 const updateStudent = async (req, res) => {
   const allowedFields = ['student_code', 'name', 'phone'];
   const updates = {};
-  Object.keys(req.body).forEach(key => {
+  Object.keys(req.validated.body).forEach(key => {
     if (allowedFields.includes(key)) {
-      updates[key] = req.body[key];
+      updates[key] = req.validated.body[key];
     }
   });
 
@@ -360,14 +365,13 @@ const createStudentOriginal = createStudent;
 const createStudentWithAudit = async (req, res) => {
   await createStudentOriginal(req, res);
   if (res.statusCode < 400) {
-    const { logAudit } = require('../lib/auditLog');
     await logAudit({
       actorId: req.user.id,
-      actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
-      teacherId: req.user.teacherId || req.user.id,
+      actorType: getActorType(req),
+      teacherId: getEffectiveTeacherId(req),
       action: 'student_created',
       entityType: 'student',
-      metadata: { name: req.body.name, group_id: req.body.group_id },
+      metadata: { name: req.validated.body.name, group_id: req.validated.body.group_id },
       ipAddress: req.ip
     });
 
@@ -380,7 +384,6 @@ const createStudentWithAudit = async (req, res) => {
         .eq('is_demo', false);
 
       if (hasRealStudents === 1) {
-        const { removeDemoData } = require('../scripts/seed_demo_data');
         await removeDemoData(req.user.id);
         logger.info('Auto-removed demo data after first real student', { teacherId: req.user.id });
       }
@@ -394,15 +397,14 @@ const updateStudentOriginal = updateStudent;
 const updateStudentWithAudit = async (req, res) => {
   await updateStudentOriginal(req, res);
   if (res.statusCode < 400) {
-    const { logAudit } = require('../lib/auditLog');
     await logAudit({
       actorId: req.user.id,
-      actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
-      teacherId: req.user.teacherId || req.user.id,
+      actorType: getActorType(req),
+      teacherId: getEffectiveTeacherId(req),
       action: 'student_updated',
       entityType: 'student',
       entityId: req.params.id,
-      metadata: { updates: Object.keys(req.body) },
+      metadata: { updates: Object.keys(req.validated.body) },
       ipAddress: req.ip
     });
   }
@@ -412,11 +414,10 @@ const deleteStudentOriginal = deleteStudent;
 const deleteStudentWithAudit = async (req, res) => {
   await deleteStudentOriginal(req, res);
   if (res.statusCode < 400) {
-    const { logAudit } = require('../lib/auditLog');
     await logAudit({
       actorId: req.user.id,
-      actorType: req.user.role === 'teacher' ? 'teacher' : 'assistant',
-      teacherId: req.user.teacherId || req.user.id,
+      actorType: getActorType(req),
+      teacherId: getEffectiveTeacherId(req),
       action: 'student_deleted',
       entityType: 'student',
       entityId: req.params.id,

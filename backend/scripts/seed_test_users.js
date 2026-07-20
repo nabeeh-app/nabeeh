@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const { PasswordService } = require('../lib/auth');
+const logger = require('../lib/logger');
 require('dotenv').config();
 
 // Initialize Supabase with Service Role Key for Admin access (creating auth users)
@@ -18,10 +19,10 @@ const passwordService = new PasswordService();
 
 async function seedTestUsers() {
     try {
-        console.log('🌱 Starting database seeding (Normalized Schema)...');
+        logger.info('Starting database seeding (Normalized Schema)...');
 
         // 1. Static Data: Grade Levels
-        console.log('📚 Creating Grade Levels...');
+        logger.info('Creating Grade Levels...');
         const gradeLevelsData = [
             { name: '1st Secondary', order: 10 },
             { name: '2nd Secondary', order: 11 },
@@ -35,10 +36,10 @@ async function seedTestUsers() {
             .select();
 
         if (gradesError) throw gradesError;
-        console.log(`  ✅ Created ${grades.length} grade levels`);
+        logger.info(`Created ${grades.length} grade levels`);
 
         // 2. Static Data: Subjects
-        console.log('📚 Creating Subjects...');
+        logger.info('Creating Subjects...');
         const subjectsData = [
             { code: 'MATH', name_en: 'Mathematics', name_ar: 'الرياضيات' },
             { code: 'PHYS', name_en: 'Physics', name_ar: 'الفيزياء' },
@@ -52,7 +53,7 @@ async function seedTestUsers() {
             .select();
 
         if (subjectsError) throw subjectsError;
-        console.log(`  ✅ Created ${subjects.length} subjects`);
+        logger.info(`Created ${subjects.length} subjects`);
 
         // Map for easy lookup
         const subjectMap = {};
@@ -62,7 +63,7 @@ async function seedTestUsers() {
 
 
         // 3. Teachers (and Auth Users)
-        console.log('👤 Creating Teachers & Auth Accounts...');
+        logger.info('Creating Teachers & Auth Accounts...');
         const teachersData = [
             {
                 email: 'teacher.math@nabeeh.com',
@@ -87,7 +88,7 @@ async function seedTestUsers() {
             if (existingUser) {
                 userId = existingUser.id;
                 await supabase.auth.admin.updateUserById(userId, { password: t.password });
-                console.log(`  ⚠️ User ${t.email} exists, updated password.`);
+                logger.info(`User ${t.email} exists, updated password.`);
             } else {
                 const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
                     email: t.email,
@@ -97,7 +98,7 @@ async function seedTestUsers() {
                 });
                 if (createError) throw createError;
                 userId = newUser.user.id;
-                console.log(`  ✅ Created Auth User: ${t.email}`);
+                logger.info(`Created Auth User: ${t.email}`);
             }
 
             // B. Create Teacher Profile (references auth.users)
@@ -121,7 +122,7 @@ async function seedTestUsers() {
             }
 
             // D. Create Offerings
-            console.log(`  📝 Creating Offerings for ${t.name}...`);
+            logger.info(`Creating Offerings for ${t.name}...`);
             const targetGrades = ['1st Secondary', '2nd Secondary'];
 
             for (const gradeName of targetGrades) {
@@ -162,10 +163,10 @@ async function seedTestUsers() {
             }
         }
 
-        console.log('\n🎉 Database seeding completed successfully!');
+        logger.info('Database seeding completed successfully!');
 
     } catch (error) {
-        console.error('❌ Seeding failed:', error);
+        logger.error('Seeding failed:', error);
         process.exit(1);
     }
 }
@@ -191,7 +192,7 @@ async function seedStudentsForGroup(groupId, gradeName, teacher) {
             .single();
 
         if (stError) {
-            console.log('  ⚠️ Student creation failed (duplicate?):', stError.message);
+            logger.info('Student creation failed (duplicate?):', stError.message);
             continue;
         }
 

@@ -110,7 +110,7 @@ const router = express.Router();
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/link', authenticateToken, requirePermission('manage_students'), validate(createLinkSchema), asyncHandler(async (req, res) => {
-  const { groupId, expiresInHours = 168 } = req.body;
+  const { groupId, expiresInHours = 168 } = req.validated.body;
 
 
   const { data: group, error: groupError } = await supabaseAdmin
@@ -369,7 +369,7 @@ router.get('/form/:token', selfRegLimiter, asyncHandler(async (req, res) => {
  */
 router.post('/submit/:token', selfRegLimiter, validate(submitRegistrationSchema), asyncHandler(async (req, res) => {
   const { token } = req.params;
-  const { name, phone, parent_phone } = req.body;
+  const { name, phone, parent_phone } = req.validated.body;
 
 
   const { data: tokenRecord, error: tokenError } = await supabaseAdmin
