@@ -55,7 +55,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Don't log abort errors
       const error = err as { name?: string; response?: { status?: number }; message?: string };
       if (error.name !== 'CanceledError' && error.name !== 'AbortError') {
-        logger.error('Auth check failed:', err);
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          logger.warn('No active session', { status: error.response.status });
+        } else {
+          logger.error('Auth check failed:', err);
+        }
       }
 
       // Only clear teacher for actual auth errors (401/403).

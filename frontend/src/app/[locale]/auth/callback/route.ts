@@ -5,14 +5,14 @@ import { randomBytes } from 'crypto';
 import logger from '@/lib/logger';
 
 function getOrigin(request: Request): string {
+  const proto = request.headers.get('x-forwarded-proto') || 'https';
   const forwardedHost = request.headers.get('x-forwarded-host');
   if (forwardedHost) {
-    const proto = request.headers.get('x-forwarded-proto') || 'https';
     return `${proto}://${forwardedHost}`;
   }
   const host = request.headers.get('host');
   if (host) {
-    return `https://${host}`;
+    return `${proto}://${host}`;
   }
   return new URL(request.url).origin;
 }
@@ -30,6 +30,8 @@ export async function GET(request: Request) {
   const cookieStore = await cookies();
   const response = NextResponse.redirect(`${origin}/${locale}/dashboard`);
 
+  const pendingCookies: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -46,6 +48,7 @@ export async function GET(request: Request) {
               // Ignore if immutable in specific server context
             }
             response.cookies.set(name, value, options);
+            pendingCookies.push({ name, value, options: options || {} });
           });
         },
       },
@@ -64,6 +67,14 @@ export async function GET(request: Request) {
   await new Promise((r) => setTimeout(r, 0));
 
   const { session } = data;
+
+  function redirectWithCookies(url: string): NextResponse {
+    const redirect = NextResponse.redirect(url);
+    for (const { name, value, options } of pendingCookies) {
+      redirect.cookies.set(name, value, options);
+    }
+    return redirect;
+  }
 
   // Exchange Supabase session for backend JWT — all server-side, no intermediate page
   try {
@@ -110,10 +121,10 @@ export async function GET(request: Request) {
 
     logger.error('Backend OAuth exchange returned non-success', { data });
     // Backend exchange failed — redirect to login with error
-    return NextResponse.redirect(`${origin}/${locale}/login?error=oauth_backend_failed`);
+    return redirectWithCookies(`${origin}/${locale}/login?error=oauth_backend_failed`);
   } catch (err) {
     logger.error('Backend unreachable during OAuth callback', { error: err });
     // Backend unreachable — redirect to login with error
-    return NextResponse.redirect(`${origin}/${locale}/login?error=oauth_backend_unreachable`);
+    return redirectWithCookies(`${origin}/${locale}/login?error=oauth_backend_unreachable`);
   }
 }

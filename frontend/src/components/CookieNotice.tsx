@@ -28,9 +28,9 @@ export function CookieNotice() {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 p-4 sm:p-6">
+    <div className="fixed bottom-0 inset-x-0 z-50 p-4 sm:p-6 pointer-events-none">
       <div
-        className="max-w-2xl mx-auto bg-ink text-canvas rounded-xl shadow-2xl p-6 border border-canvas/10"
+        className="max-w-2xl mx-auto bg-ink text-canvas rounded-xl shadow-2xl p-6 border border-canvas/10 pointer-events-auto"
       >
         <p className="text-sm font-body text-canvas/80 mb-4">
           {t('message')}
