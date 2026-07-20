@@ -1,10 +1,22 @@
 const express = require('express');
+const { z } = require('zod');
 const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createStudentSchema, updateStudentSchema } = require('../middleware/validate');
 const { createStudentsQuery, verifyStudentAccess, verifyGroupAccess, getStudentEnrollmentsForTeacher } = require('../lib/enrollmentChain');
 const logger = require('../lib/logger');
 const asyncHandler = require('../middleware/asyncHandler');
+
+const getStudentsSchema = z.object({
+  query: z.object({
+    page: z.string().regex(/^\d+$/).transform(Number).default("1"),
+    limit: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().min(1).max(1000)).default("10"),
+    search: z.string().max(255).optional(),
+    grade: z.string().max(100).optional(),
+    status: z.enum(['active', 'inactive', 'all']).default('active'),
+    group_id: z.string().uuid().optional(),
+  })
+});
 
 const router = express.Router();
 
@@ -15,7 +27,7 @@ const router = express.Router();
 // @route   GET /api/students
 // @access  Private
 const getStudents = async (req, res) => {
-  const { page = 1, limit = 10, search, grade, status = 'active' } = req.query;
+  const { page, limit, search, grade, status } = req.validated.query;
   const offset = (page - 1) * limit;
 
   // Filter by Teacher's Offerings
@@ -23,8 +35,8 @@ const getStudents = async (req, res) => {
   let query = createStudentsQuery(req.user.id);
 
   // Optional: Filter by specific Group
-  if (req.query.group_id) {
-    query = query.eq('enrollments.group_id', req.query.group_id);
+  if (req.validated.query.group_id) {
+    query = query.eq('enrollments.group_id', req.validated.query.group_id);
   }
 
   // Add search filter
@@ -56,8 +68,8 @@ const getStudents = async (req, res) => {
     success: true,
     data: students,
     pagination: {
-      page: parseInt(page),
-      limit: parseInt(limit),
+      page,
+      limit,
       total: count,
       pages: count ? Math.ceil(count / limit) : 0
     }
@@ -493,7 +505,7 @@ const deleteStudentWithAudit = async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/', authenticateToken, asyncHandler(getStudents));
+router.get('/', authenticateToken, validate(getStudentsSchema), asyncHandler(getStudents));
 
 /**
  * @openapi

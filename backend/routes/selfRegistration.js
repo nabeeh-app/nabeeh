@@ -6,6 +6,26 @@ const { selfRegLimiter } = require('../middleware/security');
 const asyncHandler = require('../middleware/asyncHandler');
 const { logAudit } = require('../lib/auditLog');
 const logger = require('../lib/logger');
+const { z } = require('zod');
+const { validate } = require('../middleware/validate');
+
+const createLinkSchema = z.object({
+  body: z.object({
+    groupId: z.string().uuid(),
+    expiresInHours: z.number().int().min(1).max(8760).optional(),
+  })
+});
+
+const submitRegistrationSchema = z.object({
+  body: z.object({
+    name: z.string().min(1).max(255),
+    phone: z.string().regex(/^\+?[1-9]\d{6,14}$/).optional().nullable(),
+    parent_phone: z.string().regex(/^\+?[1-9]\d{6,14}$/).optional().nullable(),
+  }),
+  params: z.object({
+    token: z.string().min(1),
+  })
+});
 
 const router = express.Router();
 
@@ -89,12 +109,9 @@ const router = express.Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/link', authenticateToken, requirePermission('manage_students'), asyncHandler(async (req, res) => {
+router.post('/link', authenticateToken, requirePermission('manage_students'), validate(createLinkSchema), asyncHandler(async (req, res) => {
   const { groupId, expiresInHours = 168 } = req.body;
 
-  if (!groupId) {
-    return res.status(400).json({ success: false, message: 'Group ID is required', messageAr: 'معرّف المجموعة مطلوب', code: 'VALIDATION_ERROR' });
-  }
 
   const { data: group, error: groupError } = await supabaseAdmin
     .from('groups')
@@ -350,13 +367,10 @@ router.get('/form/:token', selfRegLimiter, asyncHandler(async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/submit/:token', selfRegLimiter, asyncHandler(async (req, res) => {
+router.post('/submit/:token', selfRegLimiter, validate(submitRegistrationSchema), asyncHandler(async (req, res) => {
   const { token } = req.params;
   const { name, phone, parent_phone } = req.body;
 
-  if (!name || !name.trim()) {
-    return res.status(400).json({ success: false, message: 'Name is required', messageAr: 'الاسم مطلوب', code: 'VALIDATION_ERROR' });
-  }
 
   const { data: tokenRecord, error: tokenError } = await supabaseAdmin
     .from('self_registration_tokens')

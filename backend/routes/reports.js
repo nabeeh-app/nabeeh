@@ -19,6 +19,14 @@ const generateCommentSchema = z.object({
   }),
 });
 
+const getDraftsSchema = z.object({
+  query: z.object({
+    page: z.string().regex(/^\d+$/).transform(Number).default("1"),
+    limit: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().min(1).max(200)).default("20"),
+    status: z.enum(['draft', 'finalized', 'archived']).optional(),
+  })
+});
+
 const draftParamsSchema = z.object({ params: z.object({ id: z.string().uuid() }) });
 
 const updateDraftSchema = z.object({
@@ -91,9 +99,7 @@ const generateComment = async (req, res) => {
 
 const getDrafts = async (req, res) => {
   const teacherId = req.user.teacherId || req.user.id;
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
-  const status = req.query.status;
+  const { page, limit, status } = req.validated.query;
   const offset = (page - 1) * limit;
 
   let query = supabase
@@ -386,7 +392,7 @@ router.post('/generate-comment', authenticateToken, validate(generateCommentSche
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/drafts', authenticateToken, asyncHandler(getDrafts));
+router.get('/drafts', authenticateToken, validate(getDraftsSchema), asyncHandler(getDrafts));
 /**
  * @openapi
  * /api/reports/drafts/{id}:

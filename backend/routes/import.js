@@ -10,6 +10,30 @@ const { detectColumnType, validateImportData, HEADER_MAPPINGS } = require('../li
 const { seedDemoData, removeDemoData } = require('../scripts/seed_demo_data');
 const { logAudit } = require('../lib/auditLog');
 const logger = require('../lib/logger');
+const { z } = require('zod');
+const { validate } = require('../middleware/validate');
+
+const validateImportSchema = z.object({
+  body: z.object({
+    mapping: z.string().optional(),
+    requiredFields: z.string().optional(),
+  })
+});
+
+const executeImportSchema = z.object({
+  body: z.object({
+    fieldMapping: z.record(z.any()),
+    rows: z.array(z.record(z.any())).min(1),
+    groupId: z.string().uuid(),
+    skipErrors: z.boolean().optional(),
+  })
+});
+
+const pasteImportSchema = z.object({
+  body: z.object({
+    text: z.string().min(1),
+  })
+});
 
 const router = express.Router();
 
@@ -254,7 +278,7 @@ router.post('/preview', authenticateToken, requirePermission('manage_students'),
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/validate', authenticateToken, requirePermission('manage_students'), upload.single('file'), asyncHandler(async (req, res) => {
+router.post('/validate', authenticateToken, requirePermission('manage_students'), upload.single('file'), validate(validateImportSchema), asyncHandler(async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No file uploaded', messageAr: 'لم يتم رفع أي ملف', code: 'VALIDATION_ERROR' });
   }
@@ -378,16 +402,8 @@ router.post('/validate', authenticateToken, requirePermission('manage_students')
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/execute', authenticateToken, requirePermission('manage_students'), asyncHandler(async (req, res) => {
+router.post('/execute', authenticateToken, requirePermission('manage_students'), validate(executeImportSchema), asyncHandler(async (req, res) => {
   const { fieldMapping, rows, groupId, skipErrors = true } = req.body;
-
-  if (!fieldMapping || !rows || !Array.isArray(rows) || rows.length === 0) {
-    return res.status(400).json({ success: false, message: 'Invalid import data', messageAr: 'بيانات الاستيراد غير صالحة', code: 'VALIDATION_ERROR' });
-  }
-
-  if (!groupId) {
-    return res.status(400).json({ success: false, message: 'Target group is required', messageAr: 'المجموعة الهدف مطلوبة', code: 'VALIDATION_ERROR' });
-  }
 
   const { data: groupCheck } = await supabase
     .from('groups')
@@ -551,12 +567,8 @@ router.post('/execute', authenticateToken, requirePermission('manage_students'),
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/paste', authenticateToken, requirePermission('manage_students'), asyncHandler(async (req, res) => {
+router.post('/paste', authenticateToken, requirePermission('manage_students'), validate(pasteImportSchema), asyncHandler(async (req, res) => {
   const { text } = req.body;
-
-  if (!text || typeof text !== 'string') {
-    return res.status(400).json({ success: false, message: 'No text provided', messageAr: 'لم يتم توفير نص', code: 'VALIDATION_ERROR' });
-  }
 
   const result = Papa.parse(text.trim(), {
     header: true,

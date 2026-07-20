@@ -6,6 +6,18 @@ const logger = require('../lib/logger');
 const { batchResolveEnrollmentsWithOfferings } = require('../lib/enrollmentChain');
 const asyncHandler = require('../middleware/asyncHandler');
 
+const { z } = require('zod');
+
+const getGradesSchema = z.object({
+  query: z.object({
+    student_id: z.string().uuid().optional(),
+    subject: z.string().max(255).optional(),
+    assessment_type: z.string().max(100).optional(),
+    start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  })
+});
+
 const router = express.Router();
 
 // @desc    Get grades for students
@@ -48,7 +60,7 @@ const getGrades = async (req, res) => {
     assessment_type,
     start_date,
     end_date
-  } = req.query;
+  } = req.validated.query;
 
   let query = supabase
     .from('grades')
@@ -704,7 +716,7 @@ const deleteGradeWithAudit = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 // Route definitions
-router.get('/', authenticateToken, asyncHandler(getGrades));
+router.get('/', authenticateToken, validate(getGradesSchema), asyncHandler(getGrades));
 
 /**
  * @openapi

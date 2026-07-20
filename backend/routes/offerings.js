@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { z } = require('zod');
 const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createOfferingSchema, createGroupSchema, updateGroupSchema } = require('../middleware/validate');
@@ -205,6 +206,24 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
+const enrollStudentSchema = z.object({
+  body: z.object({
+    student_id: z.string().uuid(),
+  }),
+  params: z.object({
+    offeringId: z.string().uuid(),
+    groupId: z.string().uuid(),
+  })
+});
+
+const unenrollStudentSchema = z.object({
+  params: z.object({
+    offeringId: z.string().uuid(),
+    groupId: z.string().uuid(),
+    studentId: z.string().uuid(),
+  })
+});
+
 router.post('/', authenticateToken, requirePermission('manage_offerings'), validate(createOfferingSchema), asyncHandler(async (req, res) => {
     const { subject_id, grade_level_id, academic_year } = req.body;
 
@@ -681,13 +700,9 @@ router.put('/:offeringId/groups/:groupId', authenticateToken, requirePermission(
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePermission('manage_offerings'), asyncHandler(async (req, res) => {
+router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePermission('manage_offerings'), validate(enrollStudentSchema), asyncHandler(async (req, res) => {
     const { offeringId, groupId } = req.params;
     const { student_id } = req.body;
-
-    if (!student_id) {
-        return res.status(400).json({ success: false, message: 'student_id is required', messageAr: 'معرّف الطالب مطلوب', code: 'VALIDATION_ERROR' });
-    }
 
     // Verify ownership
     const { data: offering } = await supabase
@@ -824,8 +839,8 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.delete('/:offeringId/groups/:groupId/enroll/:studentId', authenticateToken, requirePermission('manage_offerings'), asyncHandler(async (req, res) => {
-    const { offeringId, groupId, studentId } = req.params;
+router.delete('/:offeringId/groups/:groupId/enroll/:studentId', authenticateToken, requirePermission('manage_offerings'), validate(unenrollStudentSchema), asyncHandler(async (req, res) => {
+    const { offeringId, groupId, studentId } = req.validated.params;
 
     const { data: offering } = await supabase
         .from('offerings')

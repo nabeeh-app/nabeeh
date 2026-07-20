@@ -1,10 +1,20 @@
 const express = require('express');
+const { z } = require('zod');
 const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, markAttendanceSchema, updateAttendanceSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
 const { batchResolveEnrollments } = require('../lib/enrollmentChain');
 const asyncHandler = require('../middleware/asyncHandler');
+
+const getAttendanceSchema = z.object({
+  query: z.object({
+    start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    student_id: z.string().uuid().optional(),
+    group_id: z.string().uuid().optional(),
+  })
+});
 
 const router = express.Router();
 
@@ -17,7 +27,7 @@ const getAttendance = async (req, res) => {
     end_date = new Date().toISOString().split('T')[0],
     student_id,
     group_id
-  } = req.query;
+  } = req.validated.query;
 
   let query = supabase
     .from('attendance')
@@ -630,7 +640,7 @@ const updateAttendanceWithAudit = async (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 // Route definitions
-router.get('/', authenticateToken, asyncHandler(getAttendance));
+router.get('/', authenticateToken, validate(getAttendanceSchema), asyncHandler(getAttendance));
 
 /**
  * @openapi

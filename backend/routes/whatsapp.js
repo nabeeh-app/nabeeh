@@ -1,6 +1,7 @@
 const express = require('express');
 const { z } = require('zod');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
 const { perTeacherLimiter } = require('../middleware/security');
 const sessionManager = require('../lib/sessionManager');
 const { supabase, supabaseAdmin } = require('../config/database');
@@ -17,6 +18,13 @@ const router = express.Router();
 const sendMessageSchema = z.object({
   phone: z.string().regex(/^\+?[1-9]\d{6,14}$/, 'Invalid phone number format'),
   message: z.string().min(1).max(4096)
+});
+
+const getConversationsSchema = z.object({
+  query: z.object({
+    page: z.string().regex(/^\d+$/).transform(Number).default("1"),
+    limit: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().min(1).max(100)).default("20"),
+  })
 });
 
 const marketingResponseCache = new Map();
@@ -859,9 +867,8 @@ router.post('/bot/resume', asyncHandler(async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/conversations', asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+router.get('/conversations', validate(getConversationsSchema), asyncHandler(async (req, res) => {
+  const { page, limit } = req.validated.query;
   const offset = (page - 1) * limit;
 
   const { count } = await supabase

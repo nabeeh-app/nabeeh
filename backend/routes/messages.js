@@ -1,8 +1,17 @@
 const express = require('express');
+const { z } = require('zod');
 const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
 const logger = require('../lib/logger');
 const asyncHandler = require('../middleware/asyncHandler');
+
+const getMessagesSchema = z.object({
+  query: z.object({
+    page: z.string().regex(/^\d+$/).transform(Number).default("1"),
+    limit: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().min(1).max(200)).default("50"),
+  })
+});
 
 const router = express.Router();
 
@@ -43,7 +52,7 @@ const getConversations = async (req, res) => {
 // @route   GET /api/messages/conversations/:id
 // @access  Private
 const getConversationMessages = async (req, res) => {
-  const { page = 1, limit = 50 } = req.query;
+  const { page, limit } = req.validated.query;
   const offset = (page - 1) * limit;
 
   const { data: conversation } = await supabase
@@ -270,7 +279,7 @@ router.get('/conversations', authenticateToken, asyncHandler(getConversations));
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/conversations/:id', authenticateToken, asyncHandler(getConversationMessages));
+router.get('/conversations/:id', authenticateToken, validate(getMessagesSchema), asyncHandler(getConversationMessages));
 // router.post('/send', authenticateToken, sendMessage); // Deprecated - use WhatsApp routes
 /**
  * @openapi
