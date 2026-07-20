@@ -412,9 +412,8 @@ class WhatsAppSessionManager extends EventEmitter {
   async _evictInactiveSession() {
     if (this.sessions.size === 0) return false;
 
-    // Find least recently active session
     let oldestTeacherId = null;
-    let oldestTime = Date.now();
+    let oldestTime = Infinity;
 
     for (const [teacherId, session] of this.sessions) {
       if (session.lastActive < oldestTime) {

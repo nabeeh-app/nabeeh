@@ -232,7 +232,10 @@ describeOrSkip('Real DB — whatsapp_auth_creds', () => {
 // whatsappQuery — real queries against real DB
 // ============================================================
 describeOrSkip('Real DB — whatsappQuery', () => {
-  const whatsappQuery = require('../whatsappQuery');
+  let whatsappQuery;
+  beforeAll(() => {
+    whatsappQuery = require('../whatsappQuery');
+  });
 
   it('getParentByPhone should query without error', async () => {
     const result = await whatsappQuery.getParentByPhone('+201012345678');
