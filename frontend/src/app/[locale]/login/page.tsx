@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslations, useLocale } from 'next-intl';
@@ -24,8 +24,18 @@ export default function LoginPage() {
 
   const { login, isAuthenticated } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const locale = useLocale();
+  const oauthError = searchParams.get('error');
+
   const t = useTranslations('auth');
+
+  const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+    oauth_exchange_failed: t('oauthExchangeFailed'),
+    oauth_backend_failed: t('oauthBackendFailed'),
+    oauth_backend_unreachable: t('oauthBackendUnreachable'),
+    oauth_no_code: t('oauthNoCode'),
+  };
   const tCommon = useTranslations('common');
   const isRTL = locale === 'ar';
 
@@ -133,6 +143,11 @@ export default function LoginPage() {
             {errors.general && (
               <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
                 <p className="text-sm text-destructive font-body">{errors.general}</p>
+              </div>
+            )}
+            {oauthError && OAUTH_ERROR_MESSAGES[oauthError] && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
+                <p className="text-sm text-destructive font-body">{OAUTH_ERROR_MESSAGES[oauthError]}</p>
               </div>
             )}
 

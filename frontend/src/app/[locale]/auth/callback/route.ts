@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 import { randomBytes } from 'crypto';
 import logger from '@/lib/logger';
 
@@ -27,56 +26,19 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/${locale}/login?error=oauth_no_code`);
   }
 
-  const cookieStore = await cookies();
   const response = NextResponse.redirect(`${origin}/${locale}/dashboard`);
 
-  const pendingCookies: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            try {
-              cookieStore.set(name, value, options);
-            } catch {
-              // Ignore if immutable in specific server context
-            }
-            response.cookies.set(name, value, options);
-            pendingCookies.push({ name, value, options: options || {} });
-          });
-        },
-      },
-    }
-  );
-
+  const supabase = await createClient(response);
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   if (error || !data?.session) {
     logger.error('OAuth exchangeCodeForSession failed', { error: error?.message, code: error?.code });
     return NextResponse.redirect(`${origin}/${locale}/login?error=oauth_exchange_failed`);
   }
 
-  // Ensure all auth cookies are flushed before redirect
-  // The Supabase JS library defers SIGNED_IN notification via setTimeout(0)
-  // which may not run before the response is returned in serverless environments
   await new Promise((r) => setTimeout(r, 0));
 
   const { session } = data;
 
-  function redirectWithCookies(url: string): NextResponse {
-    const redirect = NextResponse.redirect(url);
-    for (const { name, value, options } of pendingCookies) {
-      redirect.cookies.set(name, value, options);
-    }
-    return redirect;
-  }
-
-  // Exchange Supabase session for backend JWT — all server-side, no intermediate page
   try {
     let backendUrl = process.env.BACKEND_URL;
     if (!backendUrl) {
@@ -93,13 +55,10 @@ export async function GET(request: Request) {
       }),
     });
 
-    const data = await backendRes.json();
+    const result = await backendRes.json();
 
-    if (data.success && data.data?.token) {
-      // Set the backend JWT cookie on the same response
-      // Use 'lax' in production so the cookie survives cross-origin redirects
-      // (OAuth flow goes Google → app, and 'strict' blocks cookies on cross-site navigations)
-      response.cookies.set('nabeeh_token', data.data.token, {
+    if (result.success && result.data?.token) {
+      response.cookies.set('nabeeh_token', result.data.token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -119,12 +78,10 @@ export async function GET(request: Request) {
       return response;
     }
 
-    logger.error('Backend OAuth exchange returned non-success', { data });
-    // Backend exchange failed — redirect to login with error
-    return redirectWithCookies(`${origin}/${locale}/login?error=oauth_backend_failed`);
+    logger.error('Backend OAuth exchange returned non-success', { data: result });
+    return NextResponse.redirect(`${origin}/${locale}/login?error=oauth_backend_failed`);
   } catch (err) {
     logger.error('Backend unreachable during OAuth callback', { error: err });
-    // Backend unreachable — redirect to login with error
-    return redirectWithCookies(`${origin}/${locale}/login?error=oauth_backend_unreachable`);
+    return NextResponse.redirect(`${origin}/${locale}/login?error=oauth_backend_unreachable`);
   }
 }
