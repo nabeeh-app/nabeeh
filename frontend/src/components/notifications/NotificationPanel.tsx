@@ -14,9 +14,11 @@ import {
   FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from '@/hooks/useNotifications';
 import { timeAgo } from '@/lib/utils';
 import type { Notification } from '@/types';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
   attendance_marked: Clock,
@@ -68,13 +70,10 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
       <div className="overflow-y-auto max-h-[50vh]">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin h-6 w-6 border-b-2 border-ink" />
+            <LoadingSpinner />
           </div>
         ) : notifications.length === 0 ? (
-          <div className="text-center py-8 px-4">
-            <Bell className="h-8 w-8 text-ink/20 mx-auto mb-2" />
-            <p className="text-sm text-ink/50">{t('empty')}</p>
-          </div>
+          <EmptyState icon={Bell} message={t('empty')} />
         ) : (
           notifications.map((notification: Notification) => {
             const Icon = NOTIFICATION_ICONS[notification.type] || Bell;

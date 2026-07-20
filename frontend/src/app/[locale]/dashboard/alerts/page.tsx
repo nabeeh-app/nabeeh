@@ -11,8 +11,8 @@ export default function AlertsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('title') || 'Alerts'}
-        description={t('description') || 'Configure and view alert rules and notifications'}
+        title={t('title')}
+        description={t('description')}
       />
       <div className="grid gap-6 lg:grid-cols-2">
         <AlertConfig />

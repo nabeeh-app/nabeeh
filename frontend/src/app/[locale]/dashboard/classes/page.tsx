@@ -20,8 +20,10 @@ import { Offering } from '@/types';
 import {
   Plus,
   Clock,
-  Loader2
+  BookOpen
 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export default function ClassesPage() {
   const t = useTranslations('classes');
@@ -90,7 +92,7 @@ export default function ClassesPage() {
       {/* Classes Table */}
       <div className="space-y-0">
         {loading ? (
-          <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
+          <LoadingSpinner />
         ) : (
           <Table>
             <TableHeader>
@@ -106,7 +108,7 @@ export default function ClassesPage() {
             <TableBody>
               {classesList.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">{t('noClasses')}</TableCell>
+                  <TableCell colSpan={6}><EmptyState icon={BookOpen} message={t('noClasses')} /></TableCell>
                 </TableRow>
               ) : classesList.map((cls) => {
                 const status = getStatusBadge(cls.active);

@@ -10,7 +10,6 @@ import {
   Smartphone,
   Globe,
   Database,
-  Shield,
 } from 'lucide-react';
 
 type Props = { params: Promise<{ locale: string }> };

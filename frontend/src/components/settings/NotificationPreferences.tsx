@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { apiClient } from '@/lib/client';
 import { useAuth } from '@/hooks/useAuth';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 interface Prefs {
   attendance_marked: boolean;
@@ -93,7 +94,7 @@ export function NotificationPreferences() {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
-          <div className="animate-spin h-8 w-8 border-b-2 border-ink mx-auto" />
+          <LoadingSpinner />
         </CardContent>
       </Card>
     );

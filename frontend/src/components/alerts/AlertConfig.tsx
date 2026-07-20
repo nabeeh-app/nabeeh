@@ -15,6 +15,8 @@ import {
   PencilRuler,
   ChevronLeft,
 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -258,7 +260,7 @@ export function AlertConfig() {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
-          <div className="animate-spin h-8 w-8 border-b-2 border-ink mx-auto" />
+          <LoadingSpinner />
         </CardContent>
       </Card>
     );
@@ -278,11 +280,7 @@ export function AlertConfig() {
       </CardHeader>
       <CardContent>
         {rules.length === 0 ? (
-          <div className="text-center py-8 text-ink/60 font-body">
-            <Bell className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <p>{t('noRules')}</p>
-            <p className="text-sm mt-1">{t('noRulesDesc')}</p>
-          </div>
+          <EmptyState icon={Bell} message={t('noRules')} description={t('noRulesDesc')} />
         ) : (
            <div className="space-y-3">
             {rules.map(rule => (

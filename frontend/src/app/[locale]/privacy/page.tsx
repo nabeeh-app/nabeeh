@@ -59,26 +59,26 @@ export default async function PrivacyPolicy({
 
           <Section title={s("s2Title")}>
             <p className="font-semibold">{s("s2Label1")}</p>
-            <ul className="list-disc pl-6 space space-y-1">
+            <ul className="list-disc ps-6 space space-y-1">
               <li>{s("s2Item1a")}</li>
               <li>{s("s2Item1b")}</li>
               <li>{s("s2Item1c")}</li>
             </ul>
             <p className="font-semibold mt-4">{s("s2Label2")}</p>
-            <ul className="list-disc pl-6 space space-y-1">
+            <ul className="list-disc ps-6 space space-y-1">
               <li>{s("s2Item2a")}</li>
               <li>{s("s2Item2b")}</li>
               <li>{s("s2Item2c")}</li>
             </ul>
             <p className="font-semibold mt-4">{s("s2Label3")}</p>
-            <ul className="list-disc pl-6 space space-y-1">
+            <ul className="list-disc ps-6 space space-y-1">
               <li>{s("s2Item3a")}</li>
               <li>{s("s2Item3b")}</li>
             </ul>
           </Section>
 
           <Section title={s("s3Title")}>
-            <ul className="list-disc pl-6 space space-y-1">
+            <ul className="list-disc ps-6 space space-y-1">
               <li>{s("s3Item1")}</li>
               <li>{s("s3Item2")}</li>
               <li>{s("s3Item3")}</li>
@@ -89,7 +89,7 @@ export default async function PrivacyPolicy({
 
           <Section title={s("s4Title")}>
             <p>{s("s4Intro")}</p>
-            <ul className="list-disc pl-6 space space-y-1">
+            <ul className="list-disc ps-6 space space-y-1">
               <li>{s("s4Item1")}</li>
               <li>{s("s4Item2")}</li>
               <li>{s("s4Item3")}</li>
@@ -102,7 +102,7 @@ export default async function PrivacyPolicy({
 
           <Section title={s("s6Title")}>
             <p>{s("s6Intro")}</p>
-            <ul className="list-disc pl-6 space space-y-1">
+            <ul className="list-disc ps-6 space space-y-1">
               <li>{s("s6Item1")}</li>
               <li>{s("s6Item2")}</li>
               <li>{s("s6Item3")}</li>
@@ -119,7 +119,7 @@ export default async function PrivacyPolicy({
           </Section>
 
           <Section title={s("s7Title")}>
-            <ul className="list-disc pl-6 space space-y-1">
+            <ul className="list-disc ps-6 space space-y-1">
               <li>{s("s7Item1")}</li>
               <li>{s("s7Item2")}</li>
               <li>{s("s7Item3")}</li>
@@ -136,7 +136,7 @@ export default async function PrivacyPolicy({
 
           <Section title={s("s10Title")}>
             <p>{s("s10Intro")}</p>
-            <ul className="list-disc pl-6 space space-y-1">
+            <ul className="list-disc ps-6 space space-y-1">
               <li>
                 {s("s10EmailLabel")}{" "}
                 <a href="mailto:hello@nabeeh.app" className="text-primary hover:underline">

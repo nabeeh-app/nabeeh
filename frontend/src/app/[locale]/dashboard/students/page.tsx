@@ -129,7 +129,7 @@ export default function StudentsPage() {
       resetForm();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      setFormError(message || 'Failed to create student');
+      setFormError(message || t('createError'));
     } finally {
       setSubmitting(false);
     }
@@ -176,7 +176,7 @@ export default function StudentsPage() {
       resetForm();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      setFormError(message || 'Failed to update student');
+      setFormError(message || t('updateError'));
     } finally {
       setSubmitting(false);
     }
@@ -382,7 +382,7 @@ export default function StudentsPage() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-[var(--color-ink)]/60">
-              Generate a registration link for a group. Students can use this link to register themselves.
+              {t('selfRegistrationDescription')}
             </p>
             {selectedGroupId && selectedGroupId !== 'all' ? (
               <SelfRegistrationLink
@@ -390,7 +390,7 @@ export default function StudentsPage() {
               />
             ) : (
               <div className="text-sm text-[var(--color-ink)]/60">
-                Please select a specific group first using the filter above.
+                {t('selectGroupFirst')}
               </div>
             )}
           </div>

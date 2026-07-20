@@ -1,6 +1,6 @@
 'use client';
 
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter, usePathname } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations('common');
 
   const switchLanguage = () => {
     const newLocale = locale === 'en' ? 'ar' : 'en';
@@ -22,11 +23,11 @@ export function LanguageSwitcher({ className }: { className?: string }) {
       size="sm"
       onClick={switchLanguage}
       className={cn("gap-2 text-sidebar-accent-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent", className)}
-      title={locale === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
+      title={t('switchLanguage')}
     >
       <Globe className="h-4 w-4" />
       <span className="text-sm font-medium">
-        {locale === 'en' ? 'عربي' : 'English'}
+        {t('currentLanguage')}
       </span>
     </Button>
   );

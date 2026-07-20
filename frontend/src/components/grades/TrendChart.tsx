@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { TrendingUp } from 'lucide-react';
 import type { GradeTrend } from '@/types';
 
@@ -24,10 +25,7 @@ export function TrendChart({ data, studentName }: TrendChartProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-ink/60 font-body">
-            <TrendingUp className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <p>{t('noTrendData')}</p>
-          </div>
+          <EmptyState icon={TrendingUp} message={t('noTrendData')} />
         </CardContent>
       </Card>
     );

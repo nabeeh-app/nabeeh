@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { createClient, isSupabaseConfigured } from '@/utils/supabase/client';
 import { cn } from '@/lib/utils';
 import logger from '@/lib/logger';
+import { Button } from '@/components/ui/button';
 
 interface GoogleSignInButtonProps {
   className?: string;
@@ -50,16 +51,7 @@ export function GoogleSignInButton({ className, mode = 'login' }: GoogleSignInBu
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleGoogleSignIn}
-      disabled={isLoading}
-      className={cn(
-        "w-full h-12 flex items-center justify-center gap-3 border border-ink/20 bg-canvas hover:bg-surface-sage transition-colors font-body text-sm font-medium",
-        "disabled:opacity-50 disabled:pointer-events-none",
-        className
-      )}
-    >
+    <Button variant="outline" size="lg" className={cn("w-full", className)} onClick={handleGoogleSignIn} disabled={isLoading}>
       {isLoading ? (
         <div className="animate-spin h-4 w-4 border-b-2 border-ink/60" />
       ) : (
@@ -83,6 +75,6 @@ export function GoogleSignInButton({ className, mode = 'login' }: GoogleSignInBu
         </svg>
       )}
       <span>{mode === 'login' ? t('continueWithGoogle') : t('signUpWithGoogle')}</span>
-    </button>
+    </Button>
   );
 }

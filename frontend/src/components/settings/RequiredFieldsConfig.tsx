@@ -1,25 +1,30 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Settings, Lock, Save, Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/client';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 const OPTIONAL_FIELDS = [
-  { key: 'phone', label: 'Phone' },
-  { key: 'parent_phone', label: 'Parent Phone' },
-  { key: 'parent_name', label: 'Parent Name' },
-  { key: 'grade_level', label: 'Grade Level' },
-  { key: 'date_of_birth', label: 'Date of Birth' },
-  { key: 'gender', label: 'Gender' },
-  { key: 'email', label: 'Email' },
-  { key: 'address', label: 'Address' },
-  { key: 'notes', label: 'Notes' },
-  { key: 'emergency_contact', label: 'Emergency Contact' }
+  { key: 'phone', labelKey: 'fieldPhone' },
+  { key: 'parent_phone', labelKey: 'fieldParentPhone' },
+  { key: 'parent_name', labelKey: 'fieldParentName' },
+  { key: 'grade_level', labelKey: 'fieldGradeLevel' },
+  { key: 'date_of_birth', labelKey: 'fieldDateOfBirth' },
+  { key: 'gender', labelKey: 'fieldGender' },
+  { key: 'email', labelKey: 'fieldEmail' },
+  { key: 'address', labelKey: 'fieldAddress' },
+  { key: 'notes', labelKey: 'fieldNotes' },
+  { key: 'emergency_contact', labelKey: 'fieldEmergencyContact' }
 ];
 
 const LOCKED_FIELDS = ['name', 'student_code'];
 
 export default function RequiredFieldsConfig() {
+  const t = useTranslations('settings');
   const [requiredFields, setRequiredFields] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -76,7 +81,7 @@ export default function RequiredFieldsConfig() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-[var(--color-primary)]" />
+        <LoadingSpinner />
       </div>
     );
   }
@@ -85,11 +90,11 @@ export default function RequiredFieldsConfig() {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Settings className="h-5 w-5 text-[var(--color-ink)]/60" />
-        <h3 className="text-lg font-semibold text-[var(--color-ink)]">Required Fields for Import</h3>
+        <h3 className="text-lg font-semibold text-[var(--color-ink)]">{t('requiredFieldsTitle')}</h3>
       </div>
 
       <p className="text-sm text-[var(--color-ink)]/60">
-        Configure which fields are required when importing students. Name and Student Code are always required.
+        {t('requiredFieldsDescription')}
       </p>
 
       <div className="space-y-2">
@@ -100,10 +105,10 @@ export default function RequiredFieldsConfig() {
           >
             <div className="flex items-center gap-3">
               <Lock className="h-4 w-4 text-[var(--color-ink)]/30" />
-              <span className="text-sm font-medium text-[var(--color-ink)]">{field.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</span>
+              <span className="text-sm font-medium text-[var(--color-ink)]">{t(field === 'name' ? 'fieldName' : 'fieldStudentCode')}</span>
             </div>
             <span className="rounded-full bg-[var(--color-primary)]/10 px-2 py-0.5 text-xs font-medium text-[var(--color-primary)]">
-              Always Required
+              {t('alwaysRequired')}
             </span>
           </div>
         ))}
@@ -113,31 +118,19 @@ export default function RequiredFieldsConfig() {
             key={field.key}
             className="flex items-center justify-between rounded-lg border border-[var(--color-ink)]/10 bg-[var(--color-surface)] p-3"
           >
-            <span className="text-sm font-medium text-[var(--color-ink)]">{field.label}</span>
-            <button
-              onClick={() => toggleField(field.key)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                requiredFields[field.key] ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-ink)]/20'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  requiredFields[field.key] ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
+            <span className="text-sm font-medium text-[var(--color-ink)]">{t(field.labelKey)}</span>
+            <Switch
+              checked={requiredFields[field.key]}
+              onCheckedChange={() => toggleField(field.key)}
+            />
           </div>
         ))}
       </div>
 
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-primary)]/90 disabled:opacity-50"
-      >
+      <Button onClick={handleSave} disabled={saving}>
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-        {saved ? 'Saved!' : 'Save Settings'}
-      </button>
+        {saved ? t('saved') : t('saveSettings')}
+      </Button>
     </div>
   );
 }

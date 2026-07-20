@@ -19,6 +19,7 @@ interface Props {
   children: ReactNode;
   fallback?: ReactNode;
   fallbackTexts?: FallbackTexts;
+  locale?: string;
 }
 
 interface State {
@@ -27,16 +28,28 @@ interface State {
   errorInfo?: ErrorInfo;
 }
 
-const defaultTexts: FallbackTexts = {
-  title: 'Something went wrong',
-  description: 'We encountered an unexpected error. Please try again.',
-  errorDetailsLabel: 'Error Details:',
-  tryAgain: 'Try Again',
-  reloadPage: 'Reload Page',
-  goHome: 'Go Home',
-};
-
 class ErrorBoundary extends Component<Props, State> {
+  private getTexts(): FallbackTexts {
+    const { locale = 'en' } = this.props;
+    if (locale === 'ar') {
+      return {
+        title: 'حدث خطأ ما',
+        description: 'واجهنا خطأ غير متوقع. يرجى المحاولة مرة أخرى.',
+        errorDetailsLabel: 'تفاصيل الخطأ:',
+        tryAgain: 'إعادة المحاولة',
+        reloadPage: 'إعادة تحميل الصفحة',
+        goHome: 'الصفحة الرئيسية',
+      };
+    }
+    return {
+      title: 'Something went wrong',
+      description: 'We encountered an unexpected error. Please try again.',
+      errorDetailsLabel: 'Error Details:',
+      tryAgain: 'Try Again',
+      reloadPage: 'Reload Page',
+      goHome: 'Go Home',
+    };
+  }
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
@@ -69,7 +82,7 @@ class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
-      const texts = this.props.fallbackTexts || defaultTexts;
+      const texts = this.props.fallbackTexts || this.getTexts();
 
       return (
         <div className="min-h-screen flex items-center justify-center bg-canvas p-4">

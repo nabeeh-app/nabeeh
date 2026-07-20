@@ -145,7 +145,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="teacher@example.com"
+                placeholder={t('emailPlaceholder')}
                 className={cn(
                   "h-12 bg-canvas font-body text-left max-w-full",
                   errors.email && "border-destructive"

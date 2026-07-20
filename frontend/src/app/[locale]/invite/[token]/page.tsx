@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation';
 import { Shield, CheckCircle, XCircle, Loader2, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiClient } from '@/lib/client';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 interface InviteData {
   id: string;
@@ -15,19 +16,20 @@ interface InviteData {
   expires_at: string;
 }
 
-const PERMISSION_LABELS: Record<string, { en: string; ar: string }> = {
-  view_students: { en: 'View Students', ar: 'عرض الطلاب' },
-  manage_attendance: { en: 'Manage Attendance', ar: 'إدارة الحضور' },
-  manage_grades: { en: 'Manage Grades', ar: 'إدارة الدرجات' },
-  manage_assessments: { en: 'Manage Assessments', ar: 'إدارة التقييمات' },
-  manage_offerings: { en: 'Manage Courses', ar: 'إدارة الدورات' },
-  send_whatsapp: { en: 'Send WhatsApp Messages', ar: 'إرسال رسائل واتساب' },
-  view_reports: { en: 'View Reports', ar: 'عرض التقارير' },
-  manage_students: { en: 'Manage Students', ar: 'إدارة الطلاب' },
+const PERMISSION_KEY_MAP: Record<string, string> = {
+  view_students: 'permissionViewStudents',
+  manage_attendance: 'permissionManageAttendance',
+  manage_grades: 'permissionManageGrades',
+  manage_assessments: 'permissionManageAssessments',
+  manage_offerings: 'permissionManageOfferings',
+  send_whatsapp: 'permissionSendWhatsapp',
+  view_reports: 'permissionViewReports',
+  manage_students: 'permissionManageStudents',
 };
 
 export default function InviteAcceptPage() {
   const t = useTranslations('assistants');
+  const locale = useLocale();
   const params = useParams();
   const router = useRouter();
   const token = params.token as string;
@@ -47,17 +49,17 @@ export default function InviteAcceptPage() {
         if (data) {
           setInvite(data as InviteData);
         } else {
-          setError('Invalid invitation');
+          setError(t('inviteError'));
         }
       } catch {
-        setError('Failed to load invitation');
+        setError(t('loadError'));
       } finally {
         setLoading(false);
       }
     };
 
     fetchInvite();
-  }, [token]);
+  }, [token, t]);
 
   const handleAccept = async () => {
     setAccepting(true);
@@ -65,20 +67,20 @@ export default function InviteAcceptPage() {
       await apiClient.acceptInvite(token);
       setAccepted(true);
     } catch {
-      setError('Failed to accept invitation');
+      setError(t('acceptError'));
     } finally {
       setAccepting(false);
     }
   };
 
   const handleGoToLogin = () => {
-    router.push('/en/login');
+    router.push(`/${locale}/login`);
   };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--color-canvas)]">
-        <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
+        <LoadingSpinner message={t('loading')} />
       </div>
     );
   }
@@ -89,7 +91,7 @@ export default function InviteAcceptPage() {
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <XCircle className="w-12 h-12 mx-auto mb-4 text-error" />
-            <h1 className="text-lg font-semibold text-[var(--color-ink)] font-body mb-2">Invitation Error</h1>
+            <h1 className="text-lg font-semibold text-[var(--color-ink)] font-body mb-2">{t('inviteError')}</h1>
             <p className="text-sm text-[var(--color-ink)]/60 font-body">{error}</p>
           </CardContent>
         </Card>
@@ -103,13 +105,13 @@ export default function InviteAcceptPage() {
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <CheckCircle className="w-12 h-12 mx-auto mb-4 text-success" />
-            <h1 className="text-lg font-semibold text-[var(--color-ink)] font-body mb-2">Invitation Accepted!</h1>
+            <h1 className="text-lg font-semibold text-[var(--color-ink)] font-body mb-2">{t('inviteAccepted')}</h1>
             <p className="text-sm text-[var(--color-ink)]/60 font-body mb-4">
-              You are now an assistant. Please log in to access your account.
+              {t('inviteAcceptedDesc')}
             </p>
             <Button onClick={handleGoToLogin} className="w-full">
               <LogIn className="w-4 h-4 ms-2" />
-              Go to Login
+              {t('goToLogin')}
             </Button>
           </CardContent>
         </Card>
@@ -128,7 +130,7 @@ export default function InviteAcceptPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-[var(--color-ink)]/60 font-body text-center">
-            <strong>{invite?.teacherName}</strong> has invited you to join their team as a teaching assistant.
+            {t('invitedBy', { teacherName: invite?.teacherName || '' })}
           </p>
 
           <div className="space-y-2">
@@ -141,14 +143,14 @@ export default function InviteAcceptPage() {
                 .map(([key]) => (
                   <div key={key} className="flex items-center gap-2 text-sm text-[var(--color-ink)] font-body">
                     <CheckCircle className="w-3.5 h-3.5 text-success" />
-                    {PERMISSION_LABELS[key]?.en || key}
+                    {t(PERMISSION_KEY_MAP[key] || key)}
                   </div>
                 ))}
             </div>
           </div>
 
           <div className="text-xs text-[var(--color-ink)]/40 font-body text-center">
-            Expires: {invite?.expires_at ? new Date(invite.expires_at).toLocaleDateString() : 'Unknown'}
+            {t('expires')} {invite?.expires_at ? new Date(invite.expires_at).toLocaleDateString() : t('unknownExpiry')}
           </div>
 
           <Button onClick={handleAccept} disabled={accepting} className="w-full">
@@ -157,7 +159,7 @@ export default function InviteAcceptPage() {
             ) : (
               <CheckCircle className="w-4 h-4 ms-2" />
             )}
-            {accepting ? 'Accepting...' : 'Accept Invitation'}
+            {accepting ? t('accepting') : t('acceptInvitation')}
           </Button>
         </CardContent>
       </Card>

@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { Upload, FileSpreadsheet, ClipboardPaste } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
 
 interface FileUploadZoneProps {
@@ -89,14 +90,10 @@ export default function FileUploadZone({
 
       {onPasteData && (
         <div className="text-center">
-          <button
-            type="button"
-            onClick={() => setShowPaste(!showPaste)}
-            className="text-sm text-[var(--color-primary)] hover:underline inline-flex items-center gap-1"
-          >
+          <Button variant="link" size="sm" onClick={() => setShowPaste(!showPaste)}>
             <ClipboardPaste className="h-4 w-4" />
             {t('pasteTitle')}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -109,15 +106,10 @@ export default function FileUploadZone({
             rows={6}
             className="w-full rounded-lg border border-[var(--color-ink)]/20 bg-[var(--color-surface)] p-3 text-sm font-mono focus:border-[var(--color-primary)] focus:outline-none"
           />
-          <button
-            type="button"
-            onClick={handlePaste}
-            disabled={!pasteText.trim()}
-            className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
+          <Button onClick={handlePaste} disabled={!pasteText.trim()}>
             <FileSpreadsheet className="h-4 w-4" />
             {t('parsePaste')}
-          </button>
+          </Button>
         </div>
       )}
     </div>

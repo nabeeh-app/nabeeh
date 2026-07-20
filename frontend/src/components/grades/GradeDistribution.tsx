@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { BarChart3 } from 'lucide-react';
 import type { GradeDistribution as GradeDistributionType } from '@/types';
 
@@ -26,10 +27,7 @@ export function GradeDistribution({ data, assessmentName }: GradeDistributionPro
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-ink/60 font-body">
-            <BarChart3 className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <p>{t('noDistributionData')}</p>
-          </div>
+          <EmptyState icon={BarChart3} message={t('noDistributionData')} />
         </CardContent>
       </Card>
     );

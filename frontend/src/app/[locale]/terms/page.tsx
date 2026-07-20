@@ -62,7 +62,7 @@ export default async function TermsOfService({
           </Section>
 
           <Section title={s("s3Title")}>
-            <ul className="list-disc pl-6 space space-y-1">
+            <ul className="list-disc ps-6 space space-y-1">
               <li>{s("s3Item1")}</li>
               <li>{s("s3Item2")}</li>
               <li>{s("s3Item3")}</li>
@@ -72,7 +72,7 @@ export default async function TermsOfService({
 
           <Section title={s("s4Title")}>
             <p>{s("s4Intro")}</p>
-            <ul className="list-disc pl-6 space space-y-1">
+            <ul className="list-disc ps-6 space space-y-1">
               <li>{s("s4Item1")}</li>
               <li>{s("s4Item2")}</li>
               <li>{s("s4Item3")}</li>
@@ -81,7 +81,7 @@ export default async function TermsOfService({
           </Section>
 
           <Section title={s("s5Title")}>
-            <ul className="list-disc pl-6 space space-y-1">
+            <ul className="list-disc ps-6 space space-y-1">
               <li>{s("s5Item1")}</li>
               <li>{s("s5Item2")}</li>
               <li>{s("s5Item3")}</li>
@@ -89,7 +89,7 @@ export default async function TermsOfService({
           </Section>
 
           <Section title={s("s6Title")}>
-            <ul className="list-disc pl-6 space space-y-1">
+            <ul className="list-disc ps-6 space space-y-1">
               <li>{s("s6Item1")}</li>
               <li>{s("s6Item2")}</li>
               <li>{s("s6Item3")}</li>
@@ -109,7 +109,7 @@ export default async function TermsOfService({
           </Section>
 
           <Section title={s("s10Title")}>
-            <ul className="list-disc pl-6 space space-y-1">
+            <ul className="list-disc ps-6 space space-y-1">
               <li>{s("s10Item1")}</li>
               <li>{s("s10Item2")}</li>
               <li>{s("s10Item3")}</li>
@@ -126,7 +126,7 @@ export default async function TermsOfService({
 
           <Section title={s("s13Title")}>
             <p>{s("s13Intro")}</p>
-            <ul className="list-disc pl-6 space space-y-1">
+            <ul className="list-disc ps-6 space space-y-1">
               <li>
                 {s("s13EmailLabel")}{" "}
                 <a href="mailto:hello@nabeeh.app" className="text-primary hover:underline">

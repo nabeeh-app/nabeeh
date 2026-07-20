@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { BarChart3 } from 'lucide-react';
 import type { GroupComparison as GroupComparisonType } from '@/types';
 
@@ -25,10 +26,7 @@ export function GroupComparison({ data }: GroupComparisonProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-ink/60 font-body">
-            <BarChart3 className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <p>{t('noGroupData')}</p>
-          </div>
+          <EmptyState icon={BarChart3} message={t('noGroupData')} />
         </CardContent>
       </Card>
     );

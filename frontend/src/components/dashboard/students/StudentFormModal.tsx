@@ -152,7 +152,7 @@ export default function StudentFormModal({
                     className="text-left"
                     value={student.emergency_contact || ''}
                     onChange={(e) => onStudentChange({ ...student, emergency_contact: e.target.value })}
-                    placeholder="+966xxxxxxxxx"
+                    placeholder={t('students.placeholders.phonePlaceholder')}
                   />
                 </div>
               </>

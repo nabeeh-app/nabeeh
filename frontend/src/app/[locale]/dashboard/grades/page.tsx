@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,6 +21,7 @@ import {
 import { Student, Grade, CreateGradeRequest } from '@/types';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { StatCards } from '@/components/ui/StatCards';
 import { ViewModeTabs } from '@/components/ui/ViewModeTabs';
 import { useOfferings } from '@/hooks/useOfferings';
@@ -240,7 +240,7 @@ export default function GradesPage() {
       resetForm();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      setFormError(message || 'Failed to create grade');
+      setFormError(message || t('createError'));
     } finally {
       setSubmitting(false);
     }
@@ -279,7 +279,7 @@ export default function GradesPage() {
       resetForm();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      setFormError(message || 'Failed to update grade');
+      setFormError(message || t('updateError'));
     } finally {
       setSubmitting(false);
     }
@@ -341,19 +341,7 @@ export default function GradesPage() {
   }
 
   if (groups.length === 0) {
-    return (
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink/20 bg-surface-sage p-4 text-ink">
-          <div className="space-y-1">
-            <p className="text-sm font-semibold">{t('noGroups')}</p>
-            <p className="text-sm text-ink/70">{t('noGroupsDescription')}</p>
-          </div>
-          <Button asChild variant="outline" className="border-ink/20 text-ink hover:bg-surface-cool">
-            <Link href={`/${locale}/dashboard/classes?setup=required`}>{t('setUpGroups')}</Link>
-          </Button>
-        </div>
-      </div>
-    );
+    return <EmptyState icon={BarChart3} message={t('noGroups')} description={t('noGroupsDescription')} actionLabel={t('setUpGroups')} onAction={() => router.push(`/${locale}/dashboard/classes?setup=required`)} />;
   }
 
   const stats = [

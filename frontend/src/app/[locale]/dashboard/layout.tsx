@@ -8,6 +8,7 @@ import { GridPattern } from '@/components/ui/grid-pattern';
 import { isFeatureEnabled } from '@/config/featureFlags';
 import { routeFeatureMap } from '@/config/navigation';
 import ComingSoon from '@/components/ComingSoon';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 const getBlockedFeature = (pathname: string | null) => {
   if (!pathname) {
@@ -45,12 +46,7 @@ export default function DashboardLayout({
     <ProtectedRoute
       redirectTo={redirectTo}
       fallback={(
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin h-12 w-12 border-b-2 border-ink mx-auto"></div>
-            <p className="mt-4 text-ink/60 font-mono uppercase tracking-wider">{tCommon('loading')}</p>
-          </div>
-        </div>
+        <LoadingSpinner message={tCommon('loading')} />
       )}
     >
       <div className="flex h-screen bg-canvas">

@@ -6,13 +6,13 @@ import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const screenshots = [
-  { src: '/screenshots/01-dashboard.png', alt: 'Dashboard' },
-  { src: '/screenshots/02-students.png', alt: 'Students' },
-  { src: '/screenshots/03-attendance.png', alt: 'Attendance' },
-  { src: '/screenshots/04-classes.png', alt: 'Classes' },
-  { src: '/screenshots/05-schedule.png', alt: 'Schedule' },
-  { src: '/screenshots/06-whatsapp.png', alt: 'WhatsApp' },
-  { src: '/screenshots/dashboard.png', alt: 'Dashboard Overview' },
+  { src: '/screenshots/01-dashboard.png', altKey: 'altDashboard' },
+  { src: '/screenshots/02-students.png', altKey: 'altStudents' },
+  { src: '/screenshots/03-attendance.png', altKey: 'altAttendance' },
+  { src: '/screenshots/04-classes.png', altKey: 'altClasses' },
+  { src: '/screenshots/05-schedule.png', altKey: 'altSchedule' },
+  { src: '/screenshots/06-whatsapp.png', altKey: 'altWhatsApp' },
+  { src: '/screenshots/dashboard.png', altKey: 'altDashboardOverview' },
 ];
 
 export function ScreenshotCarousel() {
@@ -91,7 +91,7 @@ export function ScreenshotCarousel() {
             {canScrollLeft && (
               <button
                 onClick={() => scroll('left')}
-                aria-label="Scroll left"
+                aria-label={t('scrollLeft')}
                 className={cn(
                   'absolute top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-canvas border border-ink/10 shadow-md flex items-center justify-center hover:bg-surface-cool transition-colors cursor-pointer',
                   'start-0 -ms-2'
@@ -103,7 +103,7 @@ export function ScreenshotCarousel() {
             {canScrollRight && (
               <button
                 onClick={() => scroll('right')}
-                aria-label="Scroll right"
+                aria-label={t('scrollRight')}
                 className={cn(
                   'absolute top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-canvas border border-ink/10 shadow-md flex items-center justify-center hover:bg-surface-cool transition-colors cursor-pointer',
                   'end-0 -me-2'
@@ -134,7 +134,7 @@ export function ScreenshotCarousel() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={shot.src}
-                      alt={shot.alt}
+                      alt={t(shot.altKey)}
                       className="w-full h-full object-cover pointer-events-none"
                       loading="lazy"
                       onLoad={updateScrollButtons}
@@ -176,7 +176,7 @@ export function ScreenshotCarousel() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={screenshots[lightboxIndex].src}
-            alt={screenshots[lightboxIndex].alt}
+            alt={t(screenshots[lightboxIndex].altKey)}
             className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />

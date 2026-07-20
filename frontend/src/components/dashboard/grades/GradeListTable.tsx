@@ -13,7 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, SearchX } from 'lucide-react';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Student, Grade } from '@/types';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { formatDate } from '@/lib/utils';
@@ -55,9 +56,10 @@ export default function GradeListTable({
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-ink font-display">{t('grades.gradeList')}</h2>
         </div>
-        <div className="flex items-center justify-center py-12 text-ink/60">
-          {t('grades.noGradesMatch')}
-        </div>
+        <EmptyState
+          icon={SearchX}
+          message={t('grades.noGradesMatch')}
+        />
       </div>
     );
   }
@@ -102,7 +104,7 @@ export default function GradeListTable({
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">{grade.student?.name || 'Unknown'}</div>
+                        <div className="font-medium">{grade.student?.name || t('common.unknown')}</div>
                         <div className="text-sm text-ink/60">{grade.student?.grade_level}</div>
                       </div>
                     </div>

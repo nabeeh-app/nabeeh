@@ -13,6 +13,7 @@ export function LandingNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const locale = useLocale();
   const t = useTranslations('landing.nav');
+  const tNav = useTranslations('navigation');
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -88,7 +89,7 @@ export function LandingNav() {
           <button
             className="md:hidden p-2 text-ink"
             onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-label={mobileOpen ? tNav('closeMenu') : tNav('openMenu')}
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>

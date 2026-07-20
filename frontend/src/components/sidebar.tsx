@@ -110,9 +110,9 @@ export function Sidebar() {
             return (
               <button
                 key={item.name}
-                onClick={() => alert('Upgrade to unlock this feature')}
+                onClick={() => alert(tCommon('upgradeToUnlock'))}
                 className="flex items-center gap-3 px-3 py-3 mx-1 rounded-md text-base font-normal font-body uppercase tracking-wider text-sidebar-accent-foreground/40 opacity-50 cursor-pointer transition-colors hover:bg-sidebar-accent/30"
-                title="Upgrade to unlock this feature"
+                title={tCommon('upgradeToUnlock')}
               >
                 <Icon className="w-4.5 h-4.5" />
                 <span>{t(item.name)}</span>

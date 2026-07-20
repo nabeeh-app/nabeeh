@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { SEVERITY_CONFIG } from '@/lib/severityConfig';
 import type { AtRiskStudent } from '@/types';
@@ -24,10 +25,7 @@ export function AtRiskStudents({ data }: AtRiskStudentsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-ink/60 font-body">
-            <AlertTriangle className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <p>{t('noAtRiskStudents')}</p>
-          </div>
+          <EmptyState icon={AlertTriangle} message={t('noAtRiskStudents')} />
         </CardContent>
       </Card>
     );

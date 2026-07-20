@@ -151,7 +151,7 @@ export default function ForgotPasswordPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="teacher@example.com"
+                  placeholder={t('emailPlaceholder')}
                   className={cn(
                     "h-12 bg-canvas font-body max-w-full ps-10 text-start",
                     error && "border-destructive"

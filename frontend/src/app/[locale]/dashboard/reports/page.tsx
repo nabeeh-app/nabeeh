@@ -20,6 +20,7 @@ import { GradeStats, AttendanceSummary, MessageStats } from '@/types';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { StatCards } from '@/components/ui/StatCards';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function ReportsPage() {
   const t = useTranslations('reports');
@@ -151,7 +152,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             {topSubjects.length === 0 ? (
-              <p className="text-ink/60 text-center py-4 font-body">{t('noData')}</p>
+              <EmptyState icon={GraduationCap} message={t('noData')} />
             ) : (
               <div className="space-y-3">
                 {topSubjects.map(([subject, data]) => (
@@ -185,7 +186,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             {assessmentTypes.length === 0 ? (
-              <p className="text-ink/60 text-center py-4 font-body">{t('noData')}</p>
+              <EmptyState icon={BarChart3} message={t('noData')} />
             ) : (
               <div className="space-y-3">
                 {assessmentTypes.map(([type, data]) => (
@@ -223,7 +224,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             {!attendanceSummary ? (
-              <p className="text-ink/60 text-center py-4 font-body">{t('noData')}</p>
+              <EmptyState icon={Calendar} message={t('noData')} />
             ) : (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -281,7 +282,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             {!messageStats ? (
-              <p className="text-ink/60 text-center py-4 font-body">{t('noData')}</p>
+              <EmptyState icon={MessageSquare} message={t('noData')} />
             ) : (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">

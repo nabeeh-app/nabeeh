@@ -8,7 +8,9 @@ import {
   Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Badge } from '@/components/ui/badge';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -136,13 +138,10 @@ export function AlertDisplay() {
 
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin h-8 w-8 border-b-2 border-ink mx-auto" />
+            <LoadingSpinner />
           </div>
         ) : alerts.length === 0 ? (
-          <div className="text-center py-8 text-ink/60 font-body">
-            <Bell className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <p>{t('noAlerts')}</p>
-          </div>
+          <EmptyState icon={Bell} message={t('noAlerts')} />
         ) : (
           <div className="space-y-2">
             {alerts.map(alert => {

@@ -153,7 +153,7 @@ export default function RegisterPage(_props: Props) {
         <div className="text-center">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold text-primary font-display">
-              {t(isRTL ? 'brandNameAr' : 'brandNameEn')}
+              {t('brandName')}
             </h1>
             <div className="flex gap-2">
               <Link 
@@ -218,7 +218,7 @@ export default function RegisterPage(_props: Props) {
                     id="name"
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    placeholder={t(isRTL ? 'namePlaceholderAr' : 'namePlaceholderEn')}
+                    placeholder={t('namePlaceholder')}
                     className={cn(
                       errors.name && 'border-destructive'
                     )}
@@ -291,7 +291,7 @@ export default function RegisterPage(_props: Props) {
                       onChange={(e) => handleInputChange('password', e.target.value)}
                       placeholder={t('passwordPlaceholder')}
                       className={cn(
-                        'pr-10',
+                        'pe-10',
                         errors.password && 'border-destructive'
                       )}
                     />
@@ -318,7 +318,7 @@ export default function RegisterPage(_props: Props) {
                       onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                       placeholder={t('confirmPasswordPlaceholder')}
                       className={cn(
-                        'pr-10',
+                        'pe-10',
                         errors.confirmPassword && 'border-destructive'
                       )}
                     />
@@ -350,7 +350,7 @@ export default function RegisterPage(_props: Props) {
                       id="business_name"
                       value={formData.business_name}
                       onChange={(e) => handleInputChange('business_name', e.target.value)}
-                      placeholder={t(isRTL ? 'institutionPlaceholderAr' : 'institutionPlaceholderEn')}
+                      placeholder={t('institutionPlaceholder')}
                     />
                   </div>
 
@@ -363,7 +363,7 @@ export default function RegisterPage(_props: Props) {
                       id="subjects"
                       value={formData.subjects}
                       onChange={(e) => handleInputChange('subjects', e.target.value)}
-                      placeholder={t(isRTL ? 'subjectsPlaceholderAr' : 'subjectsPlaceholderEn')}
+                      placeholder={t('subjectsPlaceholder')}
                     />
                     <p className="text-xs text-ink/60 font-mono uppercase tracking-wider">
                       {t('subjectsHint')}

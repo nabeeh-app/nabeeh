@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { Button } from '@/components/ui/button';
 
 export function CookieNotice() {
   const [isVisible, setIsVisible] = useState(false);
@@ -35,18 +36,8 @@ export function CookieNotice() {
           {t('message')}
         </p>
         <div className="flex gap-3 justify-end">
-          <button
-            onClick={reject}
-            className="px-4 py-2 text-sm font-body text-canvas/60 hover:text-canvas transition-colors"
-          >
-            {t('reject')}
-          </button>
-          <button
-            onClick={accept}
-            className="px-4 py-2 text-sm font-body bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            {t('accept')}
-          </button>
+          <Button variant="ghost" onClick={reject}>{t('reject')}</Button>
+          <Button onClick={accept}>{t('accept')}</Button>
         </div>
       </div>
     </div>

@@ -13,6 +13,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SearchX } from 'lucide-react';
 
 interface GradebookEntry {
   student_id: string;
@@ -58,13 +60,13 @@ export default function GradebookTable({
       <div className="space-y-0">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-ink font-display">
-            {t('grades.gradebook')}
-            {currentSubjectName && ` - ${currentSubjectName}`}
+            {currentSubjectName ? t('grades.gradebookForSubject', { subject: currentSubjectName }) : t('grades.gradebook')}
           </h2>
         </div>
-        <div className="flex items-center justify-center py-12 text-ink/60">
-          {t('grades.noGradesDisplay')}
-        </div>
+        <EmptyState
+          icon={SearchX}
+          message={t('grades.noGradesDisplay')}
+        />
       </div>
     );
   }
@@ -73,8 +75,7 @@ export default function GradebookTable({
     <div className="space-y-0">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-ink font-display">
-          {t('grades.gradebook')}
-          {currentSubjectName && ` - ${currentSubjectName}`}
+          {currentSubjectName ? t('grades.gradebookForSubject', { subject: currentSubjectName }) : t('grades.gradebook')}
         </h2>
       </div>
       <div ref={scrollRef} className="overflow-x-auto max-h-[600px]">

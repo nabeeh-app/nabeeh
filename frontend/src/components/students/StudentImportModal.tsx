@@ -2,13 +2,15 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { X, ArrowRight, Check, Loader2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { X, ArrowRight, Check } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import FileUploadZone from './FileUploadZone';
 import ColumnMapper from './ColumnMapper';
 import ImportPreviewTable from './ImportPreviewTable';
 import { apiClient } from '@/lib/client';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useOfferings } from '@/hooks/useOfferings';
 
 interface ImportRow {
@@ -72,7 +74,7 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
       setAutoMapping(result.autoMapping);
       setStep('mapping');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to parse file');
+      setError(err instanceof Error ? err.message : t('parseError'));
     } finally {
       setLoading(false);
     }
@@ -87,7 +89,7 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
       setAutoMapping(result.autoMapping);
       setStep('mapping');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to parse pasted data');
+      setError(err instanceof Error ? err.message : t('parsePasteError'));
     } finally {
       setLoading(false);
     }
@@ -107,7 +109,7 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
       setStats(result.stats);
       setStep('preview');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Validation failed');
+      setError(err instanceof Error ? err.message : t('validationError'));
     } finally {
       setLoading(false);
     }
@@ -128,7 +130,7 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
       setStep('complete');
       onComplete();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import failed');
+      setError(err instanceof Error ? err.message : t('importError'));
     } finally {
       setLoading(false);
     }
@@ -160,9 +162,11 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             {t('title')}
-            <button onClick={handleClose} className="rounded-lg p-1 hover:bg-[var(--color-surface)]">
-              <X className="h-5 w-5" />
-            </button>
+            <DialogClose asChild>
+              <Button variant="ghost" size="icon" onClick={handleClose}>
+                <X className="h-5 w-5" />
+              </Button>
+            </DialogClose>
           </DialogTitle>
         </DialogHeader>
 
@@ -193,7 +197,7 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
 
         {loading && (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary)]" />
+            <LoadingSpinner message={t('loading')} />
           </div>
         )}
 
@@ -216,18 +220,18 @@ export default function StudentImportModal({ open, onClose, onComplete }: Studen
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-[var(--color-ink)]">{t('preview.targetGroup')}</label>
-              <select
-                value={selectedGroupId}
-                onChange={(e) => setSelectedGroupId(e.target.value)}
-                className="w-full rounded-lg border border-[var(--color-ink)]/20 bg-[var(--color-surface)] p-2.5 text-sm"
-              >
-                <option value="">{t('preview.selectGroup')}</option>
-                {allGroups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name} ({g.offeringSubject})
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t('preview.selectGroup')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {allGroups.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.name} ({g.offeringSubject})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <Button onClick={handleImport} disabled={!selectedGroupId || stats.ready === 0} className="w-full">

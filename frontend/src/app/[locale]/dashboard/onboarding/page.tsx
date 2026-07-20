@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { User, BookOpen, MessageSquare, CheckCircle } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 const TOTAL_STEPS = 4;
 const STEP_ICONS = [User, BookOpen, MessageSquare, CheckCircle] as const;
@@ -78,9 +79,7 @@ export default function OnboardingPage() {
 
   if (!mounted) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin h-8 w-8 border-b-2 border-primary" />
-      </div>
+      <LoadingSpinner />
     );
   }
 

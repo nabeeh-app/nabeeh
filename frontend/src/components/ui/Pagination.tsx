@@ -4,9 +4,13 @@ interface PaginationProps {
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  locale?: string;
 }
 
-export function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
+export function Pagination({ page, totalPages, onPageChange, locale }: PaginationProps) {
+  const labels = locale === 'ar'
+    ? { pagination: 'التنقل بين الصفحات', previous: 'الصفحة السابقة', next: 'الصفحة التالية' }
+    : { pagination: 'Pagination', previous: 'Previous page', next: 'Next page' };
   if (totalPages <= 1) return null;
 
   const pages: (number | '...')[] = [];
@@ -23,12 +27,12 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
   }
 
   return (
-    <nav className="flex items-center justify-center gap-1 mt-4 font-body" aria-label="Pagination">
+    <nav className="flex items-center justify-center gap-1 mt-4 font-body" aria-label={labels.pagination}>
       <button
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
         className="p-2 rounded-lg text-ink/60 hover:bg-accent/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-        aria-label="Previous page"
+        aria-label={labels.previous}
       >
         <ChevronLeft className="h-4 w-4" />
       </button>
@@ -58,7 +62,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
         className="p-2 rounded-lg text-ink/60 hover:bg-accent/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-        aria-label="Next page"
+        aria-label={labels.next}
       >
         <ChevronRight className="h-4 w-4" />
       </button>

@@ -77,7 +77,7 @@ export default function CoursesPage() {
   const handleAddGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOfferingId || !newGroupName.trim()) {
-      setFormError(t('groupName') + ' is required');
+      setFormError(t('groupNameRequired'));
       return;
     }
 
@@ -96,7 +96,7 @@ export default function CoursesPage() {
       setNewGroupSchedule('');
       setSelectedOfferingId(null);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create group';
+      const errorMessage = err instanceof Error ? err.message : t('createGroupError');
       setFormError(errorMessage);
     } finally {
       setSubmitting(false);
@@ -217,10 +217,7 @@ export default function CoursesPage() {
                 {isExpanded && (
                   <div className="border-t px-4 pb-4">
                     {offering.groups.length === 0 ? (
-                      <div className="py-6 text-center text-ink/60">
-                        <p className="font-body">{t('noGroups')}</p>
-                        <p className="text-sm mt-1">{t('noGroupsDescription')}</p>
-                      </div>
+                      <EmptyState icon={Users} message={t('noGroups')} description={t('noGroupsDescription')} />
                     ) : (
                       <Table>
                         <TableHeader>

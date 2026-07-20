@@ -14,6 +14,7 @@ import { useWhatsAppStatus } from '@/hooks/useWhatsAppStatus';
 import { Conversation, Message } from '@/types';
 import { MessageCircle, RefreshCw, Search, Send } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 type SendStatus = {
   type: 'success' | 'error';
@@ -119,12 +120,12 @@ export default function MessagesPage() {
         return nextConversations[0]?.id ?? null;
       });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load conversations';
+      const message = err instanceof Error ? err.message : t('loadError');
       setError(message);
     } finally {
       setIsLoadingConversations(false);
     }
-  }, []);
+  }, [t]);
 
   const loadConversationsRef = useRef(loadConversations);
 
@@ -138,7 +139,7 @@ export default function MessagesPage() {
       await apiClient.sendMessage({ phone, message });
       setSendStatus({ type: 'success', message: t('sendSuccess') });
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
+      const errorMessage = err instanceof Error ? err.message : t('sendError');
       setSendStatus({ type: 'error', message: errorMessage });
       throw err;
     }
@@ -160,7 +161,7 @@ export default function MessagesPage() {
         setMessages(response.data ?? []);
       } catch (err: unknown) {
         if (cancelled) return;
-        const message = err instanceof Error ? err.message : 'Failed to load messages';
+        const message = err instanceof Error ? err.message : t('loadMessagesError');
         setError(message);
         setMessages([]);
       } finally {
@@ -169,7 +170,7 @@ export default function MessagesPage() {
     };
     load();
     return () => { cancelled = true; };
-  }, [selectedConversationId]);
+  }, [selectedConversationId, t]);
 
   return (
     <div className="space-y-6">
@@ -218,12 +219,12 @@ export default function MessagesPage() {
           <CardHeader className="space-y-3">
             <CardTitle className="text-base">{t('conversations')}</CardTitle>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
               <Input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder={t('recipient')}
-                className="pl-9"
+                className="ps-9"
               />
             </div>
           </CardHeader>
@@ -231,7 +232,7 @@ export default function MessagesPage() {
             {isLoadingConversations ? (
               <p className="text-sm text-ink/60">{t('checkingStatus')}</p>
             ) : filteredConversations.length === 0 ? (
-              <p className="text-sm text-ink/60">{t('noMessages')}</p>
+              <EmptyState icon={MessageCircle} message={t('noMessages')} />
             ) : (
               filteredConversations.map(conversation => {
                 const label = getConversationLabel(conversation, t('unknown'));
@@ -242,7 +243,7 @@ export default function MessagesPage() {
                     key={conversation.id}
                     type="button"
                     onClick={() => setSelectedConversationId(conversation.id)}
-                    className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition ${isActive ? 'border-primary bg-primary/5' : 'border-ink/20 hover:bg-surface-cool/30'}`}
+                    className={`flex w-full items-start gap-3 rounded-lg border p-3 text-start transition ${isActive ? 'border-primary bg-primary/5' : 'border-ink/20 hover:bg-surface-cool/30'}`}
                   >
                     <Avatar>
                       <AvatarFallback>{getInitials(label)}</AvatarFallback>
@@ -296,12 +297,9 @@ export default function MessagesPage() {
             {isLoadingMessages ? (
               <p className="text-sm text-ink/60">{t('checkingStatus')}</p>
             ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-12 text-sm text-ink/60">
-                <MessageCircle className="h-8 w-8" />
-                {t('noMessages')}
-              </div>
+              <EmptyState icon={MessageCircle} message={t('noMessages')} />
             ) : (
-              <div className="flex max-h-[520px] flex-col gap-3 overflow-y-auto pr-2">
+              <div className="flex max-h-[520px] flex-col gap-3 overflow-y-auto pe-2">
                 {messages.map(message => {
                   const isFromParent = message.is_from_parent;
                   return (

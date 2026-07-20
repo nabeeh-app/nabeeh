@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { Switch } from '@/components/ui/switch';
 
 interface NotificationPref {
   key: string;
@@ -26,21 +27,10 @@ export default function NotificationPrefs({
         {notifications.map((item) => (
           <div key={item.key} className="flex items-center justify-between py-3">
             <span className="text-sm text-ink">{item.label}</span>
-            <button
-              type="button"
-              onClick={() => onToggle(item.key)}
-              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                item.enabled ? 'bg-primary' : 'bg-ink/20'
-              }`}
-              role="switch"
-              aria-checked={item.enabled}
-            >
-              <span
-                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out mt-0.5 ${
-                  item.enabled ? 'ltr:translate-x-4 rtl:-translate-x-4 ltr:ml-0.5 rtl:mr-0.5' : 'translate-x-0.5'
-                }`}
-              />
-            </button>
+            <Switch
+              checked={item.enabled}
+              onCheckedChange={() => onToggle(item.key)}
+            />
           </div>
         ))}
       </div>

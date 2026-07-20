@@ -46,7 +46,7 @@ export default function GradeFormModal({
         <DialogHeader>
           <DialogTitle>
             {mode === 'add'
-              ? `${t('grades.addNewGrade')}${currentSubjectName ? ` - ${currentSubjectName}` : ''}`
+              ? currentSubjectName ? t('grades.addGradeForSubject', { subject: currentSubjectName }) : t('grades.addNewGrade')
               : t('grades.editGradeTitle')
             }
           </DialogTitle>

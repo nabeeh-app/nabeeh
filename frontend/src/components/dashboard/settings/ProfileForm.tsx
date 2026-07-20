@@ -140,7 +140,7 @@ export default function ProfileForm({
               dir="ltr"
               value={settings.phone}
               onChange={(e) => onPhoneChange('phone', e.target.value)}
-              placeholder="+201234567890"
+              placeholder={t('phonePlaceholder')}
               className={errors.phone ? 'border-destructive' : ''}
             />
             {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}

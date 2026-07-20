@@ -26,7 +26,11 @@
     "yes": "نعم",
     "no": "لا",
     "saving": "جاري الحفظ...",
-    "loadMore": "تحميل المزيد"
+    "loadMore": "تحميل المزيد",
+    "switchLanguage": "التبديل إلى الإنجليزية",
+    "currentLanguage": "English",
+    "upgradeToUnlock": "قم بترقية حسابك لفتح هذه الميزة",
+    "unknown": "غير محدد"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -135,7 +139,12 @@
     "subjectsPlaceholderEn": "Mathematics, Physics, Chemistry",
     "subjectsPlaceholderAr": "الرياضيات، الفيزياء، الكيمياء",
     "brandNameEn": "Nabeeh - نبيه",
-    "brandNameAr": "نبيه - Nabeeh"
+    "brandNameAr": "نبيه - Nabeeh",
+    "namePlaceholder": "أحمد محمد حسن",
+    "institutionPlaceholder": "أكاديمية الرياضيات",
+    "subjectsPlaceholder": "الرياضيات، الفيزياء، الكيمياء",
+    "brandName": "نبيه - Nabeeh",
+    "emailPlaceholder": "teacher@example.com"
   },
   "statuses": {
     "active": "نشط",
@@ -238,7 +247,26 @@
     "deliveryEmail": "بريد إلكتروني",
     "deliveryWhatsApp": "واتساب",
     "deliveryBoth": "كلاهما",
-    "switchTeacher": "تغيير المدرس"
+    "switchTeacher": "تغيير المدرس",
+    "permissionViewStudents": "عرض الطلاب",
+    "permissionManageAttendance": "إدارة الحضور",
+    "permissionManageGrades": "إدارة الدرجات",
+    "permissionManageAssessments": "إدارة التقييمات",
+    "permissionManageOfferings": "إدارة الدورات",
+    "permissionSendWhatsapp": "إرسال رسائل واتساب",
+    "permissionViewReports": "عرض التقارير",
+    "permissionManageStudents": "إدارة الطلاب",
+    "inviteError": "دعوة غير صالحة",
+    "loadError": "فشل تحميل الدعوة",
+    "acceptError": "فشل قبول الدعوة",
+    "inviteAccepted": "تم قبول الدعوة!",
+    "inviteAcceptedDesc": "أصبحت مساعداً الآن. الرجاء تسجيل الدخول للوصول إلى حسابك.",
+    "goToLogin": "تسجيل الدخول",
+    "unknownExpiry": "غير محدد",
+    "accepting": "جاري القبول...",
+    "acceptInvitation": "قبول الدعوة",
+    "invitedBy": "قام {teacherName} بدعوتك للانضمام إلى فريقه كمساعد تعليمي.",
+    "phonePlaceholder": "+20 1XX XXX XXXX"
   },
   "admin": {
     "teachers": {
@@ -367,6 +395,8 @@
     },
     "deleteConfirm": "هل أنت متأكد من حذف هذا الطالب؟",
     "deleteSuccess": "تم حذف الطالب بنجاح",
+    "createError": "فشل إنشاء الطالب",
+    "updateError": "فشل تحديث الطالب",
     "saveSuccess": "تم حفظ الطالب بنجاح",
     "validation": {
       "nameRequired": "اسم الطالب مطلوب",
@@ -376,6 +406,8 @@
       "selectClass": "اختار الفصل"
     },
     "descriptionCount": "إدارة وتتبع {count} طالب مسجل",
+    "selfRegistrationDescription": "قم بإنشاء رابط تسجيل لمجموعة. يمكن للطلاب استخدام هذا الرابط لتسجيل أنفسهم.",
+    "selectGroupFirst": "الرجاء تحديد مجموعة معينة أولاً باستخدام الفلتر أعلاه.",
     "loading": "جاري تحميل الطلبة...",
     "searchPlaceholderShort": "البحث عن الطلبة بالاسم أو الرقم...",
     "allClasses": "جميع الفصول",
@@ -514,6 +546,8 @@
     "descriptionCount": "إدارة وتتبع درجات الطلبة والتقييمات",
     "addGrade": "إضافة درجة",
     "editGrade": "تعديل الدرجة",
+    "addGradeForSubject": "إضافة درجة — {subject}",
+    "gradebookForSubject": "دفتر الدرجات — {subject}",
     "gradeHistory": "سجل الدرجات",
     "bulkEntry": "الإدخال الجماعي",
     "loading": "جاري تحميل بيانات الدرجات...",
@@ -602,6 +636,8 @@
     "assessmentNamePlaceholder": "مثال: امتحان الوحدة الأولى",
     "notesPlaceholder": "ملاحظات إضافية...",
     "saveSuccess": "تم حفظ الدرجة بنجاح",
+    "createError": "فشل إنشاء الدرجة",
+    "updateError": "فشل تحديث الدرجة",
     "deleteSuccess": "تم حذف الدرجة بنجاح",
     "validation": {
       "studentRequired": "الطالب مطلوب",
@@ -709,6 +745,9 @@
     "characters": "حرف",
     "sending": "جاري الإرسال...",
     "cancel": "إلغاء",
+    "loadError": "فشل تحميل المحادثات",
+    "loadMessagesError": "فشل تحميل الرسائل",
+    "sendError": "فشل إرسال الرسالة",
     "sendViaWhatsApp": "أرسل رسالة إلى أي رقم هاتف عبر الواتساب",
     "checkingStatus": "جاري التحقق من حالة الواتساب...",
     "recheckStatus": "إعادة التحقق",
@@ -837,6 +876,7 @@
     "inactive": "غير نشط",
     "addGroup": "إضافة مجموعة",
     "groupName": "اسم المجموعة",
+    "groupNameRequired": "اسم المجموعة مطلوب",
     "schedule": "الجدول",
     "capacity": "السعة",
     "enrolled": "المسجلون",
@@ -856,6 +896,7 @@
     "allStatus": "جميع الحالات",
     "groupNamePlaceholder": "مثال: المجموعة أ",
     "schedulePlaceholder": "مثال: الأحد والأربعاء 5-7 مساءً",
+    "createGroupError": "فشل إنشاء المجموعة",
     "confirmDelete": "هل أنت متأكد من حذف عرض {name}؟",
     "resultCount": "عرض {shown} من {total} عرض"
   },
@@ -989,6 +1030,7 @@
     "subjectsPlaceholder": "الرياضيات، الفيزياء",
     "bio": "نبذة تعريفية",
     "bioPlaceholder": "اكتب نبذة مختصرة عنك...",
+    "phonePlaceholder": "+201234567890",
     "contact": "التواصل",
     "phone": "رقم الهاتف",
     "whatsapp": "رقم الواتساب",
@@ -1036,7 +1078,24 @@
     "notifAssignments": "تذكيرات الواجبات",
     "notifSystem": "إشعارات النظام",
     "mockModeTitle": "وضع العرض التجريبي",
-    "mockModeDescription": "الواتساب غير متاح في وضع العرض التجريبي. عيّن NEXT_PUBLIC_USE_MOCK=false في .local.env وأعد تشغيل الخادم."
+    "mockModeDescription": "الواتساب غير متاح في وضع العرض التجريبي. عيّن NEXT_PUBLIC_USE_MOCK=false في .local.env وأعد تشغيل الخادم.",
+    "requiredFieldsTitle": "الحقول المطلوبة للاستيراد",
+    "requiredFieldsDescription": "قم بتكوين الحقول المطلوبة عند استيراد الطلاب. الاسم ورمز الطالب مطلوبان دائمًا.",
+    "alwaysRequired": "مطلوب دائمًا",
+    "saveSettings": "حفظ الإعدادات",
+    "saved": "تم الحفظ!",
+    "fieldName": "الاسم",
+    "fieldStudentCode": "رمز الطالب",
+    "fieldPhone": "الهاتف",
+    "fieldParentPhone": "هاتف ولي الأمر",
+    "fieldParentName": "اسم ولي الأمر",
+    "fieldGradeLevel": "المستوى الدراسي",
+    "fieldDateOfBirth": "تاريخ الميلاد",
+    "fieldGender": "الجنس",
+    "fieldEmail": "البريد الإلكتروني",
+    "fieldAddress": "العنوان",
+    "fieldNotes": "ملاحظات",
+    "fieldEmergencyContact": "جهة الاتصال الطارئة"
   },
   "errors": {
     "generic": "حصل خطأ. حاول تاني.",
@@ -1136,7 +1195,16 @@
     },
     "screenshots": {
       "title": "شوف نبيه شغال",
-      "subtitle": "واجهة نظيفة وسهلة الاستخدام مصممة للمدرسين."
+      "subtitle": "واجهة نظيفة وسهلة الاستخدام مصممة للمدرسين.",
+      "altDashboard": "لوحة التحكم",
+      "altStudents": "الطلاب",
+      "altAttendance": "الحضور",
+      "altClasses": "الفصول",
+      "altSchedule": "الجدول",
+      "altWhatsApp": "واتساب",
+      "altDashboardOverview": "نظرة عامة على لوحة التحكم",
+      "scrollLeft": "التمرير لليسار",
+      "scrollRight": "التمرير لليمين"
     },
     "pricing": {
       "title": "أسعار بسيطة وواضحة",
@@ -1378,11 +1446,17 @@
       "codeRequired": "كود الطالب مطلوب",
       "invalidPhone": "رقم الهاتف غير صالح",
       "duplicateCode": "كود طالب مكرر: {code}"
-    }
+    },
+    "parseError": "فشل تحليل الملف",
+    "parsePasteError": "فشل تحليل البيانات الملصقة",
+    "validationError": "فشل التحقق من الصحة",
+    "importError": "فشل الاستيراد"
   },
   "selfRegistration": {
     "title": "التسجيل الذاتي للطلبة",
     "generateLink": "إنشاء رابط التسجيل",
+    "generating": "جارٍ الإنشاء...",
+    "generateNewLink": "إنشاء رابط جديد",
     "copyLink": "نسخ الرابط",
     "copied": "تم نسخ الرابط!",
     "linkExpiry": "ينتهي الرابط خلال {time}",

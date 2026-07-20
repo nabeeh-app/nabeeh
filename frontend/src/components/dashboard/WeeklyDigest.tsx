@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import {
   Calendar,
   TrendingUp,
@@ -14,9 +14,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { apiClient } from '@/lib/client';
 import type { WeeklyDigest } from '@/types';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export function WeeklyDigest() {
   const t = useTranslations('digest');
+  const locale = useLocale();
   const [digest, setDigest] = useState<WeeklyDigest | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -40,7 +42,7 @@ export function WeeklyDigest() {
   }, [fetchDigest]);
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString(undefined, {
+    return new Date(dateStr).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', {
       month: 'short',
       day: 'numeric',
     });
@@ -50,7 +52,7 @@ export function WeeklyDigest() {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
-          <div className="animate-spin h-8 w-8 border-b-2 border-ink mx-auto" />
+          <LoadingSpinner />
         </CardContent>
       </Card>
     );

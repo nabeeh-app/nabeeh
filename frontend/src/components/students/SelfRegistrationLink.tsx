@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link2, Copy, Check, ExternalLink } from 'lucide-react';
 import { apiClient } from '@/lib/client';
+import { Button } from '@/components/ui/button';
 
 interface SelfRegistrationLinkProps {
   groupId: string;
@@ -11,6 +12,7 @@ interface SelfRegistrationLinkProps {
 
 export default function SelfRegistrationLink({ groupId }: SelfRegistrationLinkProps) {
   const t = useTranslations('selfRegistration');
+  const tTime = useTranslations('timeAgo');
   const [link, setLink] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -55,37 +57,29 @@ export default function SelfRegistrationLink({ groupId }: SelfRegistrationLinkPr
     const now = new Date();
     const hours = Math.round((date.getTime() - now.getTime()) / (1000 * 60 * 60));
     if (hours >= 24) {
-      return `${Math.floor(hours / 24)} days`;
+      return tTime('days', { n: Math.floor(hours / 24) });
     }
-    return `${hours} hours`;
+    return tTime('hours', { n: hours });
   };
 
   return (
     <div className="space-y-4">
       {!link ? (
-        <button
-          onClick={generateLink}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-primary)]/90 disabled:opacity-50"
-        >
+        <Button onClick={generateLink} disabled={loading}>
           <Link2 className="h-4 w-4" />
-          {loading ? 'Generating...' : t('generateLink')}
-        </button>
+          {loading ? t('generating') : t('generateLink')}
+        </Button>
       ) : (
         <div className="space-y-3">
           <div className="flex items-center gap-2 rounded-lg border border-[var(--color-ink)]/10 bg-[var(--color-surface)] p-3">
             <code className="flex-1 truncate text-sm text-[var(--color-ink)]">{link}</code>
-            <button
-              onClick={copyToClipboard}
-              className="shrink-0 rounded-md p-1.5 hover:bg-[var(--color-surface-sage)]"
-              title={t('copyLink')}
-            >
+            <Button variant="ghost" size="icon" onClick={copyToClipboard} title={t('copyLink')}>
               {copied ? (
                 <Check className="h-4 w-4 text-success" />
               ) : (
-                <Copy className="h-4 w-4 text-[var(--color-ink)]/60" />
+                <Copy className="h-4 w-4" />
               )}
-            </button>
+            </Button>
             <a
               href={link}
               target="_blank"
@@ -102,12 +96,9 @@ export default function SelfRegistrationLink({ groupId }: SelfRegistrationLinkPr
             </p>
           )}
 
-          <button
-            onClick={generateLink}
-            className="text-xs text-[var(--color-primary)] hover:underline"
-          >
-            Generate new link
-          </button>
+          <Button variant="link" size="sm" onClick={generateLink}>
+            {t('generateNewLink')}
+          </Button>
         </div>
       )}
 

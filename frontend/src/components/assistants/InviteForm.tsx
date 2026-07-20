@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations, useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { Send, Mail, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,15 +20,15 @@ const DEFAULT_PERMISSIONS: Record<string, boolean> = {
   manage_students: false,
 };
 
-const PERMISSION_LABELS: Record<string, { en: string; ar: string }> = {
-  view_students: { en: 'View Students', ar: 'عرض الطلاب' },
-  manage_attendance: { en: 'Manage Attendance', ar: 'إدارة الحضور' },
-  manage_grades: { en: 'Manage Grades', ar: 'إدارة الدرجات' },
-  manage_assessments: { en: 'Manage Assessments', ar: 'إدارة التقييمات' },
-  manage_offerings: { en: 'Manage Courses', ar: 'إدارة الدورات' },
-  send_whatsapp: { en: 'Send WhatsApp Messages', ar: 'إرسال رسائل واتساب' },
-  view_reports: { en: 'View Reports', ar: 'عرض التقارير' },
-  manage_students: { en: 'Manage Students', ar: 'إدارة الطلاب' },
+const PERMISSION_KEY_MAP: Record<string, string> = {
+  view_students: 'permissionViewStudents',
+  manage_attendance: 'permissionManageAttendance',
+  manage_grades: 'permissionManageGrades',
+  manage_assessments: 'permissionManageAssessments',
+  manage_offerings: 'permissionManageOfferings',
+  send_whatsapp: 'permissionSendWhatsapp',
+  view_reports: 'permissionViewReports',
+  manage_students: 'permissionManageStudents',
 };
 
 type DeliveryMethod = 'email' | 'whatsapp' | 'both';
@@ -40,7 +40,6 @@ interface InviteFormProps {
 
 export function InviteForm({ onClose, onSuccess }: InviteFormProps) {
   const t = useTranslations('assistants');
-  const locale = useLocale();
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('email');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -66,7 +65,7 @@ export function InviteForm({ onClose, onSuccess }: InviteFormProps) {
       return;
     }
     if (needsPhone && !phone) {
-      setError('Phone number is required');
+      setError(t('inviteFailed'));
       return;
     }
 
@@ -150,7 +149,7 @@ export function InviteForm({ onClose, onSuccess }: InviteFormProps) {
                 type="tel"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
-                placeholder="+20 1X XXX XXXX"
+                placeholder={t('phonePlaceholder')}
                 className="mt-1"
               />
             </div>
@@ -187,7 +186,7 @@ export function InviteForm({ onClose, onSuccess }: InviteFormProps) {
                     )}
                   </div>
                   <span className="text-sm font-body text-ink">
-                    {PERMISSION_LABELS[key]?.[locale as 'en' | 'ar'] || key}
+                    {t(PERMISSION_KEY_MAP[key] || key)}
                   </span>
                 </label>
               ))}

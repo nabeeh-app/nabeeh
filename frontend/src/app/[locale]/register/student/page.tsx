@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
-import { AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle } from 'lucide-react';
 import { apiClient } from '@/lib/client';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Button } from '@/components/ui/button';
 
 interface FormSchema {
   groupName: string;
@@ -80,7 +82,7 @@ export default function StudentRegistrationPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-canvas)]">
-        <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary)]" />
+        <LoadingSpinner message={t('loading')} />
       </div>
     );
   }
@@ -170,13 +172,9 @@ export default function StudentRegistrationPage() {
 
           {error && <p className="text-sm text-error">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={submitting || !name.trim()}
-            className="w-full rounded-lg bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-primary)]/90 disabled:opacity-50"
-          >
+          <Button type="submit" disabled={submitting || !name.trim()} className="w-full">
             {submitting ? t('registering') : t('register')}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

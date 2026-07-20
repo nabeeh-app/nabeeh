@@ -16,7 +16,6 @@ import {
   mockParents,
 } from './mock-data';
 import type {
-  ApiResponse,
   PaginatedResponse,
   AuthResponse,
   LoginRequest,
@@ -55,10 +54,6 @@ function paginate<T>(data: T[], page = 1, limit = 50): PaginatedResponse<T> {
     data: data.slice(start, start + limit),
     pagination: { page, limit, total, pages },
   };
-}
-
-function ok<T>(data: T, message?: string): ApiResponse<T> {
-  return { success: true, data, ...(message ? { message } : {}) };
 }
 
 const delay = (ms = 100) => new Promise((r) => setTimeout(r, ms));

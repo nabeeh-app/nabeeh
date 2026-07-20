@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { ArrowRight, Info } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const STUDENT_FIELDS = [
   { value: 'name', label: 'Name', required: true },
@@ -70,17 +71,18 @@ export default function ColumnMapper({ headers, autoMapping, onMappingChange }: 
                     <ArrowRight className="h-4 w-4 mx-auto text-[var(--color-ink)]/30" />
                   </td>
                   <td className="py-3">
-                    <select
-                      value={mappedField}
-                      onChange={(e) => handleMappingChange(header, e.target.value)}
-                      className="rounded-lg border border-[var(--color-ink)]/20 bg-[var(--color-surface)] px-3 py-1.5 text-sm focus:border-[var(--color-primary)] focus:outline-none"
-                    >
-                      {STUDENT_FIELDS.map((field) => (
-                        <option key={field.value} value={field.value}>
-                          {field.label} {field.required ? '(Required)' : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <Select value={mappedField} onValueChange={(value) => handleMappingChange(header, value)}>
+                      <SelectTrigger className="rounded-lg border border-[var(--color-ink)]/20 bg-[var(--color-surface)] px-3 py-1.5 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STUDENT_FIELDS.map((field) => (
+                          <SelectItem key={field.value} value={field.value}>
+                            {field.label} {field.required ? '(Required)' : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </td>
                 </tr>
               );

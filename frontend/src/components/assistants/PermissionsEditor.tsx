@@ -1,22 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations, useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { apiClient } from '@/lib/client';
 import type { Assistant } from '@/types';
 
-const PERMISSION_LABELS: Record<string, { en: string; ar: string }> = {
-  view_students: { en: 'View Students', ar: 'عرض الطلاب' },
-  manage_attendance: { en: 'Manage Attendance', ar: 'إدارة الحضور' },
-  manage_grades: { en: 'Manage Grades', ar: 'إدارة الدرجات' },
-  manage_assessments: { en: 'Manage Assessments', ar: 'إدارة التقييمات' },
-  manage_offerings: { en: 'Manage Courses', ar: 'إدارة الدورات' },
-  send_whatsapp: { en: 'Send WhatsApp Messages', ar: 'إرسال رسائل واتساب' },
-  view_reports: { en: 'View Reports', ar: 'عرض التقارير' },
-  manage_students: { en: 'Manage Students', ar: 'إدارة الطلاب' },
+const PERMISSION_KEY_MAP: Record<string, string> = {
+  view_students: 'permissionViewStudents',
+  manage_attendance: 'permissionManageAttendance',
+  manage_grades: 'permissionManageGrades',
+  manage_assessments: 'permissionManageAssessments',
+  manage_offerings: 'permissionManageOfferings',
+  send_whatsapp: 'permissionSendWhatsapp',
+  view_reports: 'permissionViewReports',
+  manage_students: 'permissionManageStudents',
 };
 
 interface PermissionsEditorProps {
@@ -27,7 +27,6 @@ interface PermissionsEditorProps {
 
 export function PermissionsEditor({ assistant, onClose, onSave }: PermissionsEditorProps) {
   const t = useTranslations('assistants');
-  const locale = useLocale();
   const [permissions, setPermissions] = useState<Record<string, boolean>>({ ...assistant.permissions });
   const [loading, setLoading] = useState(false);
 
@@ -89,7 +88,7 @@ export function PermissionsEditor({ assistant, onClose, onSave }: PermissionsEdi
                   )}
                 </div>
                 <span className="text-sm font-body text-ink">
-                  {PERMISSION_LABELS[key]?.[locale as 'en' | 'ar'] || key}
+                  {t(PERMISSION_KEY_MAP[key] || key)}
                 </span>
               </label>
             ))}

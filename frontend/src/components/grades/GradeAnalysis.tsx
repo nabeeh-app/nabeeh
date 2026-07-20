@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { BarChart3, Users, AlertTriangle, TrendingUp, BookOpen } from 'lucide-react';
 import { StatCards } from '@/components/ui/StatCards';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   Select,
   SelectContent,
@@ -22,6 +24,7 @@ import type { GroupComparison as GroupComparisonType, AtRiskStudent, GradeDistri
 
 export function GradeAnalysis() {
   const tAnalysis = useTranslations('grades.analysis');
+  const locale = useLocale();
 
   const { data: offerings, isLoading: offeringsLoading } = useOfferings();
   const [selectedOffering, setSelectedOffering] = useState<string>('');
@@ -73,20 +76,16 @@ export function GradeAnalysis() {
   }, [selectedOffering, loadAnalysis]);
 
   if (offeringsLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin h-8 w-8 border-b-2 border-ink mx-auto" />
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if ((offerings || []).length === 0) {
     return (
-      <div className="text-center py-16 text-ink/60 font-body">
-        <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-40" />
-        <p className="text-lg">{tAnalysis('noOfferings')}</p>
-        <p className="text-sm mt-1">{tAnalysis('noOfferingsDesc')}</p>
-      </div>
+      <EmptyState
+        icon={BarChart3}
+        message={tAnalysis('noOfferings')}
+        description={tAnalysis('noOfferingsDesc')}
+      />
     );
   }
 
@@ -107,7 +106,7 @@ export function GradeAnalysis() {
           <SelectContent>
             {(offerings || []).map(o => (
               <SelectItem key={o.id} value={o.id}>
-                {o.subject.name_en} — {o.grade_level.name} ({o.academic_year})
+                {locale === 'ar' ? o.subject.name_ar : o.subject.name_en} — {o.grade_level.name} ({o.academic_year})
               </SelectItem>
             ))}
           </SelectContent>
@@ -117,8 +116,8 @@ export function GradeAnalysis() {
       {overview && <StatCards stats={statItems} />}
 
       {loadingAnalysis ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin h-8 w-8 border-b-2 border-ink mx-auto" />
+        <div className="py-12">
+          <LoadingSpinner />
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">

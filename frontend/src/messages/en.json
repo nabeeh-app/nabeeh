@@ -26,7 +26,11 @@
     "yes": "Yes",
     "no": "No",
     "saving": "Saving...",
-    "loadMore": "Load More"
+    "loadMore": "Load More",
+    "switchLanguage": "Switch to Arabic",
+    "currentLanguage": "عربي",
+    "upgradeToUnlock": "Upgrade to unlock this feature",
+    "unknown": "Unknown"
   },
   "auth": {
     "login": "Sign In",
@@ -135,7 +139,12 @@
     "subjectsPlaceholderEn": "Mathematics, Physics, Chemistry",
     "subjectsPlaceholderAr": "الرياضيات، الفيزياء، الكيمياء",
     "brandNameEn": "Nabeeh - نبيه",
-    "brandNameAr": "نبيه - Nabeeh"
+    "brandNameAr": "نبيه - Nabeeh",
+    "namePlaceholder": "John Smith",
+    "institutionPlaceholder": "Math Academy",
+    "subjectsPlaceholder": "Mathematics, Physics, Chemistry",
+    "brandName": "Nabeeh - نبيه",
+    "emailPlaceholder": "teacher@example.com"
   },
   "statuses": {
     "active": "Active",
@@ -238,7 +247,26 @@
     "deliveryEmail": "Email",
     "deliveryWhatsApp": "WhatsApp",
     "deliveryBoth": "Both",
-    "switchTeacher": "Switch Teacher"
+    "switchTeacher": "Switch Teacher",
+    "permissionViewStudents": "View Students",
+    "permissionManageAttendance": "Manage Attendance",
+    "permissionManageGrades": "Manage Grades",
+    "permissionManageAssessments": "Manage Assessments",
+    "permissionManageOfferings": "Manage Courses",
+    "permissionSendWhatsapp": "Send WhatsApp Messages",
+    "permissionViewReports": "View Reports",
+    "permissionManageStudents": "Manage Students",
+    "inviteError": "Invalid invitation",
+    "loadError": "Failed to load invitation",
+    "acceptError": "Failed to accept invitation",
+    "inviteAccepted": "Invitation Accepted!",
+    "inviteAcceptedDesc": "You are now an assistant. Please log in to access your account.",
+    "goToLogin": "Go to Login",
+    "unknownExpiry": "Unknown",
+    "accepting": "Accepting...",
+    "acceptInvitation": "Accept Invitation",
+    "invitedBy": "{teacherName} has invited you to join their team as a teaching assistant.",
+    "phonePlaceholder": "+20 1X XXX XXXX"
   },
   "admin": {
     "teachers": {
@@ -295,6 +323,8 @@
     "title": "Student Management",
     "description": "Manage and track student information and enrollments",
     "descriptionCount": "Manage and track {count} registered students",
+    "selfRegistrationDescription": "Generate a registration link for a group. Students can use this link to register themselves.",
+    "selectGroupFirst": "Please select a specific group first using the filter above.",
     "addStudent": "Add New Student",
     "selfRegister": "Self Registration",
     "editStudent": "Edit Student",
@@ -401,6 +431,8 @@
     },
     "deleteConfirm": "Are you sure you want to delete this student?",
     "deleteSuccess": "Student deleted successfully",
+    "createError": "Failed to create student",
+    "updateError": "Failed to update student",
     "saveSuccess": "Student saved successfully",
     "validation": {
       "nameRequired": "Student name is required",
@@ -515,6 +547,8 @@
     "descriptionCount": "Manage and track student grades and assessments",
     "addGrade": "Add Grade",
     "editGrade": "Edit Grade",
+    "addGradeForSubject": "Add Grade — {subject}",
+    "gradebookForSubject": "Gradebook — {subject}",
     "gradeHistory": "Grade History",
     "bulkEntry": "Bulk Entry",
     "loading": "Loading grades data...",
@@ -603,6 +637,8 @@
     "assessmentNamePlaceholder": "e.g., Unit 1 Test",
     "notesPlaceholder": "Additional notes...",
     "saveSuccess": "Grade saved successfully",
+    "createError": "Failed to create grade",
+    "updateError": "Failed to update grade",
     "deleteSuccess": "Grade deleted successfully",
     "validation": {
       "studentRequired": "Student is required",
@@ -710,6 +746,9 @@
     "characters": "characters",
     "sending": "Sending...",
     "cancel": "Cancel",
+    "loadError": "Failed to load conversations",
+    "loadMessagesError": "Failed to load messages",
+    "sendError": "Failed to send message",
     "sendViaWhatsApp": "Send a message to any phone number via WhatsApp",
     "checkingStatus": "Checking WhatsApp status...",
     "recheckStatus": "Recheck Status",
@@ -838,6 +877,7 @@
     "inactive": "Inactive",
     "addGroup": "Add Group",
     "groupName": "Group Name",
+    "groupNameRequired": "Group name is required",
     "schedule": "Schedule",
     "capacity": "Capacity",
     "enrolled": "Enrolled",
@@ -857,6 +897,7 @@
     "allStatus": "All Status",
     "groupNamePlaceholder": "e.g., Group A",
     "schedulePlaceholder": "e.g., Sun & Wed 5-7 PM",
+    "createGroupError": "Failed to create group",
     "confirmDelete": "Are you sure you want to delete {name}?",
     "resultCount": "Showing {shown} of {total} offerings"
   },
@@ -990,6 +1031,7 @@
     "subjectsPlaceholder": "Mathematics, Physics",
     "bio": "Bio",
     "bioPlaceholder": "Write a short bio about yourself...",
+    "phonePlaceholder": "+201234567890",
     "contact": "Contact",
     "phone": "Phone Number",
     "whatsapp": "WhatsApp Number",
@@ -1037,7 +1079,24 @@
     "notifAssignments": "Assignment reminders",
     "notifSystem": "System notifications",
     "mockModeTitle": "Mock Mode Active",
-    "mockModeDescription": "WhatsApp is unavailable in mock mode. Set NEXT_PUBLIC_USE_MOCK=false in .env.local and restart the dev server."
+    "mockModeDescription": "WhatsApp is unavailable in mock mode. Set NEXT_PUBLIC_USE_MOCK=false in .env.local and restart the dev server.",
+    "requiredFieldsTitle": "Required Fields for Import",
+    "requiredFieldsDescription": "Configure which fields are required when importing students. Name and Student Code are always required.",
+    "alwaysRequired": "Always Required",
+    "saveSettings": "Save Settings",
+    "saved": "Saved!",
+    "fieldName": "Name",
+    "fieldStudentCode": "Student Code",
+    "fieldPhone": "Phone",
+    "fieldParentPhone": "Parent Phone",
+    "fieldParentName": "Parent Name",
+    "fieldGradeLevel": "Grade Level",
+    "fieldDateOfBirth": "Date of Birth",
+    "fieldGender": "Gender",
+    "fieldEmail": "Email",
+    "fieldAddress": "Address",
+    "fieldNotes": "Notes",
+    "fieldEmergencyContact": "Emergency Contact"
   },
   "errors": {
     "generic": "An error occurred. Please try again.",
@@ -1137,7 +1196,16 @@
     },
     "screenshots": {
       "title": "See Nabeeh in action",
-      "subtitle": "A clean, intuitive interface designed for teachers."
+      "subtitle": "A clean, intuitive interface designed for teachers.",
+      "altDashboard": "Dashboard",
+      "altStudents": "Students",
+      "altAttendance": "Attendance",
+      "altClasses": "Classes",
+      "altSchedule": "Schedule",
+      "altWhatsApp": "WhatsApp",
+      "altDashboardOverview": "Dashboard Overview",
+      "scrollLeft": "Scroll left",
+      "scrollRight": "Scroll right"
     },
     "pricing": {
       "title": "Simple, transparent pricing",
@@ -1379,11 +1447,17 @@
       "codeRequired": "Student code is required",
       "invalidPhone": "Invalid phone number format",
       "duplicateCode": "Duplicate student code: {code}"
-    }
+    },
+    "parseError": "Failed to parse file",
+    "parsePasteError": "Failed to parse pasted data",
+    "validationError": "Validation failed",
+    "importError": "Import failed"
   },
   "selfRegistration": {
     "title": "Student Self-Registration",
     "generateLink": "Generate Registration Link",
+    "generating": "Generating...",
+    "generateNewLink": "Generate new link",
     "copyLink": "Copy Link",
     "copied": "Link copied!",
     "linkExpiry": "Link expires in {time}",

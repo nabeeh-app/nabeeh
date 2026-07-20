@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { ClipboardCheck, Edit3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiClient } from '@/lib/client';
 import type { ReportDraft } from '@/types';
@@ -42,7 +44,7 @@ export function ApprovalQueue({ onSelectDraft, refreshKey }: ApprovalQueueProps)
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
-          <div className="animate-spin h-8 w-8 border-b-2 border-ink mx-auto" />
+          <LoadingSpinner />
         </CardContent>
       </Card>
     );
@@ -61,10 +63,7 @@ export function ApprovalQueue({ onSelectDraft, refreshKey }: ApprovalQueueProps)
       </CardHeader>
       <CardContent>
         {drafts.length === 0 ? (
-          <div className="text-center py-8 text-ink/60 font-body">
-            <ClipboardCheck className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <p>{t('noPendingDrafts')}</p>
-          </div>
+          <EmptyState icon={ClipboardCheck} message={t('noPendingDrafts')} />
         ) : (
           <div className="space-y-2">
             {drafts.map(draft => (
