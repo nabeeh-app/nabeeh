@@ -23,7 +23,6 @@ on:
     paths:
       - 'backend/**'
       - 'frontend/**'
-      - 'admin/**'
       - 'zap/**'
   pull_request:
     branches:
@@ -66,8 +65,8 @@ jobs:
 
       - name: Build and start services
         run: |
-          docker-compose build
-          docker-compose up -d backend frontend admin
+          docker-compose build backend frontend
+          docker-compose up -d backend frontend
           sleep 30
 
       - name: Wait for services to be healthy
@@ -85,15 +84,6 @@ jobs:
           for i in $(seq 1 30); do
             if docker-compose ps frontend | grep -q "healthy"; then
               echo "Frontend is healthy"
-              break
-            fi
-            sleep 5
-          done
-
-          echo "Waiting for admin to be healthy..."
-          for i in $(seq 1 30); do
-            if docker-compose ps admin | grep -q "healthy"; then
-              echo "Admin is healthy"
               break
             fi
             sleep 5
@@ -120,17 +110,6 @@ jobs:
           docker-compose up zap-api
           mkdir -p reports
           docker cp nabeeh-zap-api:/zap/wrk/reports/ reports/ 2>/dev/null || true
-
-      - name: Run ZAP Admin Scan
-        if: >
-          github.event_name == 'schedule' ||
-          github.event.inputs.scan_type == 'baseline' ||
-          github.event.inputs.scan_type == 'all' ||
-          github.event_name == 'push'
-        run: |
-          docker-compose up zap-admin
-          mkdir -p reports
-          docker cp nabeeh-zap-admin:/zap/wrk/reports/ reports/ 2>/dev/null || true
 
       - name: Run ZAP Full Scan
         if: >
