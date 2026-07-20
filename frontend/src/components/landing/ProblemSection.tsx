@@ -1,12 +1,13 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { AlertTriangle, MessageSquare, Eye } from 'lucide-react';
 
 const painIcons = [AlertTriangle, MessageSquare, Eye];
 
 export function ProblemSection() {
   const t = useTranslations('landing.problem');
+  const locale = useLocale();
 
   const points = [
     { key: 'spreadsheets', icon: painIcons[0] },
@@ -15,7 +16,7 @@ export function ProblemSection() {
   ] as const;
 
   return (
-    <section className="py-20 bg-surface-sage/50">
+    <section className="py-20 bg-surface-sage/50" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-ink font-display mb-4">

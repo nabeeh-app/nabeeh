@@ -154,7 +154,7 @@ export function WhatsAppDemo() {
   // Name picker screen
   if (!selectedName) {
     return (
-      <div className="w-full max-w-sm bg-canvas rounded-2xl border border-ink/10 shadow-lg overflow-hidden">
+      <div className="w-full max-w-sm bg-canvas rounded-2xl border border-ink/10 shadow-lg overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
         {/* WhatsApp header */}
         <div className="bg-primary px-4 py-3 flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
@@ -173,14 +173,14 @@ export function WhatsAppDemo() {
         </div>
 
         {/* Name picker */}
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4" dir={isRTL ? 'rtl' : 'ltr'}>
           <p className="text-sm text-ink/70 font-body text-center">{t('pickName')}</p>
           <div className="space-y-2">
             {nameOptions.map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setSelectedName(key)}
-                className="w-full px-4 py-3 rounded-xl border border-ink/10 hover:border-primary/30 hover:bg-surface-sage/50 transition-all text-left font-body text-ink font-medium"
+                className="w-full px-4 py-3 rounded-xl border border-ink/10 hover:border-primary/30 hover:bg-surface-sage/50 transition-all text-start font-body text-ink font-medium"
               >
                 <span className="flex items-center gap-3">
                   <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">
@@ -197,7 +197,7 @@ export function WhatsAppDemo() {
   }
 
   return (
-    <div className="w-full max-w-sm bg-canvas rounded-2xl border border-ink/10 shadow-lg overflow-hidden flex flex-col">
+    <div className="w-full max-w-sm bg-canvas rounded-2xl border border-ink/10 shadow-lg overflow-hidden flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* WhatsApp header */}
       <div className="bg-primary px-4 py-3 flex items-center gap-3 shrink-0">
         <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">

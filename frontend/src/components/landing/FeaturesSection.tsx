@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { FeatureCard } from './FeatureCard';
 import { CheckCircle, BarChart3, MessageCircle, Send, PieChart, Users } from 'lucide-react';
 
@@ -15,9 +15,10 @@ const featureKeys = [
 
 export function FeaturesSection() {
   const t = useTranslations('landing.features');
+  const locale = useLocale();
 
   return (
-    <section id="features" className="py-20 scroll-mt-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="features" className="py-20 scroll-mt-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <div className="text-center mb-16">
         <h2 className="text-3xl sm:text-4xl font-bold text-ink font-display mb-4">
           {t('title')}

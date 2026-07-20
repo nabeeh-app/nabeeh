@@ -31,6 +31,7 @@ export function LandingNav() {
 
   return (
     <nav
+      dir={locale === 'ar' ? 'rtl' : 'ltr'}
       className={cn(
         'fixed inset-x-0 top-0 z-50 transition-all duration-300',
         scrolled

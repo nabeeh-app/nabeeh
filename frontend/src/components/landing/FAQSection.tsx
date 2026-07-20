@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import {
   Accordion,
   AccordionContent,
@@ -13,9 +13,10 @@ const faqKeys = ['what', 'whatsapp', 'pricing', 'setup', 'data', 'support'] as c
 export function FAQSection() {
   const t = useTranslations('landing.faq');
   const tQ = useTranslations('landing.faq.questions');
+  const locale = useLocale();
 
   return (
-    <section id="faq" className="py-20 bg-surface-sage/50 scroll-mt-24">
+    <section id="faq" className="py-20 bg-surface-sage/50 scroll-mt-24" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-ink font-display mb-4">
@@ -31,7 +32,7 @@ export function FAQSection() {
               value={key}
               className="bg-canvas border border-ink/10 rounded-xl px-4 overflow-hidden data-[state=open]:shadow-sm data-[state=open]:bg-surface-sage/30"
             >
-              <AccordionTrigger className="faq-question text-left text-ink font-display font-semibold py-4 hover:no-underline [&[data-state=open]]:text-primary">
+              <AccordionTrigger className="faq-question text-start text-ink font-display font-semibold py-4 hover:no-underline [&[data-state=open]]:text-primary">
                 {tQ(`${key}.question`)}
               </AccordionTrigger>
               <AccordionContent className="text-sm text-ink/70 font-body leading-relaxed pb-4">

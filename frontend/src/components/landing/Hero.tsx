@@ -14,7 +14,7 @@ export function Hero() {
     <section className={cn('relative pt-24 pb-16 lg:pt-32 lg:pb-24 overflow-hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8')}>
       <div className={cn('grid lg:grid-cols-2 gap-12 lg:gap-16 items-center')}>
         {/* Left — Headline + CTAs */}
-        <div className={cn('space-y-8', 'lg:text-end')}>
+        <div className={cn('space-y-8', 'lg:text-end')} dir={locale === 'ar' ? 'rtl' : 'ltr'}>
           <h1 className="hero-title text-4xl sm:text-5xl lg:text-6xl font-bold text-ink font-display leading-tight tracking-tight">
             {t('title')}
           </h1>
