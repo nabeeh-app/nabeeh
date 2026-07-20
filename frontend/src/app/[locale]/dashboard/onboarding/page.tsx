@@ -93,7 +93,7 @@ export default function OnboardingPage() {
           {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
             <div key={i} className="flex items-center gap-3">
               <div
-                className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold font-mono uppercase transition-all duration-300 ${
+                className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold font-body uppercase transition-all duration-300 ${
                   i < step
                     ? 'bg-primary text-primary-foreground'
                     : i === step

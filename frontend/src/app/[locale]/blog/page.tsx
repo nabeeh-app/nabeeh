@@ -45,7 +45,7 @@ export default async function BlogIndex({ params }: Props) {
       {/* Hero Band */}
       <section className="bg-ink text-canvas">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
-          <nav className="text-sm text-canvas/40 mb-8 font-mono uppercase tracking-wider">
+          <nav className="text-sm text-canvas/40 mb-8 font-body uppercase tracking-wider">
             <Link href={`/${locale}`} className="hover:text-canvas transition-colors">
               {isAr ? 'الرئيسية' : 'Home'}
             </Link>
@@ -53,7 +53,7 @@ export default async function BlogIndex({ params }: Props) {
             <span className="text-canvas/70">{isAr ? 'المدونة' : 'Blog'}</span>
           </nav>
 
-          <p className="font-mono text-sm uppercase tracking-wider text-accent mb-4">
+          <p className="font-body text-sm uppercase tracking-wider text-accent mb-4">
             {isAr ? 'المدونة' : 'BLOG'}
           </p>
           <h1 className="text-4xl sm:text-5xl font-bold text-canvas font-display mb-4 leading-tight">
@@ -74,15 +74,15 @@ export default async function BlogIndex({ params }: Props) {
             <Link href={`/${locale}/blog/${featured.slug}`} className="group block">
               <div className="bg-surface-sage border border-ink/5 rounded-xl p-8 lg:p-10 hover:border-ink/10 transition-colors">
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="font-mono text-xs uppercase tracking-wider text-primary">
+                  <span className="font-body text-xs uppercase tracking-wider text-primary">
                     {isAr ? 'مقال مميز' : 'Featured'}
                   </span>
                   <span className="text-ink/20">·</span>
-                  <time className="font-mono text-xs uppercase tracking-wider text-ink/40">
+                  <time className="font-body text-xs uppercase tracking-wider text-ink/40">
                     {featured.date}
                   </time>
                   <span className="text-ink/20">·</span>
-                  <span className="inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink/40">
+                  <span className="inline-flex items-center gap-1 font-body text-xs uppercase tracking-wider text-ink/40">
                     <Clock className="w-3 h-3" />
                     {estimateReadingTime(isAr ? featured.ar.content : featured.en.content)} min
                   </span>
@@ -110,11 +110,11 @@ export default async function BlogIndex({ params }: Props) {
               className="group bg-surface-cool border border-ink/5 rounded-xl p-6 hover:border-ink/10 transition-colors"
             >
               <div className="flex items-center gap-3 mb-3">
-                <time className="font-mono text-xs uppercase tracking-wider text-ink/40">
+                <time className="font-body text-xs uppercase tracking-wider text-ink/40">
                   {post.date}
                 </time>
                 <span className="text-ink/20">·</span>
-                <span className="inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink/40">
+                <span className="inline-flex items-center gap-1 font-body text-xs uppercase tracking-wider text-ink/40">
                   <Clock className="w-3 h-3" />
                   {estimateReadingTime(isAr ? post.ar.content : post.en.content)} min
                 </span>

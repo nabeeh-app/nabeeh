@@ -187,7 +187,7 @@ export default function SystemMonitorPage() {
             </div>
             {systemInfo?.lastChecked && (
               <div className="text-right">
-                <p className="text-xs text-ink/40 font-mono uppercase tracking-wider">{t('lastChecked')}</p>
+                <p className="text-xs text-ink/40 font-body uppercase tracking-wider">{t('lastChecked')}</p>
                 <p className="text-sm font-mono text-ink/60">{formatTimeDisplay(systemInfo.lastChecked)}</p>
               </div>
             )}

@@ -42,7 +42,7 @@ export function FilterBar({
           )}
         </div>
         {resultCount !== undefined && totalCount !== undefined && resultCount !== totalCount && (
-          <p className="text-sm text-ink/60 mt-2 font-mono uppercase tracking-wider">
+          <p className="text-sm text-ink/60 mt-2 font-body uppercase tracking-wider">
             {resultLabel}
           </p>
         )}

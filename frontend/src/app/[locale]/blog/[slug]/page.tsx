@@ -58,7 +58,7 @@ export default async function BlogPost({ params }: Props) {
       {/* Hero Band */}
       <section className="bg-ink text-canvas">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-          <nav className="text-sm text-canvas/40 mb-8 font-mono uppercase tracking-wider">
+          <nav className="text-sm text-canvas/40 mb-8 font-body uppercase tracking-wider">
             <Link href={`/${locale}`} className="hover:text-canvas transition-colors">
               {isAr ? 'الرئيسية' : 'Home'}
             </Link>
@@ -71,11 +71,11 @@ export default async function BlogPost({ params }: Props) {
           </nav>
 
           <div className="flex items-center gap-3 mb-4">
-            <time className="font-mono text-xs uppercase tracking-wider text-canvas/50">
+            <time className="font-body text-xs uppercase tracking-wider text-canvas/50">
               {post.date}
             </time>
             <span className="text-canvas/20">·</span>
-            <span className="inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-canvas/50">
+            <span className="inline-flex items-center gap-1 font-body text-xs uppercase tracking-wider text-canvas/50">
               <Clock className="w-3 h-3" />
               {readingTime} {isAr ? 'دقيقة قراءة' : 'min read'}
             </span>
@@ -120,7 +120,7 @@ export default async function BlogPost({ params }: Props) {
         {/* Related Posts */}
         {related.length > 0 && (
           <section className="mt-16 pt-8 border-t border-ink/10">
-            <p className="font-mono text-sm uppercase tracking-wider text-ink/40 mb-3">
+            <p className="font-body text-sm uppercase tracking-wider text-ink/40 mb-3">
               {isAr ? 'مقالات ذات صلة' : 'RELATED POSTS'}
             </p>
             <h2 className="text-2xl font-bold text-ink font-display mb-8">
@@ -135,7 +135,7 @@ export default async function BlogPost({ params }: Props) {
                     href={`/${locale}/blog/${r.slug}`}
                     className="group bg-surface-sage border border-ink/5 rounded-xl p-6 hover:border-ink/10 transition-colors"
                   >
-                    <time className="font-mono text-xs uppercase tracking-wider text-ink/40">
+                    <time className="font-body text-xs uppercase tracking-wider text-ink/40">
                       {r.date}
                     </time>
                     <h3 className="text-lg font-bold text-ink font-display mt-2 mb-2 group-hover:text-primary transition-colors leading-snug">

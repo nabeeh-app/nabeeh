@@ -232,7 +232,7 @@ export default function ReportsPage() {
                     <div className="text-2xl font-bold text-ink font-display">
                       {attendanceSummary.present_count}
                     </div>
-                    <div className="text-xs text-ink/60 font-mono uppercase tracking-wider">
+                    <div className="text-xs text-ink/60 font-body uppercase tracking-wider">
                       {tAttendance('summary.present')}
                     </div>
                   </div>
@@ -240,7 +240,7 @@ export default function ReportsPage() {
                     <div className="text-2xl font-bold text-ink font-display">
                       {attendanceSummary.absent_count}
                     </div>
-                    <div className="text-xs text-ink/60 font-mono uppercase tracking-wider">
+                    <div className="text-xs text-ink/60 font-body uppercase tracking-wider">
                       {tAttendance('summary.absent')}
                     </div>
                   </div>
@@ -248,7 +248,7 @@ export default function ReportsPage() {
                     <div className="text-2xl font-bold text-ink font-display">
                       {attendanceSummary.late_count}
                     </div>
-                    <div className="text-xs text-ink/60 font-mono uppercase tracking-wider">
+                    <div className="text-xs text-ink/60 font-body uppercase tracking-wider">
                       {tAttendance('summary.late')}
                     </div>
                   </div>
@@ -256,7 +256,7 @@ export default function ReportsPage() {
                     <div className="text-2xl font-bold text-ink font-display">
                       {attendanceSummary.excused_count}
                     </div>
-                    <div className="text-xs text-ink/60 font-mono uppercase tracking-wider">
+                    <div className="text-xs text-ink/60 font-body uppercase tracking-wider">
                       {tAttendance('summary.excused')}
                     </div>
                   </div>
@@ -290,7 +290,7 @@ export default function ReportsPage() {
                     <div className="text-2xl font-bold text-ink font-display">
                       {messageStats.total_messages}
                     </div>
-                    <div className="text-xs text-ink/60 font-mono uppercase tracking-wider">
+                    <div className="text-xs text-ink/60 font-body uppercase tracking-wider">
                       {tReportsStatus('total')}
                     </div>
                   </div>
@@ -298,7 +298,7 @@ export default function ReportsPage() {
                     <div className="text-2xl font-bold text-ink font-display">
                       {messageStats.incoming_messages}
                     </div>
-                    <div className="text-xs text-ink/60 font-mono uppercase tracking-wider">
+                    <div className="text-xs text-ink/60 font-body uppercase tracking-wider">
                       {tMessages('received')}
                     </div>
                   </div>
@@ -306,7 +306,7 @@ export default function ReportsPage() {
                     <div className="text-2xl font-bold text-ink font-display">
                       {messageStats.outgoing_messages}
                     </div>
-                    <div className="text-xs text-ink/60 font-mono uppercase tracking-wider">
+                    <div className="text-xs text-ink/60 font-body uppercase tracking-wider">
                       {tMessages('sent')}
                     </div>
                   </div>
@@ -314,7 +314,7 @@ export default function ReportsPage() {
                     <div className="text-2xl font-bold text-ink font-display">
                       {messageStats.automated_messages}
                     </div>
-                    <div className="text-xs text-ink/60 font-mono uppercase tracking-wider">
+                    <div className="text-xs text-ink/60 font-body uppercase tracking-wider">
                       {tReportsStatus('automated')}
                     </div>
                   </div>

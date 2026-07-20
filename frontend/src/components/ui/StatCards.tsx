@@ -40,7 +40,7 @@ export function StatCards({ stats }: StatCardsProps) {
               <stat.icon className={`h-8 w-8 ${textMap[color]}`} />
               <div>
                 <p className="text-2xl font-bold font-display">{stat.value}</p>
-                <p className="text-sm text-ink/60 font-mono uppercase tracking-wider">{stat.label}</p>
+                <p className="text-sm text-ink/60 font-body uppercase tracking-wider">{stat.label}</p>
               </div>
             </div>
           </div>

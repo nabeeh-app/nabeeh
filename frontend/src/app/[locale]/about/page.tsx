@@ -124,7 +124,7 @@ export default async function AboutPage({ params }: Props) {
       {/* Hero Band — deep teal */}
       <section className="bg-ink text-canvas">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
-          <nav className="text-sm text-canvas/40 mb-8 font-mono uppercase tracking-wider">
+          <nav className="text-sm text-canvas/40 mb-8 font-body uppercase tracking-wider">
             <Link href={`/${locale}`} className="hover:text-canvas transition-colors">
               {c.home}
             </Link>
@@ -132,7 +132,7 @@ export default async function AboutPage({ params }: Props) {
             <span className="text-canvas/70">{c.about}</span>
           </nav>
 
-          <p className="font-mono text-sm uppercase tracking-wider text-accent mb-4">
+          <p className="font-body text-sm uppercase tracking-wider text-accent mb-4">
             {c.heroLabel}
           </p>
           <h1 className="text-4xl sm:text-5xl font-bold text-canvas font-display mb-6 leading-tight">
@@ -207,7 +207,7 @@ export default async function AboutPage({ params }: Props) {
 
         {/* Technology */}
         <section className="pb-16 lg:pb-20">
-          <p className="font-mono text-sm uppercase tracking-wider text-ink/40 mb-3">
+          <p className="font-body text-sm uppercase tracking-wider text-ink/40 mb-3">
             {c.techLabel}
           </p>
           <h2 className="text-2xl font-bold text-ink font-display mb-4">

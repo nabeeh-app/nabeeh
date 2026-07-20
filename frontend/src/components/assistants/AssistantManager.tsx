@@ -146,7 +146,7 @@ export function AssistantManager() {
                   className="flex items-center justify-between p-4 rounded-lg border border-border bg-canvas"
                 >
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-surface-sage flex items-center justify-center text-ink font-mono uppercase tracking-wider text-sm shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-surface-sage flex items-center justify-center text-ink font-body uppercase tracking-wider text-sm shrink-0">
                       {assistant.name?.charAt(0) || '?'}
                     </div>
                     <div className="min-w-0">
@@ -156,7 +156,7 @@ export function AssistantManager() {
                         <Badge variant={getStatusVariant(assistant.status) as 'success' | 'warning' | 'secondary' | 'outline'}>
                           {t(`status.${assistant.status}`)}
                         </Badge>
-                        <span className="text-xs text-ink/40 font-mono">
+                        <span className="text-xs text-ink/40 font-body">
                           {getActivePermissionsCount(assistant.permissions)} {t('permissionsLabel')}
                         </span>
                       </div>

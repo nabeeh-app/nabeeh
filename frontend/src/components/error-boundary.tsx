@@ -101,7 +101,7 @@ class ErrorBoundary extends Component<Props, State> {
             <CardContent className="space-y-4">
               {process.env.NODE_ENV === 'development' && this.state.error && (
                 <div className="rounded-md bg-destructive/10 p-3">
-                  <h4 className="text-sm font-medium text-destructive mb-2 font-mono uppercase tracking-wider">{texts.errorDetailsLabel}</h4>
+                  <h4 className="text-sm font-medium text-destructive mb-2 font-body uppercase tracking-wider">{texts.errorDetailsLabel}</h4>
                   <pre className="text-xs text-destructive overflow-auto max-h-32 font-mono">
                     {this.state.error.message}
                     {this.state.errorInfo?.componentStack}

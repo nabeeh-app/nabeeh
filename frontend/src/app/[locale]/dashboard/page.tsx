@@ -80,7 +80,7 @@ export default function DashboardPage() {
             </h1>
             <p className="mt-2 text-lg text-ink/60 font-body uppercase tracking-wider">
               {t('welcome')}, {teacher?.name}{' '}
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-pill text-xs font-medium font-mono uppercase tracking-wider ${teacher?.role === 'admin' ? 'bg-surface-sage text-ink' :
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-pill text-xs font-medium font-body uppercase tracking-wider ${teacher?.role === 'admin' ? 'bg-surface-sage text-ink' :
                 teacher?.role === 'teacher' ? 'bg-primary/10 text-primary' :
                   'bg-accent text-ink'
                 }`}>

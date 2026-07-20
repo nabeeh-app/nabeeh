@@ -19,7 +19,7 @@ export default async function SchedulePage({ params }: Props) {
       </div>
       <div className="flex min-h-[40vh] items-center justify-center">
         <div className="text-center space-y-3 max-w-md">
-          <p className="text-xs font-semibold uppercase tracking-widest text-ink/40 font-mono">
+          <p className="text-xs font-semibold uppercase tracking-widest text-ink/40 font-body">
             {t('title')}
           </p>
           <p className="text-sm text-ink/50 font-body">{t('description')}</p>

@@ -210,7 +210,7 @@ export default function RegisterPage(_props: Props) {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="flex items-center gap-2 font-mono uppercase tracking-wider">
+                  <Label htmlFor="name" className="flex items-center gap-2 font-body uppercase tracking-wider">
                     <User className="h-4 w-4" />
                     {t('fullName')}
                   </Label>
@@ -227,7 +227,7 @@ export default function RegisterPage(_props: Props) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="flex items-center gap-2 font-mono uppercase tracking-wider">
+                  <Label htmlFor="email" className="flex items-center gap-2 font-body uppercase tracking-wider">
                     <Mail className="h-4 w-4" />
                     {t('emailAddress')}
                   </Label>
@@ -245,7 +245,7 @@ export default function RegisterPage(_props: Props) {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="flex items-center gap-2 font-mono uppercase tracking-wider">
+                  <Label htmlFor="phone" className="flex items-center gap-2 font-body uppercase tracking-wider">
                     <Phone className="h-4 w-4" />
                     {t('phoneNumber')}
                   </Label>
@@ -257,13 +257,13 @@ export default function RegisterPage(_props: Props) {
                     className={errors.phone ? 'border-destructive' : ''}
                   />
                   {errors.phone && <p className="text-base text-destructive">{errors.phone}</p>}
-                  <p className="text-xs text-ink/60 font-mono uppercase tracking-wider">
+                  <p className="text-xs text-ink/60 font-body uppercase tracking-wider">
                     {t('phoneHint')}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="whatsapp_number" className="flex items-center gap-2 font-mono uppercase tracking-wider">
+                  <Label htmlFor="whatsapp_number" className="flex items-center gap-2 font-body uppercase tracking-wider">
                     <Phone className="h-4 w-4" />
                     {t('whatsappNumber')}
                   </Label>
@@ -280,7 +280,7 @@ export default function RegisterPage(_props: Props) {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="font-mono uppercase tracking-wider">
+                  <Label htmlFor="password" className="font-body uppercase tracking-wider">
                     {t('password')} *
                   </Label>
                   <div className="relative">
@@ -307,7 +307,7 @@ export default function RegisterPage(_props: Props) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="font-mono uppercase tracking-wider">
+                  <Label htmlFor="confirmPassword" className="font-body uppercase tracking-wider">
                     {t('confirmPassword')} *
                   </Label>
                   <div className="relative">
@@ -342,7 +342,7 @@ export default function RegisterPage(_props: Props) {
                 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="business_name" className="flex items-center gap-2 font-mono uppercase tracking-wider">
+                    <Label htmlFor="business_name" className="flex items-center gap-2 font-body uppercase tracking-wider">
                       <Building className="h-4 w-4" />
                       {t('institutionName')}
                     </Label>
@@ -355,7 +355,7 @@ export default function RegisterPage(_props: Props) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="subjects" className="flex items-center gap-2 font-mono uppercase tracking-wider">
+                    <Label htmlFor="subjects" className="flex items-center gap-2 font-body uppercase tracking-wider">
                       <BookOpen className="h-4 w-4" />
                       {t('subjectsYouTeach')}
                     </Label>
@@ -365,9 +365,9 @@ export default function RegisterPage(_props: Props) {
                       onChange={(e) => handleInputChange('subjects', e.target.value)}
                       placeholder={t('subjectsPlaceholder')}
                     />
-                    <p className="text-xs text-ink/60 font-mono uppercase tracking-wider">
-                      {t('subjectsHint')}
-                    </p>
+                  <p className="text-xs text-ink/60 font-body uppercase tracking-wider">
+                    {t('subjectsHint')}
+                  </p>
                   </div>
                 </div>
               </div>

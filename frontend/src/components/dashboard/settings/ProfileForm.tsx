@@ -63,7 +63,7 @@ export default function ProfileForm({
               <Upload className="h-4 w-4" />
               {t('uploadPhoto')}
             </Button>
-            <p className="text-xs text-ink/60 font-mono uppercase tracking-wider">
+            <p className="text-xs text-ink/60 font-body uppercase tracking-wider">
               {t('photoHint')}
             </p>
           </div>
@@ -159,7 +159,7 @@ export default function ProfileForm({
               className={errors.whatsapp_number ? 'border-destructive' : ''}
             />
             {errors.whatsapp_number && <p className="text-sm text-destructive">{errors.whatsapp_number}</p>}
-            <p className="text-xs text-ink/60 font-mono uppercase tracking-wider">
+            <p className="text-xs text-ink/60 font-body uppercase tracking-wider">
               {t('whatsappHint')}
             </p>
           </div>
