@@ -60,31 +60,6 @@ services:
     networks:
       - nabeeh-network
 
-  admin:
-    build:
-      context: ./admin
-      dockerfile: Dockerfile
-    container_name: nabeeh-admin
-    ports:
-      - "3001:3001"
-    environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://backend:5000/api}
-    depends_on:
-      backend:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    networks:
-      - nabeeh-network
-
   # OWASP ZAP - Full Scan
   zap-full:
     image: ghcr.io/zaproxy/zaproxy:stable
@@ -162,33 +137,6 @@ services:
         -T 60
     depends_on:
       frontend:
-        condition: service_healthy
-    environment:
-      - ZAP_PORT=8080
-    networks:
-      - nabeeh-network
-
-  # OWASP ZAP - Admin Baseline Scan
-  zap-admin:
-    image: ghcr.io/zaproxy/zaproxy:stable
-    container_name: nabeeh-zap-admin
-    ports:
-      - "8093:8090"
-    volumes:
-      - ./zap:/zap/wrk/:rw
-      - zap_reports:/zap/wrk/reports:rw
-    command: >
-      zap-baseline.py
-        -t http://admin:3001
-        -r zap-admin-report.html
-        -J zap-admin-report.json
-        -x zap-admin-report.xml
-        -d
-        -I
-        -m 10
-        -T 60
-    depends_on:
-      admin:
         condition: service_healthy
     environment:
       - ZAP_PORT=8080
