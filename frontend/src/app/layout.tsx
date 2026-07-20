@@ -86,6 +86,9 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{
+          __html: `(function(){var p=location.pathname;if(p.startsWith('/ar')){document.documentElement.dir='rtl';document.documentElement.lang='ar';}else{document.documentElement.dir='ltr';document.documentElement.lang='en';}})()`
+        }} />
         <link rel="preload" href="/fonts/thmanyahsans-Black.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <link rel="preload" href="/fonts/thmanyahsans-Medium.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <link rel="preload" href="/fonts/thmanyahsans-Regular.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
