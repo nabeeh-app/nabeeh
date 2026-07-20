@@ -12,10 +12,19 @@
     "dev:frontend:mock": "cd frontend && NEXT_PUBLIC_USE_MOCK=true npm run dev",
     "start": "concurrently -n backend,frontend -c blue,green \"cd backend && node server.js\" \"cd frontend && npm start\"",
     "start:mock": "concurrently -n backend,frontend -c blue,green \"cd backend && USE_MOCK_DB=true node server.js\" \"cd frontend && NEXT_PUBLIC_USE_MOCK=true npm run build && npm start\"",
-    "stop": "node scripts/stop-services.js"
+    "test": "cd backend && npm test && cd ../frontend && npm test",
+    "lint": "cd backend && npm run lint && cd ../frontend && npm run lint",
+    "stop": "node scripts/stop-services.js",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "backend/**/*.js": ["cd backend && npm run lint -- --no-warn-ignored", "cd backend && npm test -- --bail --findRelatedTests --passWithNoTests"],
+    "frontend/**/*.{ts,tsx}": ["cd frontend && npm run lint", "cd frontend && npm test -- --bail --run --passWithNoTests"]
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.1.0",
     "shadcn": "^4.11.0"
   },
   "dependencies": {
