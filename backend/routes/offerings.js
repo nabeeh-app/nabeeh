@@ -62,14 +62,29 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
             created_at,
             subject:subjects(id, name_en, name_ar, code),
             grade_level:grade_levels(id, name, order),
-            groups:groups(id, name, max_capacity, schedule_description)
+            groups:groups(
+                id, name, max_capacity, schedule_description,
+                enrollments:enrollments(count)
+            )
         `)
         .eq('teacher_id', req.user.id)
         .eq('is_active', true)
         .order('grade_level(order)');
 
     if (error) throw error;
-    res.json({ success: true, data: offerings });
+
+    const data = offerings.map(o => ({
+        ...o,
+        groups: o.groups.map(g => ({
+            id: g.id,
+            name: g.name,
+            max_capacity: g.max_capacity,
+            schedule_description: g.schedule_description,
+            student_count: g.enrollments?.[0]?.count ?? 0
+        }))
+    }));
+
+    res.json({ success: true, data });
 }));
 
 /**

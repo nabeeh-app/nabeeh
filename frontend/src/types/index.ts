@@ -261,6 +261,7 @@ export interface OfferingGroup {
   id: string;
   name: string;
   schedule_description: string | null;
+  student_count?: number;
 }
 
 export interface Offering {

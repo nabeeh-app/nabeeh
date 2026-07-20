@@ -3,6 +3,7 @@
 import { useTranslations, useLocale } from 'next-intl';
 import { useAuth, usePermissions } from '@/hooks/useAuth';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
+import { Link } from '@/i18n/routing';
 import { Users, BarChart3, FileText, MessageSquare, GraduationCap, User, Users2, Zap, ClipboardList, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { getVisibleNavigation } from '@/config/navigation';
@@ -202,7 +203,7 @@ function NavigationCard({
 }) {
   const Icon = icon;
   return (
-    <a
+    <Link
       href={href}
       className="block bg-canvas rounded-md shadow-[0_1px_3px_rgba(8,61,68,0.06)] hover:shadow-[0_2px_8px_rgba(8,61,68,0.1)] transition-shadow duration-200"
     >
@@ -221,6 +222,6 @@ function NavigationCard({
           </div>
         </div>
       </div>
-    </a>
+    </Link>
   );
 }

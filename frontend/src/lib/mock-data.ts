@@ -36,7 +36,7 @@ export const mockTeacher: Teacher = {
   logo_url: null,
   bio: 'مدرس رياضيات وفيزياء للمرحلة الثانوية',
   subjects: ['Mathematics', 'Physics'],
-  address: 'شارع金字塔، المعادي',
+  address: 'شارع الأهرام، المعادي',
   city: 'القاهرة',
   country: 'مصر',
   timezone: 'Africa/Cairo',
@@ -61,8 +61,8 @@ export const mockOfferings: Offering[] = [
     subject: { name_en: 'Mathematics', name_ar: 'الرياضيات', code: 'MATH' },
     grade_level: { name: '1st Secondary', order: 1 },
     groups: [
-      { id: GROUP_A_ID, name: 'المجموعة أ', schedule_description: 'السبت والأحد 10:00-12:00' },
-      { id: GROUP_B_ID, name: 'المجموعة ب', schedule_description: 'السبت والأحد 1:00-3:00' },
+      { id: GROUP_A_ID, name: 'المجموعة أ', schedule_description: 'السبت والأحد 10:00-12:00', student_count: 12 },
+      { id: GROUP_B_ID, name: 'المجموعة ب', schedule_description: 'السبت والأحد 1:00-3:00', student_count: 8 },
     ],
   },
   {
@@ -72,7 +72,7 @@ export const mockOfferings: Offering[] = [
     subject: { name_en: 'Physics', name_ar: 'الفيزياء', code: 'PHYS' },
     grade_level: { name: '2nd Secondary', order: 2 },
     groups: [
-      { id: GROUP_C_ID, name: 'المجموعة أ', schedule_description: 'الاثنين والأربعاء 4:00-6:00' },
+      { id: GROUP_C_ID, name: 'المجموعة أ', schedule_description: 'الاثنين والأربعاء 4:00-6:00', student_count: 15 },
     ],
   },
   {
@@ -82,7 +82,7 @@ export const mockOfferings: Offering[] = [
     subject: { name_en: 'Arabic', name_ar: 'اللغة العربية', code: 'ARAB' },
     grade_level: { name: '3rd Secondary', order: 3 },
     groups: [
-      { id: '660e8400-e29b-41d4-a716-446655440013', name: 'المجموعة أ', schedule_description: 'الثلاثاء والخميس 2:00-4:00' },
+      { id: '660e8400-e29b-41d4-a716-446655440013', name: 'المجموعة أ', schedule_description: 'الثلاثاء والخميس 2:00-4:00', student_count: 10 },
     ],
   },
 ];
@@ -396,7 +396,7 @@ export const mockConversations: Conversation[] = [
 
 export const mockMessages: Message[] = [
   { id: 'msg-01', conversation_id: CONVERSATION_IDS[0], sender_phone: '+201098765432', sender_name: 'محمد علي', content: 'السلام عليكم، كيف حال أحمد في الفصل؟', message_type: 'text', is_from_parent: true, ai_response_confidence: null, created_at: daysAgo(5) },
-  { id: 'msg-02', conversation_id: CONVERSATION_IDS[0], sender_phone: '+201012345678', sender_name: 'أحمد حسن', content: 'وعليكم السلام، أحمد ممتاز و积极参与 في الحصص', message_type: 'text', is_from_parent: false, ai_response_confidence: null, created_at: daysAgo(5) },
+  { id: 'msg-02', conversation_id: CONVERSATION_IDS[0], sender_phone: '+201012345678', sender_name: 'أحمد حسن', content: 'وعليكم السلام، أحمد ممتاز ويشارك بنشاط في الحصص', message_type: 'text', is_from_parent: false, ai_response_confidence: null, created_at: daysAgo(5) },
   { id: 'msg-03', conversation_id: CONVERSATION_IDS[0], sender_phone: '+201098765432', sender_name: 'محمد علي', content: 'هل هناك أي مشاكل يجب أن أعرفها؟', message_type: 'text', is_from_parent: true, ai_response_confidence: null, created_at: daysAgo(4) },
   { id: 'msg-04', conversation_id: CONVERSATION_IDS[0], sender_phone: '+201012345678', sender_name: 'أحمد حسن', content: 'لا، كل شيء على ما يرام. أحمد يحصل على درجات جيدة في الاختبارات الأخيرة.', message_type: 'text', is_from_parent: false, ai_response_confidence: null, created_at: daysAgo(4) },
   { id: 'msg-05', conversation_id: CONVERSATION_IDS[0], sender_phone: '+201098765432', sender_name: 'محمد علي', content: 'ممتاز، شكراً على المتابعة', message_type: 'text', is_from_parent: true, ai_response_confidence: null, created_at: daysAgo(3) },
@@ -405,7 +405,7 @@ export const mockMessages: Message[] = [
   { id: 'msg-08', conversation_id: CONVERSATION_IDS[0], sender_phone: '+201012345678', sender_name: 'أحمد حسن', content: 'بالتأكيد، سأرسله لك الآن', message_type: 'text', is_from_parent: false, ai_response_confidence: null, created_at: daysAgo(1) },
   { id: 'msg-09', conversation_id: CONVERSATION_IDS[1], sender_phone: '+201087654321', sender_name: 'أحمد فاطمة', content: 'مرحباً، أريد أن أسأل عن تقدم فاطمة', message_type: 'text', is_from_parent: true, ai_response_confidence: null, created_at: daysAgo(3) },
   { id: 'msg-10', conversation_id: CONVERSATION_IDS[1], sender_phone: '+201012345678', sender_name: 'أحمد حسن', content: 'فاطمة متفوقة، حصلت على أعلى درجة في اختبار الرياضيات الأخير', message_type: 'text', is_from_parent: false, ai_response_confidence: null, created_at: daysAgo(3) },
-  { id: 'msg-11', conversation_id: CONVERSATION_IDS[1], sender_phone: '+201087654321', sender_name: 'أحمد فاطمة', content: 'الحمد لله، هل هناك واجبات إضافية يمكنها làmها؟', message_type: 'text', is_from_parent: true, ai_response_confidence: null, created_at: daysAgo(2) },
+  { id: 'msg-11', conversation_id: CONVERSATION_IDS[1], sender_phone: '+201087654321', sender_name: 'أحمد فاطمة', content: 'الحمد لله، هل هناك واجبات إضافية يمكنها القيام بها؟', message_type: 'text', is_from_parent: true, ai_response_confidence: null, created_at: daysAgo(2) },
   { id: 'msg-12', conversation_id: CONVERSATION_IDS[1], sender_phone: '+201012345678', sender_name: 'أحمد حسن', content: 'نعم، سأرسل لها مجموعات إضافية للتدريب', message_type: 'text', is_from_parent: false, ai_response_confidence: null, created_at: daysAgo(2) },
   { id: 'msg-13', conversation_id: CONVERSATION_IDS[1], sender_phone: '+201087654321', sender_name: 'أحمد فاطمة', content: 'هل هناك واجبات إضافية؟', message_type: 'text', is_from_parent: true, ai_response_confidence: null, created_at: daysAgo(1) },
   { id: 'msg-14', conversation_id: CONVERSATION_IDS[2], sender_phone: '+201054321098', sender_name: 'إبراهيم يوسف', content: 'مرحباً، يوسف يحتاج مساعدة في الفيزياء', message_type: 'text', is_from_parent: true, ai_response_confidence: null, created_at: daysAgo(5) },

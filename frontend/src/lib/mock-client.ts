@@ -398,6 +398,86 @@ class MockApiClient extends ApiClient {
   async deleteParent(_id: string): Promise<void> {
     await delay();
   }
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  // Mock — Import/Export
+  async previewImport(_file: File): Promise<any> { await delay(); return { fileName: 'mock.csv', totalRows: 0, headers: [], autoMapping: {}, unmappedColumns: [], preview: [] }; }
+  async validateImport(_file: File, _mapping: Record<string, string>, _requiredFields?: string[]): Promise<any> { await delay(); return { fieldMapping: {}, rows: [], stats: { total: 0, ready: 0, warning: 0, error: 0 } }; }
+  async executeImport(_data: { fieldMapping: Record<string, string>; rows: { data: Record<string, string>; status: string }[]; groupId: string; skipErrors?: boolean }): Promise<any> { await delay(); return { imported: 0, skipped: 0, errors: [] }; }
+  async parsePastedData(_text: string): Promise<any> { await delay(); return { headers: [], autoMapping: {}, unmappedColumns: [], totalRows: 0, preview: [], allRows: [] }; }
+
+  // Mock — Self-registration
+  async generateRegistrationLink(_groupId: string, _expiresInHours?: number): Promise<any> { await delay(); return { url: 'https://nabeeh.app/register/xyz', token: 'mock-token', expiresAt: new Date().toISOString(), groupName: 'Group A', subject: 'Math' }; }
+  async getRegistrationForm(_token: string): Promise<any> { await delay(); return { groupName: 'Group A', teacherName: 'Ahmed', fields: ['name', 'phone'] }; }
+  async submitRegistration(_token: string, _data: { name: string; phone?: string; parent_phone?: string }): Promise<any> { await delay(); return { studentId: 'new-student', studentCode: 'ST999' }; }
+
+  // Mock — Demo data
+  async seedDemoData(): Promise<any> { await delay(); return { success: true, message: 'Demo data seeded' }; }
+  async removeDemoData(): Promise<any> { await delay(); return { success: true, message: 'Demo data removed' }; }
+
+  // Mock — WhatsApp
+  async requestWhatsAppPairingCode(_phone: string): Promise<any> { await delay(); return { code: '123456', phone: _phone }; }
+  async getWhatsAppStatus(): Promise<any> { await delay(); return { status: 'disconnected', qr: null, phone: null, pairingCodeMode: false }; }
+  async logoutWhatsApp(): Promise<void> { await delay(); }
+
+  // Mock — Offerings & Groups
+  async getOffering(_id: string): Promise<any> { await delay(); return mockOfferings[0]; }
+  async deleteOffering(_id: string): Promise<void> { await delay(); }
+  async updateGroup(_offeringId: string, _groupId: string, _data: any): Promise<any> { await delay(); return { id: _groupId, name: _data?.name || 'Updated Group', schedule_description: _data?.schedule_description || null }; }
+  async enrollStudent(_offeringId: string, _groupId: string, _studentId: string): Promise<void> { await delay(); }
+  async unenrollStudent(_offeringId: string, _groupId: string, _studentId: string): Promise<void> { await delay(); }
+
+  // Mock — Assistants
+  async getAssistants(): Promise<any> { await delay(); return []; }
+  async inviteAssistant(_email: string, _permissions?: Record<string, boolean>): Promise<any> { await delay(); return { id: 'invite-1', email: _email, expires_at: new Date().toISOString() }; }
+  async inviteAssistantDual(_params: { email?: string; phone?: string; deliveryMethod: string; permissions?: Record<string, boolean> }): Promise<any> { await delay(); return { id: 'invite-2', email: _params.email || '', phone: _params.phone || '', expires_at: new Date().toISOString() }; }
+  async getInviteByToken(_token: string): Promise<any> { await delay(); return { id: 'invite-1', teacherName: 'Ahmed', permissions: {}, expires_at: new Date().toISOString() }; }
+  async acceptInvite(_token: string): Promise<any> { await delay(); return { assistantId: 'assistant-1' }; }
+  async listPendingInvites(): Promise<any> { await delay(); return []; }
+  async updateAssistantPermissions(_id: string, _permissions: Record<string, boolean>): Promise<any> { await delay(); return { id: _id, permissions: _permissions }; }
+  async updateAssistantStatus(_id: string, _status: string): Promise<any> { await delay(); return { id: _id, status: _status }; }
+  async removeAssistant(_id: string): Promise<void> { await delay(); }
+
+  // Mock — Reports
+  async generateReportComment(_studentId: string, _groupId?: string): Promise<any> { await delay(); return { id: 'draft-1', draft_text: 'Good progress', status: 'pending', created_at: new Date().toISOString() }; }
+  async getReportDrafts(_params?: { page?: number; limit?: number; status?: string }): Promise<any> { await delay(); return { success: true, data: [], pagination: { page: 1, limit: 50, total: 0, pages: 0 } }; }
+  async updateReportDraft(_id: string, _data: { edited_text?: string; status?: string }): Promise<any> { await delay(); return { id: _id, status: _data.status || 'edited' }; }
+  async approveReportDraft(_id: string): Promise<any> { await delay(); return { id: _id, status: 'approved' }; }
+  async rejectReportDraft(_id: string): Promise<any> { await delay(); return { id: _id, status: 'rejected' }; }
+  async bulkGenerateComments(_groupId: string): Promise<any> { await delay(); return { job_id: 'job-1', status: 'completed' }; }
+  async getJobStatus(_jobId: string): Promise<any> { await delay(); return { id: _jobId, status: 'completed', result: null, error: null }; }
+  async getLatestDigest(): Promise<any> { await delay(); return { id: 'digest-1', week_start: '', week_end: '', digest_data: { improved: [], declining: [], action_items: [] }, created_at: new Date().toISOString() }; }
+  async getDigestByWeek(_week: string): Promise<any> { await delay(); return { id: 'digest-1', week_start: _week, week_end: '', digest_data: {}, created_at: new Date().toISOString() }; }
+
+  // Mock — Notifications
+  async getNotifications(_params?: { page?: number; limit?: number; type?: string; unread_only?: boolean }): Promise<any> { await delay(); return { success: true, data: [], pagination: { page: 1, limit: 50, total: 0, pages: 0 } }; }
+  async getUnreadNotificationCount(): Promise<any> { await delay(); return { count: 0 }; }
+  async markNotificationRead(_id: string): Promise<void> { await delay(); }
+  async markAllNotificationsRead(): Promise<void> { await delay(); }
+  async deleteNotification(_id: string): Promise<void> { await delay(); }
+
+  // Mock — Alerts
+  async getAlertRules(): Promise<any> { await delay(); return []; }
+  async createAlertRule(_data: { alert_type: string; threshold_value: number; comparison: string; notification_method?: string }): Promise<any> { await delay(); return { id: 'rule-1', alert_type: _data.alert_type }; }
+  async updateAlertRule(_id: string, _data: any): Promise<any> { await delay(); return { id: _id }; }
+  async deleteAlertRule(_id: string): Promise<void> { await delay(); }
+  async toggleAlertRule(_id: string): Promise<any> { await delay(); return { id: _id, is_enabled: false }; }
+  async getAlerts(_params?: { page?: number; limit?: number; severity?: string; alert_type?: string }): Promise<any> { await delay(); return { success: true, data: [], pagination: { page: 1, limit: 50, total: 0, pages: 0 } }; }
+  async markAlertRead(_id: string): Promise<void> { await delay(); }
+  async markAllAlertsRead(): Promise<void> { await delay(); }
+
+  // Mock — Grade Analysis
+  async getGroupComparison(_offeringId: string): Promise<any> { await delay(); return []; }
+  async getAtRiskStudents(_offeringId: string, _params?: { grade_threshold?: number; attendance_threshold?: number }): Promise<any> { await delay(); return []; }
+  async getGradeDistribution(_assessmentId: string): Promise<any> { await delay(); return []; }
+  async getGradeTrends(_studentId: string): Promise<any> { await delay(); return []; }
+  async getGradeOverview(_offeringId: string): Promise<any> { await delay(); return { total_students: 0, average: 0, highest: 0, lowest: 0, total_grades: 0 }; }
+
+  // Mock — Other
+  async updateNotificationPreferences(_data: { attendance_marked?: boolean; grade_entered?: boolean; whatsapp_sent?: boolean; assistant_action?: boolean; digest?: boolean; quiet_hours_start?: string; quiet_hours_end?: string }): Promise<any> { await delay(); return { id: 'prefs-1' }; }
+  async requestPasswordReset(_email: string): Promise<any> { await delay(); return { message: 'Reset email sent', messageAr: 'تم إرسال بريد إعادة التعيين' }; }
+  async resetPassword(_token: string, _newPassword: string): Promise<any> { await delay(); return { message: 'Password reset', messageAr: 'تم إعادة تعيين كلمة المرور' }; }
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
 export default MockApiClient;

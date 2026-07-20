@@ -117,7 +117,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setTeacher(null);
     setError(null);
     if (typeof window !== 'undefined') {
-      const currentLocale = window.location.pathname.split('/')[1] || 'en';
+      const currentLocale = window.location.pathname.split('/')[1] || 'ar';
       window.location.href = `/${currentLocale}/login`;
     }
   };

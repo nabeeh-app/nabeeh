@@ -237,7 +237,7 @@ export default function CoursesPage() {
                               <TableCell>
                                 <Badge variant="outline">
                                   <Users className="h-3 w-3 ms-1" />
-                                  0
+                                  {group.student_count ?? 0}
                                 </Badge>
                               </TableCell>
                             </TableRow>
