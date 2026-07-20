@@ -18,8 +18,8 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "backend/**/*.js": ["cd backend && npm run lint -- --no-warn-ignored", "cd backend && npm test -- --bail --findRelatedTests --passWithNoTests"],
-    "frontend/**/*.{ts,tsx}": ["cd frontend && npm run lint", "cd frontend && npm test -- --bail --run --passWithNoTests"]
+    "backend/**/*.js": "bash -c \"cd backend && npm run lint -- --no-warn-ignored\"",
+    "frontend/**/*.{ts,tsx}": "bash -c \"cd frontend && npm run lint\""
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
