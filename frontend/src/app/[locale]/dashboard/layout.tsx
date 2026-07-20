@@ -40,7 +40,7 @@ export default function DashboardLayout({
   const tCommon = useTranslations('common');
   const pathname = usePathname();
   const blockedFeature = getBlockedFeature(pathname);
-  const redirectTo = `/${locale}/login`;
+  const redirectTo = '/login';
 
   return (
     <ProtectedRoute
