@@ -22,7 +22,7 @@ export function Hero() {
           <p dir={dir} className="hero-subtitle text-lg text-ink/70 font-body max-w-lg leading-relaxed">
             {t('subtitle')}
           </p>
-          <div className={cn('flex flex-wrap gap-4', 'justify-start lg:justify-end')}>
+          <div className={cn('flex flex-wrap gap-4', 'justify-start')}>
             <Button size="lg" asChild>
               <Link href={`/${locale}/register`}>{t('cta.start')}</Link>
             </Button>
