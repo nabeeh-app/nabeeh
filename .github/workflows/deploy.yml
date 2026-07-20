@@ -16,6 +16,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      infra: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -26,10 +27,13 @@ jobs:
               - 'backend/**'
             frontend:
               - 'frontend/**'
+            infra:
+              - 'docker-compose*.yml'
+              - '.github/workflows/deploy.yml'
 
   check:
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.infra == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,7 +74,7 @@ jobs:
     if: |
       !cancelled() && 
       (needs.check.result == 'success' || needs.check.result == 'skipped') &&
-      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true')
+      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.infra == 'true')
     runs-on: ubuntu-latest
     steps:
       - name: Setup SSH key
@@ -86,23 +90,23 @@ jobs:
             "ssh tagooza 'cd /home/exedev/nabeeh && git fetch origin master && git reset --hard origin/master'"
 
       - name: Build and deploy backend
-        if: needs.changes.outputs.backend == 'true'
+        if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.infra == 'true'
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no exe.dev \
             "ssh tagooza 'cd /home/exedev/nabeeh && docker compose -f docker-compose.prod.yml build backend && docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans backend'"
 
       - name: Wait for backend health
-        if: needs.changes.outputs.backend == 'true'
+        if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.infra == 'true'
         run: sleep 10
 
       - name: Build and deploy frontend
-        if: needs.changes.outputs.frontend == 'true'
+        if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.infra == 'true'
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no exe.dev \
             "ssh tagooza 'cd /home/exedev/nabeeh && docker compose -f docker-compose.prod.yml build frontend && docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans frontend'"
 
       - name: Wait for frontend health
-        if: needs.changes.outputs.frontend == 'true'
+        if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.infra == 'true'
         run: sleep 15
 
       - name: Verify containers
