@@ -98,14 +98,14 @@ class ErrorBoundary extends Component<Props, State> {
 
               <div className="flex flex-col space-y-2">
                 <Button onClick={this.handleReset} className="w-full">
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <RefreshCw className="ms-2 h-4 w-4" />
                   {texts.tryAgain}
                 </Button>
                 <Button variant="outline" onClick={this.handleReload} className="w-full">
                   {texts.reloadPage}
                 </Button>
                 <Button variant="ghost" onClick={this.handleGoHome} className="w-full">
-                  <Home className="mr-2 h-4 w-4" />
+                  <Home className="ms-2 h-4 w-4" />
                   {texts.goHome}
                 </Button>
               </div>

@@ -159,7 +159,7 @@ export default function SystemMonitorPage() {
           }}
           disabled={checking}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${checking ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 ms-2 ${checking ? 'animate-spin' : ''}`} />
           {t('refresh')}
         </Button>
       </PageHeader>

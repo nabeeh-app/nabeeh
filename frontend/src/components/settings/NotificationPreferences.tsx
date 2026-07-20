@@ -177,7 +177,7 @@ export function NotificationPreferences() {
 
         <div className="flex items-center gap-3">
           <Button onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4 mr-1" />
+            <Save className="h-4 w-4 ms-1" />
             {saving ? t('saving') : t('savePreferences')}
           </Button>
           {saved && (

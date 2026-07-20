@@ -39,7 +39,7 @@ export function AtRiskStudents({ data }: AtRiskStudentsProps) {
         <CardTitle className="flex items-center gap-2 text-ink font-display">
           <AlertTriangle className="h-5 w-5" />
           {t('atRiskStudents')}
-          <Badge variant="destructive" className="ml-1">{data.length}</Badge>
+          <Badge variant="destructive" className="ms-1">{data.length}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>

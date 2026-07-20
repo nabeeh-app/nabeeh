@@ -220,7 +220,6 @@ export default function RegisterPage(_props: Props) {
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder={t(isRTL ? 'namePlaceholderAr' : 'namePlaceholderEn')}
                     className={cn(
-                      isRTL && 'text-right',
                       errors.name && 'border-destructive'
                     )}
                   />
@@ -299,7 +298,7 @@ export default function RegisterPage(_props: Props) {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/60 hover:text-ink/80"
+                      className="absolute end-3 top-1/2 -translate-y-1/2 text-ink/60 hover:text-ink/80"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -326,7 +325,7 @@ export default function RegisterPage(_props: Props) {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/60 hover:text-ink/80"
+                      className="absolute end-3 top-1/2 -translate-y-1/2 text-ink/60 hover:text-ink/80"
                     >
                       {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -352,7 +351,6 @@ export default function RegisterPage(_props: Props) {
                       value={formData.business_name}
                       onChange={(e) => handleInputChange('business_name', e.target.value)}
                       placeholder={t(isRTL ? 'institutionPlaceholderAr' : 'institutionPlaceholderEn')}
-                      className={isRTL ? 'text-right' : ''}
                     />
                   </div>
 
@@ -366,7 +364,6 @@ export default function RegisterPage(_props: Props) {
                       value={formData.subjects}
                       onChange={(e) => handleInputChange('subjects', e.target.value)}
                       placeholder={t(isRTL ? 'subjectsPlaceholderAr' : 'subjectsPlaceholderEn')}
-                      className={isRTL ? 'text-right' : ''}
                     />
                     <p className="text-xs text-ink/60 font-mono uppercase tracking-wider">
                       {t('subjectsHint')}

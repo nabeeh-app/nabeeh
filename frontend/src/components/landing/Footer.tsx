@@ -2,13 +2,11 @@
 
 import { useTranslations, useLocale } from 'next-intl';
 import { MessageCircle, Mail } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 export function Footer() {
   const t = useTranslations('landing.footer');
   const tNav = useTranslations('landing.nav');
   const locale = useLocale();
-  const isRTL = locale === 'ar';
 
   const phone = process.env.NEXT_PUBLIC_WHATSAPP_MARKETING_PHONE || '201234567890';
   const email = 'hello@nabeeh.app';
@@ -84,7 +82,7 @@ export function Footer() {
           </div>
 
           {/* Contact */}
-          <div className={cn('space-y-4', isRTL && 'text-right')}>
+          <div className="space-y-4">
             <h4 className="font-semibold font-display text-sm uppercase tracking-wider text-canvas/70">
               {t('contact')}
             </h4>
@@ -94,7 +92,7 @@ export function Footer() {
                   href={`https://wa.me/${phone}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={cn('inline-flex items-center gap-2 text-sm text-canvas/50 hover:text-canvas transition-colors font-body', isRTL && 'flex-row-reverse')}
+                  className="inline-flex items-center gap-2 text-sm text-canvas/50 hover:text-canvas transition-colors font-body"
                 >
                   <MessageCircle className="w-4 h-4 shrink-0" />
                   {t('whatsapp')}
@@ -103,7 +101,7 @@ export function Footer() {
               <li>
                 <a
                   href={`mailto:${email}`}
-                  className={cn('inline-flex items-center gap-2 text-sm text-canvas/50 hover:text-canvas transition-colors font-body', isRTL && 'flex-row-reverse')}
+                  className="inline-flex items-center gap-2 text-sm text-canvas/50 hover:text-canvas transition-colors font-body"
                 >
                   <Mail className="w-4 h-4 shrink-0" />
                   {t('email')}

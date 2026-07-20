@@ -49,7 +49,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
   };
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-80 max-h-[70vh] bg-popover border border-border shadow-lg z-50 rounded-lg overflow-hidden">
+    <div className="absolute end-0 top-full mt-2 w-80 max-h-[70vh] bg-popover border border-border shadow-lg z-50 rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <h3 className="font-semibold text-ink font-display">{t('title')}</h3>
         {notifications.some((n: Notification) => !n.is_read) && (

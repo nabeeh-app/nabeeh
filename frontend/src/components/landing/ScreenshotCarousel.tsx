@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations, useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -17,8 +17,6 @@ const screenshots = [
 
 export function ScreenshotCarousel() {
   const t = useTranslations('landing.screenshots');
-  const locale = useLocale();
-  const isRTL = locale === 'ar';
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -96,7 +94,7 @@ export function ScreenshotCarousel() {
                 aria-label="Scroll left"
                 className={cn(
                   'absolute top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-canvas border border-ink/10 shadow-md flex items-center justify-center hover:bg-surface-cool transition-colors cursor-pointer',
-                  isRTL ? 'right-0 -mr-2' : 'left-0 -ml-2'
+                  'start-0 -ms-2'
                 )}
               >
                 <ChevronLeft className="w-5 h-5 text-ink" />
@@ -108,7 +106,7 @@ export function ScreenshotCarousel() {
                 aria-label="Scroll right"
                 className={cn(
                   'absolute top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-canvas border border-ink/10 shadow-md flex items-center justify-center hover:bg-surface-cool transition-colors cursor-pointer',
-                  isRTL ? 'left-0 -ml-2' : 'right-0 -mr-2'
+                  'end-0 -me-2'
                 )}
               >
                 <ChevronRight className="w-5 h-5 text-ink" />
@@ -156,21 +154,21 @@ export function ScreenshotCarousel() {
         >
           <button
             onClick={closeLightbox}
-            className="absolute top-4 right-4 z-50 w-10 h-10 rounded-full bg-canvas/20 flex items-center justify-center hover:bg-canvas/40 transition-colors cursor-pointer"
+            className="absolute top-4 end-4 z-50 w-10 h-10 rounded-full bg-canvas/20 flex items-center justify-center hover:bg-canvas/40 transition-colors cursor-pointer"
           >
             <X className="w-6 h-6 text-canvas" />
           </button>
 
           <button
             onClick={(e) => { e.stopPropagation(); navigateLightbox('left'); }}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-50 w-12 h-12 rounded-full bg-canvas/20 flex items-center justify-center hover:bg-canvas/40 transition-colors cursor-pointer"
+            className="absolute start-4 top-1/2 -translate-y-1/2 z-50 w-12 h-12 rounded-full bg-canvas/20 flex items-center justify-center hover:bg-canvas/40 transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-7 h-7 text-canvas" />
           </button>
 
           <button
             onClick={(e) => { e.stopPropagation(); navigateLightbox('right'); }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-50 w-12 h-12 rounded-full bg-canvas/20 flex items-center justify-center hover:bg-canvas/40 transition-colors cursor-pointer"
+            className="absolute end-4 top-1/2 -translate-y-1/2 z-50 w-12 h-12 rounded-full bg-canvas/20 flex items-center justify-center hover:bg-canvas/40 transition-colors cursor-pointer"
           >
             <ChevronRight className="w-7 h-7 text-canvas" />
           </button>

@@ -94,7 +94,7 @@ export default function GradeListTable({
                   }}
                 >
                   <TableCell>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-surface-cool text-ink/60">
                           {grade.student?.name?.split(' ')[0]?.charAt(0)}
@@ -131,7 +131,7 @@ export default function GradeListTable({
                     </span>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center gap-1">
                       <Button variant="ghost" size="sm" onClick={() => onEdit(grade)} title={t('common.edit')}>
                         <Edit className="w-4 h-4" />
                       </Button>

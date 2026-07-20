@@ -70,8 +70,7 @@ export default function ForgotPasswordPage() {
               className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium font-body"
             >
               {t('backToLogin')}
-              {!isRTL && <ArrowRight className="w-4 h-4" />}
-              {isRTL && <ArrowRight className="w-4 h-4 rotate-180" />}
+              <ArrowRight className="w-4 h-4 rtl:-scale-x-100" />
             </Link>
           </div>
         </div>
@@ -146,7 +145,7 @@ export default function ForgotPasswordPage() {
                 {t('email')}
               </Label>
               <div className="relative">
-                <Mail className={cn("absolute top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40", isRTL ? "right-3" : "left-3")} />
+                <Mail className={cn("absolute top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40", "ltr:left-3 rtl:right-3")} />
                 <Input
                   id="email"
                   type="email"
@@ -154,8 +153,7 @@ export default function ForgotPasswordPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="teacher@example.com"
                   className={cn(
-                    "h-12 bg-canvas font-body max-w-full",
-                    isRTL ? "pr-10 text-right" : "pl-10 text-left",
+                    "h-12 bg-canvas font-body max-w-full ps-10 text-start",
                     error && "border-destructive"
                   )}
                   dir="ltr"

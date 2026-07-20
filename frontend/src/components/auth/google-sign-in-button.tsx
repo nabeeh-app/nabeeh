@@ -15,7 +15,6 @@ export function GoogleSignInButton({ className, mode = 'login' }: GoogleSignInBu
   const [isLoading, setIsLoading] = useState(false);
   const locale = useLocale();
   const t = useTranslations('auth');
-  const isRTL = locale === 'ar';
 
   const handleGoogleSignIn = async () => {
     if (!isSupabaseConfigured) {
@@ -58,7 +57,6 @@ export function GoogleSignInButton({ className, mode = 'login' }: GoogleSignInBu
       className={cn(
         "w-full h-12 flex items-center justify-center gap-3 border border-ink/20 bg-canvas hover:bg-surface-sage transition-colors font-body text-sm font-medium",
         "disabled:opacity-50 disabled:pointer-events-none",
-        isRTL && "flex-row-reverse",
         className
       )}
     >

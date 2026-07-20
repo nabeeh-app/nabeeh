@@ -102,7 +102,7 @@ export default function GradebookTable({
                   }}
                 >
                   <TableCell>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-primary/10 text-primary">
                           {entry.student_name.split(' ')[0].charAt(0)}

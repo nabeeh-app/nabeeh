@@ -389,15 +389,15 @@ export default function GradesPage() {
           </SelectContent>
         </Select>
         <Button variant="outline" size="sm">
-          <Download className="w-4 h-4 mr-2" />
+          <Download className="w-4 h-4 ms-2" />
           {tCommon('export')}
         </Button>
         <Button variant="outline" size="sm">
-          <Upload className="w-4 h-4 mr-2" />
+          <Upload className="w-4 h-4 ms-2" />
           {tCommon('import')}
         </Button>
         <Button variant="outline" size="sm" onClick={() => setStatsModalOpen(true)}>
-          <BarChart3 className="w-4 h-4 mr-2" />
+          <BarChart3 className="w-4 h-4 ms-2" />
           {t('gradeStatistics')}
         </Button>
         <Button className="gap-2" onClick={() => setAddGradeModalOpen(true)} disabled={!selectedGroupId}>
@@ -414,7 +414,7 @@ export default function GradesPage() {
           active={viewMode}
           onChange={(mode) => setViewMode(mode as 'gradebook' | 'list')}
         />
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <Input placeholder={t('searchEllipsis')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-64" />
         </div>
       </div>

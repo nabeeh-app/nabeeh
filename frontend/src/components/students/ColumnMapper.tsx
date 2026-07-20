@@ -63,7 +63,7 @@ export default function ColumnMapper({ headers, autoMapping, onMappingChange }: 
                   <td className="py-3 font-mono text-[var(--color-ink)]">
                     {header}
                     {isRequired && (
-                      <span className="ml-1 text-xs text-[var(--color-error)]">*</span>
+                      <span className="ms-1 text-xs text-[var(--color-error)]">*</span>
                     )}
                   </td>
                   <td className="py-3 text-center">

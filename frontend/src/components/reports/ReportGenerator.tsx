@@ -138,9 +138,9 @@ export function ReportGenerator() {
           <div className="flex justify-end">
             <Button onClick={handleGenerate} disabled={!selectedStudent || generating}>
               {generating ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                <Loader2 className="h-4 w-4 ms-1 animate-spin" />
               ) : (
-                <Sparkles className="h-4 w-4 mr-1" />
+                <Sparkles className="h-4 w-4 ms-1" />
               )}
               {generating ? t('generating') : t('generateComment')}
             </Button>
@@ -183,7 +183,7 @@ export function ReportGenerator() {
               {t('discard')}
             </Button>
             <Button onClick={() => setSendDialogOpen(true)}>
-              <FileText className="h-4 w-4 mr-1" />
+              <FileText className="h-4 w-4 ms-1" />
               {t('sendToParent')}
             </Button>
           </div>

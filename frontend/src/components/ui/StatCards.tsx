@@ -36,7 +36,7 @@ export function StatCards({ stats }: StatCardsProps) {
         const color = stat.color || 'primary';
         return (
           <div key={index} className={`${bgMap[color]} p-4 rounded-md`}>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
               <stat.icon className={`h-8 w-8 ${textMap[color]}`} />
               <div>
                 <p className="text-2xl font-bold font-display">{stat.value}</p>

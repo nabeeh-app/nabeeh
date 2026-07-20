@@ -40,7 +40,7 @@ export function TrendChart({ data, studentName }: TrendChartProps) {
           <TrendingUp className="h-5 w-5" />
           {t('gradeTrends')}
           {studentName && (
-            <span className="text-sm font-normal text-ink/60 ml-2">— {studentName}</span>
+            <span className="text-sm font-normal text-ink/60 ms-2">— {studentName}</span>
           )}
         </CardTitle>
       </CardHeader>

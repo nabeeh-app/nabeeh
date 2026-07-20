@@ -49,7 +49,7 @@ export function CommentApproval() {
     return (
       <div className="space-y-4">
         <Button variant="ghost" size="sm" onClick={() => { setSelectedDraft(null); setEditing(false); }}>
-          <ArrowLeft className="h-4 w-4 mr-1" />
+          <ArrowLeft className="h-4 w-4 ms-1" />
           {t('backToQueue')}
         </Button>
 
@@ -76,15 +76,15 @@ export function CommentApproval() {
               </div>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-                  <Edit3 className="h-4 w-4 mr-1" />
+                  <Edit3 className="h-4 w-4 ms-1" />
                   {t('edit')}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handleReject(selectedDraft)}>
-                  <XCircle className="h-4 w-4 mr-1" />
+                  <XCircle className="h-4 w-4 ms-1" />
                   {t('reject')}
                 </Button>
                 <Button size="sm" onClick={() => handleApprove(selectedDraft)}>
-                  <CheckCircle className="h-4 w-4 mr-1" />
+                  <CheckCircle className="h-4 w-4 ms-1" />
                   {t('approve')}
                 </Button>
               </div>

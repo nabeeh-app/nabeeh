@@ -108,7 +108,7 @@ export default function InviteAcceptPage() {
               You are now an assistant. Please log in to access your account.
             </p>
             <Button onClick={handleGoToLogin} className="w-full">
-              <LogIn className="w-4 h-4 mr-2" />
+              <LogIn className="w-4 h-4 ms-2" />
               Go to Login
             </Button>
           </CardContent>
@@ -153,9 +153,9 @@ export default function InviteAcceptPage() {
 
           <Button onClick={handleAccept} disabled={accepting} className="w-full">
             {accepting ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 ms-2 animate-spin" />
             ) : (
-              <CheckCircle className="w-4 h-4 mr-2" />
+              <CheckCircle className="w-4 h-4 ms-2" />
             )}
             {accepting ? 'Accepting...' : 'Accept Invitation'}
           </Button>

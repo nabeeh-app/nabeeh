@@ -48,7 +48,7 @@ export default function AttendanceList({
     <div className="space-y-0">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-ink font-display">{t('attendance.attendanceRecords')}</h2>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <Input placeholder={t('attendance.searchStudent')} value={studentFilter} onChange={(e) => onStudentFilterChange(e.target.value)} className="w-64" />
           <Select value={statusFilter} onValueChange={onStatusFilterChange}>
             <SelectTrigger className="min-w-[150px]">
@@ -80,7 +80,7 @@ export default function AttendanceList({
             return (
               <TableRow key={record.id}>
                 <TableCell>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-surface-cool text-ink/60">
                         {record.student?.name?.split(' ')[0]?.charAt(0)}

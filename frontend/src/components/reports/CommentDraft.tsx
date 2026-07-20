@@ -27,12 +27,12 @@ export function CommentDraft({ draft }: CommentDraftProps) {
         <div className="flex items-center gap-2">
           {draft.student?.name && (
             <Badge variant="outline" className="text-xs">
-              <User className="h-3 w-3 mr-1" />
+              <User className="h-3 w-3 ms-1" />
               {draft.student.name}
             </Badge>
           )}
           <Badge variant="secondary" className="text-xs">
-            <Clock className="h-3 w-3 mr-1" />
+            <Clock className="h-3 w-3 ms-1" />
             {new Date(draft.created_at).toLocaleDateString()}
           </Badge>
         </div>

@@ -259,15 +259,15 @@ export default function AttendancePage() {
           </SelectContent>
         </Select>
         <Button variant="outline" size="sm">
-          <Download className="w-4 h-4 mr-2" />
+          <Download className="w-4 h-4 ms-2" />
           {tCommon('export')}
         </Button>
         <Button variant="outline" size="sm">
-          <Upload className="w-4 h-4 mr-2" />
+          <Upload className="w-4 h-4 ms-2" />
           {tCommon('import')}
         </Button>
         <Button size="sm" onClick={() => setStatsModalOpen(true)}>
-          <BarChart3 className="w-4 h-4 mr-2" />
+          <BarChart3 className="w-4 h-4 ms-2" />
           {t('statsTitle')}
         </Button>
       </PageHeader>

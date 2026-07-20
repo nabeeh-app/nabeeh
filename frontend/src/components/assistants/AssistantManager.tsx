@@ -171,18 +171,18 @@ export function AssistantManager() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setEditingPermissions(assistant)}>
-                        <Shield className="w-4 h-4 mr-2" />
+                        <Shield className="w-4 h-4 ms-2" />
                         {t('editPermissions')}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleToggleStatus(assistant)}>
                         {assistant.status === 'active' ? (
                           <>
-                            <UserX className="w-4 h-4 mr-2" />
+                            <UserX className="w-4 h-4 ms-2" />
                             {t('deactivate')}
                           </>
                         ) : (
                           <>
-                            <UserCheck className="w-4 h-4 mr-2" />
+                            <UserCheck className="w-4 h-4 ms-2" />
                             {t('activate')}
                           </>
                         )}
@@ -191,7 +191,7 @@ export function AssistantManager() {
                         onClick={() => setRemovingId(assistant.id)}
                         className="text-destructive"
                       >
-                        <Trash2 className="w-4 h-4 mr-2" />
+                        <Trash2 className="w-4 h-4 ms-2" />
                         {t('remove')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>

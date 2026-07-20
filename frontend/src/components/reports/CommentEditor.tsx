@@ -38,11 +38,11 @@ export function CommentEditor({ draft, onSaved, onCancel }: CommentEditorProps) 
         <CardTitle className="text-ink font-display">{t('editDraft')}</CardTitle>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={onCancel}>
-            <X className="h-4 w-4 mr-1" />
+            <X className="h-4 w-4 ms-1" />
             {t('cancel')}
           </Button>
           <Button size="sm" onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4 mr-1" />
+            <Save className="h-4 w-4 ms-1" />
             {saving ? t('saving') : t('save')}
           </Button>
         </div>

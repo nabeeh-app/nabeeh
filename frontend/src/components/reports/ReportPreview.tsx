@@ -62,7 +62,7 @@ export function ReportPreview({ draft, onEdit, compact }: ReportPreviewProps) {
         {onEdit && draft.status === 'pending' && (
           <div className="flex justify-end">
             <Button variant="ghost" size="sm" onClick={() => onEdit(displayText)}>
-              <Edit3 className="h-4 w-4 mr-1" />
+              <Edit3 className="h-4 w-4 ms-1" />
               {t('editDraft')}
             </Button>
           </div>

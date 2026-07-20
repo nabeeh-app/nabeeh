@@ -74,7 +74,7 @@ export function ReportSendDialog({ open, onOpenChange, draftId, studentName, onS
                 {t('cancel')}
               </Button>
               <Button onClick={handleSend} disabled={sending}>
-                <Send className="h-4 w-4 mr-1" />
+                <Send className="h-4 w-4 ms-1" />
                 {sending ? t('sending') : t('sendToWhatsApp')}
               </Button>
             </DialogFooter>

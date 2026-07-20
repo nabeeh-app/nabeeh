@@ -116,7 +116,7 @@ export function Sidebar() {
               >
                 <Icon className="w-4.5 h-4.5" />
                 <span>{t(item.name)}</span>
-                <Lock className="w-3.5 h-3.5 ml-auto opacity-60" />
+                <Lock className="w-3.5 h-3.5 ms-auto opacity-60" />
               </button>
             );
           }
@@ -176,7 +176,7 @@ export function Sidebar() {
     <>
       {/* Mobile hamburger */}
       <button
-        className="fixed top-4 left-4 z-50 md:hidden p-3 rounded-none bg-sidebar text-sidebar-foreground"
+        className="fixed top-4 start-4 z-50 md:hidden p-3 rounded-none bg-sidebar text-sidebar-foreground"
         onClick={() => setMobileOpen(!mobileOpen)}
         aria-label={mobileOpen ? t('closeMenu') : t('openMenu')}
       >
@@ -197,7 +197,7 @@ export function Sidebar() {
       </div>
 
       {/* Mobile sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-40 md:hidden transform transition-transform duration-200 ease-in-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`fixed inset-y-0 start-0 z-40 md:hidden transform transition-transform duration-200 ease-in-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {sidebarContent}
       </div>
     </>

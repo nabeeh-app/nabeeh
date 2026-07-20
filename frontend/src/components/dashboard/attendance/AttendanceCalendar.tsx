@@ -77,7 +77,7 @@ export default function AttendanceCalendar({
               <CardTitle>
                 {formatMonthYear(currentMonth, locale)}
               </CardTitle>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => onMonthNavigate('prev')} aria-label={t('common.previous')}>
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
@@ -133,7 +133,7 @@ export default function AttendanceCalendar({
               <div className="space-y-3">
                 {dailyAttendance.students.slice(0, 5).map((student) => (
                   <div key={student.student_id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-surface-cool text-ink/60 text-xs">
                           {student.name.split(' ')[0].charAt(0)}

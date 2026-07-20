@@ -55,7 +55,7 @@ export default function AttendanceBulkEntry({
               {formatDateLong(selectedDate, locale)}
             </p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
             <Input type="date" value={selectedDate} onChange={(e) => onDateChange(e.target.value)} className="w-auto" />
             <Button onClick={onSave} disabled={saving} className="gap-2">
               {saving ? (
@@ -76,14 +76,14 @@ export default function AttendanceBulkEntry({
       <CardContent>
         {dailyAttendance && (
           <div className="space-y-4">
-            <div className="flex items-center space-x-2 p-4 bg-surface-cool rounded-lg">
+            <div className="flex items-center gap-2 p-4 bg-surface-cool rounded-lg">
               <span className="text-sm font-medium">{t('attendance.quickActions')}</span>
               <Button variant="outline" size="sm" onClick={onMarkAllPresent}>
-                <CheckCircle className="w-4 h-4 mr-1" />
+                <CheckCircle className="w-4 h-4 ms-1" />
                 {t('attendance.markAllPresent')}
               </Button>
               <Button variant="outline" size="sm" onClick={onMarkAllAbsent}>
-                <XCircle className="w-4 h-4 mr-1" />
+                <XCircle className="w-4 h-4 ms-1" />
                 {t('attendance.markAllAbsent')}
               </Button>
             </div>
@@ -93,7 +93,7 @@ export default function AttendanceBulkEntry({
                 const studentData = students.find(s => s.id === student.student_id);
                 return (
                   <Card key={student.student_id} className="p-4">
-                    <div className="flex items-center space-x-3 mb-3">
+                    <div className="flex items-center gap-3 mb-3">
                       <Avatar>
                         <AvatarFallback className="bg-primary/10 text-primary">
                           {student.name.split(' ')[0].charAt(0)}

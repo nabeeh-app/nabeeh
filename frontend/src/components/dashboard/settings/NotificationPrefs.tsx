@@ -10,13 +10,11 @@ interface NotificationPref {
 
 interface NotificationPrefsProps {
   notifications: NotificationPref[];
-  isRTL: boolean;
   onToggle: (key: string) => void;
 }
 
 export default function NotificationPrefs({
   notifications,
-  isRTL,
   onToggle,
 }: NotificationPrefsProps) {
   const t = useTranslations('settings');
@@ -39,7 +37,7 @@ export default function NotificationPrefs({
             >
               <span
                 className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out mt-0.5 ${
-                  item.enabled ? (isRTL ? '-translate-x-4 mr-0.5' : 'translate-x-4 ml-0.5') : 'translate-x-0.5'
+                  item.enabled ? 'ltr:translate-x-4 rtl:-translate-x-4 ltr:ml-0.5 rtl:mr-0.5' : 'translate-x-0.5'
                 }`}
               />
             </button>

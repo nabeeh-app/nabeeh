@@ -55,7 +55,7 @@ export function ApprovalQueue({ onSelectDraft, refreshKey }: ApprovalQueueProps)
           <ClipboardCheck className="h-5 w-5" />
           {t('pendingApprovals')}
           {drafts.length > 0 && (
-            <Badge variant="warning" className="ml-1">{drafts.length}</Badge>
+            <Badge variant="warning" className="ms-1">{drafts.length}</Badge>
           )}
         </CardTitle>
       </CardHeader>
@@ -84,7 +84,7 @@ export function ApprovalQueue({ onSelectDraft, refreshKey }: ApprovalQueueProps)
                     {draft.draft_text}
                   </p>
                 </div>
-                <Edit3 className="h-4 w-4 text-ink/40 shrink-0 ml-2" />
+                <Edit3 className="h-4 w-4 text-ink/40 shrink-0 ms-2" />
               </button>
             ))}
           </div>

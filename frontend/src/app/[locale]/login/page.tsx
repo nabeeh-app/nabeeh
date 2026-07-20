@@ -170,7 +170,7 @@ export default function LoginPage() {
                   placeholder={t('password')}
                   className={cn(
                     "h-12 bg-canvas font-body text-left max-w-full",
-                    isRTL ? "pl-10" : "pr-10",
+                    "ltr:pr-10 rtl:pl-10",
                     errors.password && "border-destructive"
                   )}
                   dir="ltr"
@@ -180,7 +180,7 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className={cn(
                     "absolute top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink/60 transition-colors flex items-center justify-center w-5 h-5",
-                    isRTL ? "left-3" : "right-3"
+                    "end-3"
                   )}
                 >
                   {showPassword ? (
@@ -195,7 +195,7 @@ export default function LoginPage() {
               )}
             </div>
 
-            <div className={cn("flex items-center justify-between", isRTL && "flex-row-reverse")}>
+            <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"

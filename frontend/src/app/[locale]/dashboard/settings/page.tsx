@@ -58,7 +58,6 @@ export default function SettingsPage() {
   const params = useParams();
   const locale = params.locale as string;
   const { teacher, updateProfile } = useAuth();
-  const isRTL = locale === 'ar';
   const t = useTranslations('settings');
 
   const [settings, setSettings] = useState<TeacherSettings>(() => mapTeacherToSettings(null));
@@ -258,7 +257,6 @@ export default function SettingsPage() {
 
       <NotificationPrefs
         notifications={notifications}
-        isRTL={isRTL}
         onToggle={toggleNotification}
       />
 

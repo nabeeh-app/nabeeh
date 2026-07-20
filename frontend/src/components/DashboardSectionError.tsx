@@ -43,7 +43,7 @@ export default function DashboardSectionError({
             </div>
           )}
           <Button onClick={reset} className="w-full">
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCw className="ms-2 h-4 w-4" />
             {t('tryAgain')}
           </Button>
           <Button
@@ -51,7 +51,7 @@ export default function DashboardSectionError({
             onClick={() => window.location.reload()}
             className="w-full"
           >
-            <RotateCcw className="mr-2 h-4 w-4" />
+            <RotateCcw className="ms-2 h-4 w-4" />
             {t('reloadPage')}
           </Button>
           <Button
@@ -61,7 +61,7 @@ export default function DashboardSectionError({
             }}
             className="w-full"
           >
-            <LayoutDashboard className="mr-2 h-4 w-4" />
+            <LayoutDashboard className="ms-2 h-4 w-4" />
             {t('goToDashboard')}
           </Button>
         </CardContent>

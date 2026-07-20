@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   Users,
   PencilRuler,
+  ChevronLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -271,7 +272,7 @@ export function AlertConfig() {
           {t('configuration')}
         </CardTitle>
         <Button size="sm" onClick={handleOpenCreate}>
-          <Plus className="h-4 w-4 mr-1" />
+          <Plus className="h-4 w-4 ms-1" />
           {t('addRule')}
         </Button>
       </CardHeader>
@@ -411,7 +412,7 @@ export function AlertConfig() {
                     onValueChange={val => setFormData(prev => ({ ...prev, alert_type: val }))}
                     dir={isRTL ? 'rtl' : 'ltr'}
                   >
-                    <SelectTrigger className={cn('mt-1', isRTL && 'text-right')}>
+                    <SelectTrigger className="mt-1">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -429,16 +430,16 @@ export function AlertConfig() {
 
                 {formData.alert_type !== 'trend_anomaly' && (
                   <div className="grid grid-cols-2 gap-3">
-                    <div className={isRTL ? 'order-last' : undefined}>
+                    <div>
                       <Label>{t('comparison')}</Label>
                       <Select
                         value={formData.comparison}
                         onValueChange={val => setFormData(prev => ({ ...prev, comparison: val }))}
                         dir={isRTL ? 'rtl' : 'ltr'}
                       >
-                        <SelectTrigger className={cn('mt-1', isRTL && 'text-right')}>
-                          <SelectValue />
-                        </SelectTrigger>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
                         <SelectContent>
                           {COMPARISON_OPTIONS.map(opt => (
                             <SelectItem key={opt.value} value={opt.value}>
@@ -448,7 +449,7 @@ export function AlertConfig() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className={isRTL ? 'order-first' : undefined}>
+                    <div>
                       <Label>{t('threshold')}</Label>
                       <Input
                         type="number"
@@ -461,7 +462,7 @@ export function AlertConfig() {
                             threshold_value: Number(e.target.value),
                           }))
                         }
-                        className={cn('mt-1', isRTL && 'text-right')}
+                        className="mt-1"
                       />
                     </div>
                   </div>
@@ -476,7 +477,7 @@ export function AlertConfig() {
                     }
                     dir={isRTL ? 'rtl' : 'ltr'}
                   >
-                    <SelectTrigger className={cn('mt-1', isRTL && 'text-right')}>
+                    <SelectTrigger className="mt-1">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -501,7 +502,7 @@ export function AlertConfig() {
               </Button>
               {dialogStep === 'form' && !editingRule && (
                 <Button variant="ghost" onClick={handleBackToPresets}>
-                  {isRTL ? '→' : '←'} {t('choosePreset').split(' ')[0]}
+                  <ChevronLeft className="h-4 w-4 rtl:-scale-x-100" /> {t('choosePreset').split(' ')[0]}
                 </Button>
               )}
               {dialogStep === 'form' && (

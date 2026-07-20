@@ -160,7 +160,7 @@ export function WeeklyDigest() {
               {digest_data.action_items.slice(0, 3).map((item, i) => (
                 <li
                   key={i}
-                  className="text-sm text-ink/70 font-body pl-4 relative before:content-['•'] before:absolute before:left-0 before:text-ink/40"
+                  className="text-sm text-ink/70 font-body ps-4 relative before:content-['•'] before:absolute before:start-0 before:text-ink/40"
                 >
                   {item}
                 </li>
@@ -172,7 +172,7 @@ export function WeeklyDigest() {
         <div className="pt-2">
           <Button variant="ghost" size="sm" className="w-full">
             {t('viewFullReport')}
-            <ChevronRight className="h-4 w-4 ml-1" />
+            <ChevronRight className="h-4 w-4 ms-1" />
           </Button>
         </div>
       </CardContent>

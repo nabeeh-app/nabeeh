@@ -85,7 +85,7 @@ export function AlertDisplay() {
           <Bell className="h-5 w-5" />
           {t('title')}
           {unreadCount > 0 && (
-            <Badge variant="destructive" className="ml-2">
+            <Badge variant="destructive" className="ms-2">
               {unreadCount}
             </Badge>
           )}
@@ -93,7 +93,7 @@ export function AlertDisplay() {
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
             <Button variant="ghost" size="sm" onClick={handleMarkAllRead}>
-              <CheckCheck className="h-4 w-4 mr-1" />
+              <CheckCheck className="h-4 w-4 ms-1" />
               {t('markAllRead')}
             </Button>
           )}

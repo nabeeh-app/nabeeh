@@ -176,7 +176,7 @@ export default function ResetPasswordPage() {
                 {t('newPassword')}
               </Label>
               <div className="relative">
-                <Lock className={cn("absolute top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40", isRTL ? "right-3" : "left-3")} />
+                <Lock className={cn("absolute top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40", "ltr:left-3 rtl:right-3")} />
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -184,18 +184,14 @@ export default function ResetPasswordPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={t('newPassword')}
                   className={cn(
-                    "h-12 bg-canvas font-body max-w-full",
-                    isRTL ? "pr-10 pl-10 text-right" : "pl-10 pr-10 text-left"
+                    "h-12 bg-canvas font-body max-w-full ps-10 pe-10 text-start"
                   )}
                   dir="ltr"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className={cn(
-                    "absolute top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink/60 transition-colors",
-                    isRTL ? "left-3" : "right-3"
-                  )}
+                  className="absolute top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink/60 transition-colors ltr:right-3 rtl:left-3"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -207,7 +203,7 @@ export default function ResetPasswordPage() {
                 {t('confirmPassword')}
               </Label>
               <div className="relative">
-                <Lock className={cn("absolute top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40", isRTL ? "right-3" : "left-3")} />
+                <Lock className={cn("absolute top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40", "ltr:left-3 rtl:right-3")} />
                 <Input
                   id="confirmPassword"
                   type={showConfirm ? 'text' : 'password'}
@@ -215,18 +211,14 @@ export default function ResetPasswordPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder={t('confirmPassword')}
                   className={cn(
-                    "h-12 bg-canvas font-body max-w-full",
-                    isRTL ? "pr-10 pl-10 text-right" : "pl-10 pr-10 text-left"
+                    "h-12 bg-canvas font-body max-w-full ps-10 pe-10 text-start"
                   )}
                   dir="ltr"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
-                  className={cn(
-                    "absolute top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink/60 transition-colors",
-                    isRTL ? "left-3" : "right-3"
-                  )}
+                  className="absolute top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink/60 transition-colors ltr:right-3 rtl:left-3"
                 >
                   {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>

@@ -14,7 +14,6 @@ export function PricingSection() {
   const t = useTranslations('landing.pricing');
   const tTiers = useTranslations('landing.pricing.tiers');
   const locale = useLocale();
-  const isRTL = locale === 'ar';
 
   return (
     <section id="pricing" className="py-20 scroll-mt-24">
@@ -40,7 +39,7 @@ export function PricingSection() {
                 )}
               >
                 {tier === 'pro' && (
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
+                  <div className="absolute inset-x-0 top-0 h-1 bg-primary" />
                 )}
                 <CardContent className="p-6 flex flex-col h-full">
                   <div>
@@ -54,19 +53,19 @@ export function PricingSection() {
                         </Badge>
                       )}
                     </div>
-                    <p className={cn('text-sm text-ink/70 font-body', isRTL && 'text-right')}>
+                    <p className="text-sm text-ink/70 font-body">
                       {tTiers(`${tier}.description`)}
                     </p>
                   </div>
 
-                  <div className={cn('text-2xl font-bold text-ink font-display mt-4', isRTL && 'text-right')}>
+                  <div className="text-2xl font-bold text-ink font-display mt-4">
                     {isAvailable ? (
                       <span className="text-primary">{tTiers(`${tier}.price`)}</span>
                     ) : (
                       tTiers(`${tier}.price`)
                     )}
                     {tTiers(`${tier}.period`) && (
-                      <span className="text-sm font-normal text-ink/50 ml-1">
+                      <span className="text-sm font-normal text-ink/50 ms-1">
                         / {tTiers(`${tier}.period`)}
                       </span>
                     )}

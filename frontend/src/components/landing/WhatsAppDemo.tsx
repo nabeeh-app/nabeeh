@@ -228,7 +228,7 @@ export function WhatsAppDemo() {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={cn('flex', msg.sender === 'parent' ? (isRTL ? 'justify-start' : 'justify-end') : (isRTL ? 'justify-end' : 'justify-start'))}
+            className={cn('flex', msg.sender === 'parent' ? 'justify-end' : 'justify-start')}
           >
             <div
               className={cn(
@@ -254,8 +254,8 @@ export function WhatsAppDemo() {
       </div>
 
       {/* Input */}
-      <div className={cn('p-3 border-t border-ink/5 bg-canvas shrink-0', isRTL && 'flex-row-reverse')}>
-        <div className={cn('flex items-center gap-2', isRTL && 'flex-row-reverse')}>
+      <div className="p-3 border-t border-ink/5 bg-canvas shrink-0">
+        <div className="flex items-center gap-2">
           <input
             ref={inputRef}
             type="text"
@@ -264,8 +264,7 @@ export function WhatsAppDemo() {
             onKeyDown={handleKeyDown}
             placeholder={t('typing')}
             className={cn(
-              'flex-1 px-4 py-2 rounded-full bg-surface-cool text-sm font-body text-ink placeholder:text-ink/40 outline-none border border-ink/10 focus:border-primary/30',
-              isRTL && 'text-right'
+              'flex-1 px-4 py-2 rounded-full bg-surface-cool text-sm font-body text-ink placeholder:text-ink/40 outline-none border border-ink/10 focus:border-primary/30'
             )}
             dir={isRTL ? 'rtl' : 'ltr'}
           />

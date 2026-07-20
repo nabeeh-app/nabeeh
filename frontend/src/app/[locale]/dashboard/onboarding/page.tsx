@@ -190,7 +190,7 @@ export default function OnboardingPage() {
                   className="w-full"
                   onClick={() => setWhatsappConnected(!whatsappConnected)}
                 >
-                  <MessageSquare className="h-4 w-4 mr-2" />
+                  <MessageSquare className="h-4 w-4 ms-2" />
                   {whatsappConnected ? t('whatsapp.connect') : t('whatsapp.skip')}
                 </Button>
               </div>
@@ -200,7 +200,7 @@ export default function OnboardingPage() {
             {step === 3 && (
               <div className="w-full">
                 <Button className="w-full" onClick={handleComplete}>
-                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <CheckCircle className="h-4 w-4 ms-2" />
                   {t('completed.goToDashboard')}
                 </Button>
               </div>

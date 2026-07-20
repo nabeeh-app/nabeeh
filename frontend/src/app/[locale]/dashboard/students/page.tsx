@@ -242,15 +242,15 @@ export default function StudentsPage() {
         description={t('descriptionCount', { count: studentsResponse?.pagination?.total ?? students.length })}
       >
         <Button variant="outline" size="sm" onClick={() => setImportModalOpen(true)}>
-          <Upload className="w-4 h-4 mr-2" />
+          <Upload className="w-4 h-4 ms-2" />
           {tCommon('import')}
         </Button>
         <Button variant="outline" size="sm" onClick={() => setSelfRegModalOpen(true)}>
-          <Link2 className="w-4 h-4 mr-2" />
+          <Link2 className="w-4 h-4 ms-2" />
           {t('selfRegister')}
         </Button>
         <Button variant="outline" size="sm">
-          <Download className="w-4 h-4 mr-2" />
+          <Download className="w-4 h-4 ms-2" />
           {tCommon('export')}
         </Button>
         <Button className="gap-2" onClick={() => setAddModalOpen(true)}>

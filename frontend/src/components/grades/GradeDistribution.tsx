@@ -42,7 +42,7 @@ export function GradeDistribution({ data, assessmentName }: GradeDistributionPro
           <BarChart3 className="h-5 w-5" />
           {t('gradeDistribution')}
           {assessmentName && (
-            <span className="text-sm font-normal text-ink/60 ml-2">— {assessmentName}</span>
+            <span className="text-sm font-normal text-ink/60 ms-2">— {assessmentName}</span>
           )}
         </CardTitle>
       </CardHeader>
