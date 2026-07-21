@@ -16,13 +16,13 @@ export function Hero() {
       <div dir={dir} className={cn('grid lg:grid-cols-2 gap-12 lg:gap-16 items-center')}>
         {/* Left — Headline + CTAs */}
         <div className={cn('space-y-8', 'lg:text-end')} dir={dir}>
-          <h1 dir={dir} className="hero-title text-4xl sm:text-5xl lg:text-6xl font-bold text-ink font-display leading-tight tracking-tight">
+          <h1 dir={dir} className="hero-title text-center lg:text-end text-4xl sm:text-5xl lg:text-6xl font-bold text-ink font-display leading-tight tracking-tight">
             {t('title')}
           </h1>
-          <p dir={dir} className="hero-subtitle text-lg text-ink/70 font-body max-w-lg leading-relaxed">
+          <p dir={dir} className="hero-subtitle text-center lg:text-end text-lg text-ink/70 font-body max-w-lg leading-relaxed">
             {t('subtitle')}
           </p>
-          <div className={cn('flex flex-wrap gap-4', 'justify-start')}>
+          <div className={cn('flex flex-wrap gap-4 items-end', 'justify-center lg:justify-start')}>
             <Button size="lg" asChild>
               <Link href={`/${locale}/register`}>{t('cta.start')}</Link>
             </Button>
