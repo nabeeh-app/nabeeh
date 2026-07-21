@@ -197,7 +197,7 @@ export function Sidebar() {
       </div>
 
       {/* Mobile sidebar */}
-      <div className={`fixed inset-y-0 start-0 z-40 md:hidden transform transition-transform duration-200 ease-in-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`fixed inset-y-0 start-0 z-40 md:hidden transform transition-transform duration-200 ease-in-out ${mobileOpen ? 'translate-x-0' : (locale === 'ar' ? 'translate-x-full' : '-translate-x-full')}`}>
         {sidebarContent}
       </div>
     </>
