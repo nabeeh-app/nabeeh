@@ -15,11 +15,11 @@ export function Hero() {
     <section dir={dir} className={cn('relative pt-24 pb-16 lg:pt-32 lg:pb-24 overflow-hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8')}>
       <div dir={dir} className={cn('grid lg:grid-cols-2 gap-12 lg:gap-16 items-center')}>
         {/* Left — Headline + CTAs */}
-        <div className={cn('space-y-8', 'lg:text-end')} dir={dir}>
-          <h1 dir={dir} className="hero-title text-center lg:text-end text-4xl sm:text-5xl lg:text-6xl font-bold text-ink font-display leading-tight tracking-tight">
+        <div className={cn('space-y-8', 'lg:text-start')} dir={dir}>
+          <h1 dir={dir} className="hero-title text-center lg:text-start text-4xl sm:text-5xl lg:text-6xl font-bold text-ink font-display leading-tight tracking-tight">
             {t('title')}
           </h1>
-          <p dir={dir} className="hero-subtitle text-center lg:text-end text-lg text-ink/70 font-body max-w-lg leading-relaxed">
+          <p dir={dir} className="hero-subtitle text-center lg:text-start text-lg text-ink/70 font-body max-w-lg leading-relaxed">
             {t('subtitle')}
           </p>
           <div className={cn('flex flex-wrap gap-4 items-end', 'justify-center lg:justify-start')}>
