@@ -19,8 +19,11 @@ const UNLOCK_KEYS = {
 
 type UnlockFeature = keyof typeof UNLOCK_KEYS;
 
-function isFeatureUnlocked(feature: UnlockFeature): boolean {
+const PAID_TIERS = ['basic', 'pro', 'center'];
+
+function isFeatureUnlocked(feature: UnlockFeature, subscriptionPlan?: string | null): boolean {
   if (typeof window === 'undefined') return false;
+  if (subscriptionPlan && PAID_TIERS.includes(subscriptionPlan)) return true;
   const key = UNLOCK_KEYS[feature];
   return localStorage.getItem(key) === 'true';
 }
@@ -104,7 +107,7 @@ export function Sidebar() {
           }
 
           const unlockFeature = item.unlockFeature as UnlockFeature | undefined;
-          const isLocked = unlockFeature && !isFeatureUnlocked(unlockFeature);
+          const isLocked = unlockFeature && !isFeatureUnlocked(unlockFeature, teacher?.subscription_plan);
 
           if (isLocked) {
             return (

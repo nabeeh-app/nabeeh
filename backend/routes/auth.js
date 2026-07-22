@@ -51,6 +51,10 @@ const teacherSelectFields = `
     timezone,
     whatsapp_number,
     telegram_username,
+    role,
+    is_active,
+    preferred_language,
+    subscription_tier,
     created_at,
     updated_at
 `;
@@ -64,7 +68,9 @@ const formatTeacherResponse = (teacher) => {
         email: teacher.email,
         phone: teacher.phone || '',
         name: teacher.name,
-        role: 'teacher',
+        role: teacher.role || 'teacher',
+        preferred_language: teacher.preferred_language || 'ar',
+        is_active: teacher.is_active ?? true,
         business_name: teacher.business_name || null,
         bio: teacher.bio || null,
         subjects: teacher.subjects || [],
@@ -74,6 +80,8 @@ const formatTeacherResponse = (teacher) => {
         timezone: teacher.timezone || 'Africa/Cairo',
         whatsapp_number: teacher.whatsapp_number || null,
         telegram_username: teacher.telegram_username || null,
+        subscription_plan: teacher.subscription_tier || 'free',
+        subscription_expires_at: null,
         created_at: teacher.created_at,
         updated_at: teacher.updated_at
     };
