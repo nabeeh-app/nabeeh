@@ -1,0 +1,5 @@
+ts	phase	decision	why	evidence	result
+2026-10-08T06:54:41Z	start	stage1 run begins, prior rows are earlier turns	new run needs its own stretch	this turn	open
+2026-10-08T06:54:41Z	channel	MCP apply denied, pooler aws-1 works, fresh pg_dump taken	direct PG is IPv6 only here, aws-1 pooler answers on v4	/tmp/opencode/nabeeh-stage1-predump-20261008.sql 38 COPY tables	backup good, 8 teachers present
+2026-10-08T06:58:07Z	stage1-apply	stage 1 applied to prod via pooler psql, 190 statements, ON_ERROR_STOP clean	MCP channel denied, pooler was the working path	commit 19f24dc local only, migration stage1_tenant_id_columns	33 cols, 33 triggers, 32 NOT NULL
+2026-10-08T06:58:07Z	stage1-verify	live probes plus matrix plus suite all green, zero leftovers	checked the real tables, not the migration output	matrix no 200 with A data, suite 561 pass, probe rows rolled back	gate met, waiting next

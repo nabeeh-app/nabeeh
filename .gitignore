@@ -322,3 +322,5 @@ jwt-secret.txt
 *.njsproj
 *.sln
 *.sw?
+# Phase 2 tenancy backups (prod data, never commit)
+.backups/
