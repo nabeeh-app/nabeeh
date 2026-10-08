@@ -35,6 +35,14 @@ would hand out the tenant claim to whoever holds it, so the mint
 function returns the configured client, never the raw token, and callers
 have no accessor for the token string.
 
+Assistant identity decision (2026-10-08, operator option a): KEEP
+teachers-first resolution. It matches the shipped OAuth invite flow:
+link-only accounts borrow owner scope, while anyone holding a teacher
+row stays a teacher. Zero refactor, no quiet behavior change. Stage 5
+assistant policy work covers link-resolved assistants only: accounts
+that registered normally keep seeing their own tenant even after
+accepting an invite, until a product call says otherwise.
+
 Migration tracking decision (2026-10-08): stages 021, 022, and 024 went
 in through psql, not the Supabase CLI, and no supabase/migrations
 directory exists. supabase_migrations holds only the 17 older CLI

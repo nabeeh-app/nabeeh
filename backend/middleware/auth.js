@@ -100,7 +100,10 @@ const authenticateToken = async (req, res, next) => {
 
 /**
  * Resolve user from decoded JWT token
- * Single query for teacher (by id OR auth_id), then assistant fallback
+ * Single query for teacher (by id OR auth_id), then assistant fallback.
+ * Teachers-first is deliberate (operator decision 2026-10-08): anyone
+ * holding a teacher row stays a teacher, link-only accounts borrow owner
+ * scope. Do not reorder without a product call.
  * @param {Object} decoded - Decoded JWT payload with user_id, jti
  * @returns {Promise<{user: Object|null, error: string|null}>}
  */
