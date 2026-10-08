@@ -367,3 +367,17 @@ html[dir="rtl"] body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Printable sheets (attendance tool): hide site chrome, landscape table */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+  body {
+    background: #fff;
+  }
+}

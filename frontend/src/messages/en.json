@@ -96,7 +96,6 @@
     "hidePassword": "Hide password",
     "networkError": "Network error occurred. Please check your connection.",
     "serverError": "Server error occurred. Please try again later.",
-
     "teacherInfo": "Teacher Information",
     "teacherInfoDescription": "Enter your personal and contact information",
     "fullName": "Full Name *",
@@ -813,7 +812,7 @@
     "mayTakeFewSeconds": "This may take a few seconds",
     "connectionStepsTitle": "How to connect",
     "stepOpenWhatsApp": "Open WhatsApp on your phone",
-    "stepGoToLinkedDevices": "Go to Settings \u2192 Linked Devices",
+    "stepGoToLinkedDevices": "Go to Settings → Linked Devices",
     "stepScanQR": "Tap \"Link a Device\" and scan the code",
     "qrWillAppearHere": "QR code will appear here once generated",
     "mockModeTitle": "Mock Mode",
@@ -1138,7 +1137,8 @@
       "faq": "FAQ",
       "login": "Sign In",
       "startFree": "Start Free",
-      "brandName": "Nabeeh"
+      "brandName": "Nabeeh",
+      "tools": "Free tools"
     },
     "hero": {
       "title": "Nabeeh: Smart Teaching Assistant for Tutors",
@@ -1327,7 +1327,7 @@
       "omar": "Omar",
       "salma": "Salma",
       "online": "Online",
-      "typing": "typing...",
+      "typing": "Type a message... (try: attendance, grades, schedule)",
       "welcomeMessage": "Hello! Try asking about attendance, grades, or schedule.",
       "scenarios": {
         "attendance": {
@@ -1343,7 +1343,6 @@
           "botResponse": "Ahmed's schedule this week:\n\n🕐 Sunday: Math 5-7 PM\n🕐 Monday: Science 4-6 PM\n🕐 Wednesday: Math 5-7 PM\n🕐 Thursday: English 4-6 PM\n\nNext class: Math, Sunday 5 PM"
         }
       },
-      "typing": "Type a message... (try: attendance, grades, schedule)",
       "botName": "Nabeeh Bot"
     }
   },
@@ -1714,6 +1713,54 @@
       "s10EmailLabel": "Email:",
       "s10WhatsAppLabel": "WhatsApp:",
       "s10WhatsAppLink": "Contact us"
+    }
+  },
+  "tools": {
+    "attendance": {
+      "formTitle": "Sheet details",
+      "groupLabel": "Group / subject name",
+      "groupPlaceholder": "e.g. Math - Grade 3 Sec - Group A",
+      "teacherLabel": "Teacher name (optional)",
+      "teacherPlaceholder": "e.g. Mr. Ahmed",
+      "monthLabel": "Month",
+      "schoolDaysLabel": "School days",
+      "modeAll": "All days",
+      "modeNoFriday": "All days except Friday",
+      "modeFriSat": "Except Friday & Saturday",
+      "studentsLabel": "Student names (one per line)",
+      "studentsPlaceholder": "Ahmed Mohamed\nSara Ali\n…",
+      "studentsHint": "Paste from Excel or type manually. {count} students × {days} days.",
+      "sampleBtn": "Try sample data",
+      "clearBtn": "Clear marks",
+      "present": "Present",
+      "absent": "Absent",
+      "late": "Late",
+      "unmarked": "Unmarked",
+      "totalAbsences": "Absences",
+      "atRisk": "At risk (5+ absences)",
+      "printBtn": "Print / Save PDF",
+      "excelBtn": "Download Excel",
+      "emptyState": "Add student names above to generate the sheet. Click any cell to cycle: present → absent → late.",
+      "legend": "Click a cell to cycle through states.",
+      "howTitle": "How to use it",
+      "step1t": "Enter group details",
+      "step1d": "Write the group name, teacher name, and pick the month. Choose to exclude Friday, or Friday and Saturday.",
+      "step2t": "Add student names",
+      "step2d": "Paste names from Excel, one per line, or try the sample data.",
+      "step3t": "Download or print",
+      "step3d": "Get the sheet as Excel, or print it (save as PDF) for the paper archive.",
+      "ctaTitle": "Tired of static sheets?",
+      "ctaDesc": "This sheet can't message parents when a student is absent. Nabeeh tracks attendance automatically and its WhatsApp bot answers parents in under 5 seconds — free for up to 20 students.",
+      "ctaBtn": "Create free account",
+      "faqTitle": "Common questions",
+      "q1": "How do I handle the Friday holiday?",
+      "a1": "Choose “All days except Friday” and Friday columns disappear. Centers closed Friday and Saturday choose the second option.",
+      "q2": "What does “at risk” mean?",
+      "a2": "Any student with 5 or more absences in the month is highlighted red, following the common Egyptian school rule that triggers a parent warning.",
+      "q3": "Can I record late arrivals?",
+      "a3": "Yes. Click a cell twice: first click marks absent, second marks late. Late arrivals are counted separately from absences.",
+      "q4": "How is this different from an Excel template?",
+      "a4": "Templates are static files you refill every month. This generator builds the month for you, computes totals automatically, and exports clean Excel — and Nabeeh goes further by notifying parents on WhatsApp automatically."
     }
   }
 }

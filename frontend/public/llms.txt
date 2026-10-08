@@ -33,6 +33,7 @@ Nabeeh is a SaaS web app for private tutors (مدرس خصوصي) and tutoring c
 - [About](https://nabeeh.app/ar/about) - About Nabeeh
 - [Pricing](https://nabeeh.app/ar#pricing) - Free and Pro plans
 - [Blog](https://nabeeh.app/ar/blog) - Tutorials and guides
+- [Attendance sheet generator](https://nabeeh.app/ar/tools/attendance-sheet) - Free printable monthly attendance sheet (Excel/PDF)
 - [Register](https://nabeeh.app/ar/register) - Create free account
 - [Login](https://nabeeh.app/ar/login) - Sign in
 

@@ -47,6 +47,14 @@ export function Footer() {
                   </a>
                 </li>
               ))}
+              <li>
+                <a
+                  href={`/${locale}/tools/attendance-sheet`}
+                  className="text-sm text-canvas/50 hover:text-canvas transition-colors font-body"
+                >
+                  {tNav('tools')}
+                </a>
+              </li>
             </ul>
           </div>
 
