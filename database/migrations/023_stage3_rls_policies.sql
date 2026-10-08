@@ -271,14 +271,12 @@ CREATE POLICY teacher_self_update ON teachers FOR UPDATE TO authenticated
 -- anon loses everything, present and future, whoever creates the table.
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM anon;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public REVOKE ALL ON TABLES FROM anon;
+-- Limitation: the platform denies ALTER DEFAULT PRIVILEGES FOR ROLE, so
+-- dashboard-created tables are covered by the CI gate, not by defaults.
 -- authenticated keeps SELECT/INSERT/UPDATE/DELETE (already held on all 40
 -- public tables, measured 2026-10-08; policies become the gate) but loses
 -- the exotic privileges it never needs, present and future.
 REVOKE TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM authenticated;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM authenticated;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public REVOKE TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM authenticated;
 -- teachers: no INSERT/UPDATE/DELETE for authenticated at all, then UPDATE
 -- back on exactly the 11 API-writable profile columns. SELECT stays.
 REVOKE INSERT, UPDATE, DELETE ON teachers FROM authenticated;

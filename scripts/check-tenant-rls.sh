@@ -51,12 +51,11 @@ done
 
 grep -q "REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon" "$M23" \
   || { echo "FAIL: anon revoke missing in 023"; fail=1; }
-for r in postgres supabase_admin; do
-  grep -q "ALTER DEFAULT PRIVILEGES FOR ROLE $r IN SCHEMA public REVOKE ALL ON TABLES FROM anon" "$M23" \
-    || { echo "FAIL: default-privs anon revoke for $r missing in 023"; fail=1; }
-  grep -q "ALTER DEFAULT PRIVILEGES FOR ROLE $r IN SCHEMA public REVOKE TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM authenticated" "$M23" \
-    || { echo "FAIL: default-privs exotic revoke for $r missing in 023"; fail=1; }
-done
+grep -q "ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon" "$M23" \
+  || { echo "FAIL: bare default-privs anon revoke missing in 023"; fail=1; }
+# Platform denies role-scoped default-privilege changes: they must be absent.
+grep -vE "^\s*--" "$M23" | grep -q "ALTER DEFAULT PRIVILEGES FOR ROLE" \
+  && { echo "FAIL: FOR ROLE default-privs are unrunnable on managed Supabase"; fail=1; }
 grep -q "REVOKE ALL ON FUNCTION public.exec_sql(text) FROM PUBLIC, anon, authenticated" "$M23" \
   || { echo "FAIL: exec_sql lockdown missing in 023"; fail=1; }
 

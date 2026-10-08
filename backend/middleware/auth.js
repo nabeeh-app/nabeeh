@@ -66,7 +66,10 @@ const authenticateToken = async (req, res, next) => {
 
         // Session invalidation: tokens issued before the last password
         // change are dead, even with a valid signature and expiry.
-        if (user.pwdChangedAt && decoded.iat && decoded.iat * 1000 < new Date(user.pwdChangedAt).getTime()) {
+        // Second precision on both sides: JWT iat floors to the second
+        // while password_changed_at carries microseconds, so a raw
+        // millisecond compare would kill freshly issued tokens.
+        if (user.pwdChangedAt && decoded.iat && Math.floor(new Date(user.pwdChangedAt).getTime() / 1000) > decoded.iat) {
             return res.status(401).json({
                 success: false,
                 message: 'Password changed, please log in again',
