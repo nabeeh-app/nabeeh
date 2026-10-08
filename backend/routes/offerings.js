@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { z } = require('zod');
-const { supabaseAdmin } = require('../config/database');
+const { scopedClient } = require('../lib/privileged/tenantClient');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createOfferingSchema, createGroupSchema, updateGroupSchema } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -9,8 +9,8 @@ const { verifyStudentAccess } = require('../lib/enrollmentChain');
 
 const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
 
-async function verifyOfferingAccess(offeringId, teacherId) {
-  const { data: offering } = await supabaseAdmin
+async function verifyOfferingAccess(db, offeringId, teacherId) {
+  const { data: offering } = await db
     .from('offerings')
     .select('id')
     .eq('id', offeringId)
@@ -56,7 +56,8 @@ async function verifyOfferingAccess(offeringId, teacherId) {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.get('/', authenticateToken, asyncHandler(async (req, res) => {
-    const { data: offerings, error } = await supabaseAdmin
+  const db = scopedClient(req);
+    const { data: offerings, error } = await db
         .from('offerings')
         .select(`
             id,
@@ -139,7 +140,8 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
-    const { data: offering, error } = await supabaseAdmin
+  const db = scopedClient(req);
+    const { data: offering, error } = await db
         .from('offerings')
         .select(`
             id,
@@ -253,9 +255,10 @@ const unenrollStudentSchema = z.object({
 });
 
 router.post('/', authenticateToken, requirePermission('manage_offerings'), validate(createOfferingSchema), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
     const { subject_id, grade_level_id, academic_year } = req.validated.body;
 
-    const { data: offering, error } = await supabaseAdmin
+    const { data: offering, error } = await db
         .from('offerings')
         .insert({
             teacher_id: getEffectiveTeacherId(req),
@@ -325,13 +328,14 @@ router.post('/', authenticateToken, requirePermission('manage_offerings'), valid
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.delete('/:id', authenticateToken, requirePermission('manage_offerings'), asyncHandler(async (req, res) => {
-    const offering = await verifyOfferingAccess(req.params.id, getEffectiveTeacherId(req));
+  const db = scopedClient(req);
+    const offering = await verifyOfferingAccess(db, req.params.id, getEffectiveTeacherId(req));
 
     if (!offering) {
         return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await db
         .from('offerings')
         .update({ is_active: false })
         .eq('id', req.params.id)
@@ -392,13 +396,14 @@ router.delete('/:id', authenticateToken, requirePermission('manage_offerings'), 
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.get('/:offeringId/groups', authenticateToken, asyncHandler(async (req, res) => {
-    const offering = await verifyOfferingAccess(req.params.offeringId, getEffectiveTeacherId(req));
+  const db = scopedClient(req);
+    const offering = await verifyOfferingAccess(db, req.params.offeringId, getEffectiveTeacherId(req));
 
     if (!offering) {
         return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
     }
 
-    const { data: groups, error } = await supabaseAdmin
+    const { data: groups, error } = await db
         .from('groups')
         .select(`
             id, name, max_capacity, schedule_description,
@@ -494,14 +499,15 @@ router.get('/:offeringId/groups', authenticateToken, asyncHandler(async (req, re
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/:offeringId/groups', authenticateToken, requirePermission('manage_offerings'), validate(createGroupSchema), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
     const { name, max_capacity, schedule_description } = req.validated.body;
     const { offeringId } = req.params;
 
-    const offering = await verifyOfferingAccess(offeringId, getEffectiveTeacherId(req));
+    const offering = await verifyOfferingAccess(db, offeringId, getEffectiveTeacherId(req));
 
     if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
-    const { data: group, error } = await supabaseAdmin
+    const { data: group, error } = await db
         .from('groups')
         .insert({
             offering_id: offeringId,
@@ -594,9 +600,10 @@ router.post('/:offeringId/groups', authenticateToken, requirePermission('manage_
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.put('/:offeringId/groups/:groupId', authenticateToken, requirePermission('manage_offerings'), validate(updateGroupSchema), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
     const { offeringId, groupId } = req.params;
 
-    const offering = await verifyOfferingAccess(offeringId, getEffectiveTeacherId(req));
+    const offering = await verifyOfferingAccess(db, offeringId, getEffectiveTeacherId(req));
 
     if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
@@ -612,7 +619,7 @@ router.put('/:offeringId/groups/:groupId', authenticateToken, requirePermission(
         return res.status(400).json({ success: false, message: 'No valid fields to update', messageAr: 'لا توجد حقول صالحة للتحديث', code: 'VALIDATION_ERROR' });
     }
 
-    const { data: group, error } = await supabaseAdmin
+    const { data: group, error } = await db
         .from('groups')
         .update(updates)
         .eq('id', groupId)
@@ -710,21 +717,22 @@ router.put('/:offeringId/groups/:groupId', authenticateToken, requirePermission(
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePermission('manage_offerings'), validate(enrollStudentSchema), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
     const { offeringId, groupId } = req.params;
     const { student_id } = req.validated.body;
 
     // Verify ownership
-    const offering = await verifyOfferingAccess(offeringId, getEffectiveTeacherId(req));
+    const offering = await verifyOfferingAccess(db, offeringId, getEffectiveTeacherId(req));
 
     if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
     // Verify the student belongs to the caller. Stops cross-tenant enrollment.
-    const studentAccess = await verifyStudentAccess(student_id, getEffectiveTeacherId(req));
+    const studentAccess = await verifyStudentAccess(db, student_id, getEffectiveTeacherId(req));
 
     if (!studentAccess) return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
 
     // Check group exists and belongs to offering
-    const { data: group } = await supabaseAdmin
+    const { data: group } = await db
         .from('groups')
         .select('id, max_capacity')
         .eq('id', groupId)
@@ -735,7 +743,7 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
 
     // Check capacity
     if (group.max_capacity) {
-        const { count } = await supabaseAdmin
+        const { count } = await db
             .from('enrollments')
             .select('id', { count: 'exact', head: true })
             .eq('group_id', groupId)
@@ -747,7 +755,7 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
     }
 
     // Check if already enrolled
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await db
         .from('enrollments')
             .select('id, status')
             .eq('student_id', student_id)
@@ -761,7 +769,7 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
     // Re-enroll if previously withdrawn, or create new
     let enrollment;
     if (existing) {
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await db
             .from('enrollments')
             .update({ status: 'active', enrolled_at: new Date().toISOString() })
             .eq('id', existing.id)
@@ -770,7 +778,7 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
         if (error) throw error;
         enrollment = data;
     } else {
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await db
             .from('enrollments')
             .insert({
                 student_id,
@@ -849,17 +857,18 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.delete('/:offeringId/groups/:groupId/enroll/:studentId', authenticateToken, requirePermission('manage_offerings'), validate(unenrollStudentSchema), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
     const { offeringId, groupId, studentId } = req.validated.params;
 
-    const offering = await verifyOfferingAccess(offeringId, getEffectiveTeacherId(req));
+    const offering = await verifyOfferingAccess(db, offeringId, getEffectiveTeacherId(req));
 
     if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
-    const studentAccess = await verifyStudentAccess(studentId, getEffectiveTeacherId(req));
+    const studentAccess = await verifyStudentAccess(db, studentId, getEffectiveTeacherId(req));
 
     if (!studentAccess) return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
 
-    const { error } = await supabaseAdmin
+    const { error } = await db
         .from('enrollments')
         .update({ status: 'inactive' })
         .eq('student_id', studentId)

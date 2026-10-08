@@ -1,6 +1,6 @@
 const express = require('express');
 const { z } = require('zod');
-const { supabaseAdmin } = require('../config/database');
+const { scopedClient } = require('../lib/privileged/tenantClient');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -45,15 +45,16 @@ const overviewSchema = z.object({
 
 // ── GET /group-comparison — Average scores per group for an offering ──
 const getGroupComparison = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
   const { offering_id } = req.validated.query;
 
   // Verify offering belongs to teacher
-  const offering = await verifyOfferingAccess(offering_id, teacherId);
+  const offering = await verifyOfferingAccess(db, offering_id, teacherId);
   if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
 
   // Get groups with their enrollments and grades
-  const { data: groups } = await supabaseAdmin
+  const { data: groups } = await db
     .from('groups')
     .select(`
       id,
@@ -97,15 +98,16 @@ const getGroupComparison = async (req, res) => {
 
 // ── GET /at-risk — Students with grades below threshold + poor attendance ──
 const getAtRisk = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
   const { offering_id, grade_threshold, attendance_threshold } = req.validated.query;
 
   // Verify offering belongs to teacher
-  const offering = await verifyOfferingAccess(offering_id, teacherId);
+  const offering = await verifyOfferingAccess(db, offering_id, teacherId);
   if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
 
   // Get all enrollments in this offering with grades and attendance
-  const { data: enrollments } = await supabaseAdmin
+  const { data: enrollments } = await db
     .from('enrollments')
     .select(`
       id,
@@ -171,11 +173,12 @@ const getAtRisk = async (req, res) => {
 
 // ── GET /distribution/:assessmentId — Grade distribution histogram ──
 const getDistribution = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
   const { assessmentId } = req.validated.params;
 
   // Verify assessment belongs to teacher
-  const { data: assessment } = await supabaseAdmin
+  const { data: assessment } = await db
     .from('assessments')
     .select('id, name, max_score, offering:offerings(teacher_id)')
     .eq('id', assessmentId)
@@ -186,7 +189,7 @@ const getDistribution = async (req, res) => {
   }
 
   // Get all grades for this assessment
-  const { data: grades } = await supabaseAdmin
+  const { data: grades } = await db
     .from('grades')
     .select('score')
     .eq('assessment_id', assessmentId);
@@ -238,18 +241,19 @@ const getDistribution = async (req, res) => {
 
 // ── GET /trends/:studentId — Grade trend over time for a student ──
 const getTrends = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
   const { studentId } = req.validated.params;
 
   // Enforce enrollment chain access control
-  const enrollments = await getStudentEnrollmentsForTeacher(studentId, teacherId);
+  const enrollments = await getStudentEnrollmentsForTeacher(db, studentId, teacherId);
   if (!enrollments || enrollments.length === 0) {
     return res.json({ success: true, data: { student_id: studentId, trends: [] } });
   }
 
   const enrollmentIds = enrollments.map(e => e.id);
 
-  const { data: grades } = await supabaseAdmin
+  const { data: grades } = await db
     .from('grades')
     .select(`
       score,
@@ -277,11 +281,12 @@ const getTrends = async (req, res) => {
 
 // ── GET /overview/:offeringId — Aggregate stats for offering ──
 const getOverview = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
   const { offeringId } = req.validated.params;
 
   // Verify offering belongs to teacher
-  const { data: offering } = await supabaseAdmin
+  const { data: offering } = await db
     .from('offerings')
     .select('id, subject:subjects(name), grade_level:grade_levels(name)')
     .eq('id', offeringId)
@@ -291,7 +296,7 @@ const getOverview = async (req, res) => {
   if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
 
   // Get all grades in this offering
-  const { data: grades } = await supabaseAdmin
+  const { data: grades } = await db
     .from('grades')
     .select(`
       score,
@@ -301,7 +306,7 @@ const getOverview = async (req, res) => {
     .eq('assessment.offerings.id', offeringId);
 
   // Get enrollment count
-  const { count: studentCount } = await supabaseAdmin
+  const { count: studentCount } = await db
     .from('enrollments')
     .select('id', { count: 'exact', head: true })
     .eq('group.offering_id', offeringId);

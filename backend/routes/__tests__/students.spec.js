@@ -36,6 +36,13 @@ jest.mock('../../lib/enrollmentChain', () => ({
   getStudentEnrollmentsForTeacher: jest.fn(),
 }));
 
+// Scoped client resolves to the mocked admin query builder in unit tests.
+// Live scoping is proven by the cross-tenant matrix, not by these specs.
+jest.mock('../../lib/privileged/tenantClient', () => {
+  const db = require('../../config/database');
+  return { scopedClient: () => db.supabaseAdmin };
+});
+
 const studentsRouter = require('../students');
 const { supabase, supabaseAdmin } = require('../../config/database');
 const { createStudentsQuery, verifyStudentAccess, verifyGroupAccess, getStudentEnrollmentsForTeacher } = require('../../lib/enrollmentChain');
@@ -84,7 +91,7 @@ describe('Students Routes', () => {
       expect(res.body.pagination.page).toBe(1);
       expect(res.body.pagination.limit).toBe(10);
       expect(res.body.pagination.total).toBe(2);
-      expect(createStudentsQuery).toHaveBeenCalledWith('teacher-1');
+      expect(createStudentsQuery).toHaveBeenCalledWith(expect.anything(), 'teacher-1');
     });
 
     it('should call ilike with search parameter', async () => {
@@ -209,7 +216,7 @@ describe('Students Routes', () => {
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
       expect(res.body.data.name).toBe('New Student');
-      expect(verifyGroupAccess).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440000', 'teacher-1');
+      expect(verifyGroupAccess).toHaveBeenCalledWith(expect.anything(), '550e8400-e29b-41d4-a716-446655440000', 'teacher-1');
     });
 
     it('should create parents when provided', async () => {
@@ -562,7 +569,7 @@ describe('Students Routes', () => {
       expect(res.body.data.academic.total_assessments).toBe(2);
       expect(res.body.data.academic.average_score).toBe(87.5);
 
-      expect(getStudentEnrollmentsForTeacher).toHaveBeenCalledWith('s1', 'teacher-1');
+      expect(getStudentEnrollmentsForTeacher).toHaveBeenCalledWith(expect.anything(), 's1', 'teacher-1');
     });
 
     it('should return zeros when student has no attendance or grades', async () => {

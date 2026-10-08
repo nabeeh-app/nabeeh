@@ -4,7 +4,7 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const Papa = require('papaparse');
 const { v4: uuidv4 } = require('uuid');
-const { supabaseAdmin } = require('../config/database');
+const { scopedClient } = require('../lib/privileged/tenantClient');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const { detectColumnType, validateImportData, HEADER_MAPPINGS } = require('../lib/importValidation');
@@ -176,6 +176,7 @@ function autoDetectMapping(headers) {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/preview', authenticateToken, requirePermission('manage_students'), upload.single('file'), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No file uploaded', messageAr: 'لم يتم رفع أي ملف', code: 'VALIDATION_ERROR' });
   }
@@ -282,6 +283,7 @@ router.post('/preview', authenticateToken, requirePermission('manage_students'),
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/validate', authenticateToken, requirePermission('manage_students'), upload.single('file'), validate(validateImportSchema), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No file uploaded', messageAr: 'لم يتم رفع أي ملف', code: 'VALIDATION_ERROR' });
   }
@@ -406,9 +408,10 @@ router.post('/validate', authenticateToken, requirePermission('manage_students')
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/execute', authenticateToken, requirePermission('manage_students'), validate(executeImportSchema), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
   const { fieldMapping, rows, groupId, skipErrors = true } = req.validated.body;
 
-  const { data: groupCheck } = await supabaseAdmin
+  const { data: groupCheck } = await db
     .from('groups')
     .select('id, offering:offerings(teacher_id, id)')
     .eq('id', groupId)
@@ -438,7 +441,7 @@ router.post('/execute', authenticateToken, requirePermission('manage_students'),
         is_demo: false
       };
 
-      const { data: student, error: studentError } = await supabaseAdmin
+      const { data: student, error: studentError } = await db
         .from('students')
         .insert([studentData])
         .select()
@@ -449,7 +452,7 @@ router.post('/execute', authenticateToken, requirePermission('manage_students'),
         continue;
       }
 
-      const { error: enrollError } = await supabaseAdmin
+      const { error: enrollError } = await db
         .from('enrollments')
         .insert({
           student_id: student.id,
@@ -464,7 +467,7 @@ router.post('/execute', authenticateToken, requirePermission('manage_students'),
       }
 
       if (row.data.parent_phone || row.data.parent_name) {
-        await supabaseAdmin.from('parents').insert([{
+        await db.from('parents').insert([{
           student_id: student.id,
           name: row.data.parent_name || `Parent of ${row.data.name}`,
           phone: row.data.parent_phone,
@@ -571,6 +574,7 @@ router.post('/execute', authenticateToken, requirePermission('manage_students'),
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/paste', authenticateToken, requirePermission('manage_students'), validate(pasteImportSchema), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
   const { text } = req.validated.body;
 
   const result = Papa.parse(text.trim(), {
@@ -635,6 +639,7 @@ router.post('/paste', authenticateToken, requirePermission('manage_students'), v
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/demo/seed', authenticateToken, requirePermission('manage_students'), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
   const result = await seedDemoData(getEffectiveTeacherId(req));
   res.json({ success: true, data: result });
 }));
@@ -675,6 +680,7 @@ router.post('/demo/seed', authenticateToken, requirePermission('manage_students'
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/demo/remove', authenticateToken, requirePermission('manage_students'), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
   const result = await removeDemoData(getEffectiveTeacherId(req));
   res.json({ success: true, data: result });
 }));

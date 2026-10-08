@@ -245,6 +245,12 @@ describe('Teachers Routes', () => {
   });
 });
 
+jest.mock('../../lib/privileged/tenantClient', () => {
+  const db = require('../../config/database');
+  return { scopedClient: () => db.supabaseAdmin };
+});
+
+
 describe('getEffectiveTeacherId', () => {
   const { getEffectiveTeacherId } = require('../teachers');
 

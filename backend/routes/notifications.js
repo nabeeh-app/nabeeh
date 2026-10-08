@@ -1,6 +1,6 @@
 const express = require('express');
 const { z } = require('zod');
-const { supabaseAdmin } = require('../config/database');
+const { scopedClient } = require('../lib/privileged/tenantClient');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -23,11 +23,12 @@ const markReadParamsSchema = z.object({
 
 // ── GET / — List notifications (paginated, unread first) ───────
 const getNotifications = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
   const { page, limit, type, unread_only } = req.validated.query;
   const offset = (page - 1) * limit;
 
-  let query = supabaseAdmin
+  let query = db
     .from('notifications')
     .select('*', { count: 'exact' })
     .eq('teacher_id', teacherId);
@@ -57,8 +58,9 @@ const getNotifications = async (req, res) => {
 
 // ── GET /unread-count ──────────────────────────────────────────
 const getUnreadCount = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
-  const { count } = await supabaseAdmin
+  const { count } = await db
     .from('notifications')
     .select('id', { count: 'exact', head: true })
     .eq('teacher_id', teacherId)
@@ -69,10 +71,11 @@ const getUnreadCount = async (req, res) => {
 
 // ── PUT /:id/read — Mark single notification as read ───────────
 const markRead = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
   const { id } = req.validated.params;
 
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('notifications')
     .update({ is_read: true })
     .eq('id', id)
@@ -85,9 +88,10 @@ const markRead = async (req, res) => {
 
 // ── PUT /read-all — Mark all as read ───────────────────────────
 const markAllRead = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
 
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('notifications')
     .update({ is_read: true })
     .eq('teacher_id', teacherId)
@@ -100,10 +104,11 @@ const markAllRead = async (req, res) => {
 
 // ── DELETE /:id — Delete a notification ────────────────────────
 const deleteNotification = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
   const { id } = req.validated.params;
 
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('notifications')
     .delete()
     .eq('id', id)

@@ -49,7 +49,7 @@ describe('enrollmentChain', () => {
       const enrollmentData = { id: 'e1', student_id: 's1', group_id: 'g1', status: 'active' };
       supabaseAdmin.from.mockReturnValue(createChainable({ data: enrollmentData, error: null }));
 
-      const result = await verifyStudentAccess('s1', 'teacher-1');
+      const result = await verifyStudentAccess(supabaseAdmin, 's1', 'teacher-1');
 
       expect(result).toEqual(enrollmentData);
       expect(supabaseAdmin.from).toHaveBeenCalledWith('enrollments');
@@ -58,7 +58,7 @@ describe('enrollmentChain', () => {
     it('should return null when teacher does not own student', async () => {
       supabaseAdmin.from.mockReturnValue(createChainable({ data: null, error: null }));
 
-      const result = await verifyStudentAccess('s1', 'teacher-1');
+      const result = await verifyStudentAccess(supabaseAdmin, 's1', 'teacher-1');
 
       expect(result).toBeNull();
     });
@@ -66,7 +66,7 @@ describe('enrollmentChain', () => {
     it('should return null on database error', async () => {
       supabaseAdmin.from.mockReturnValue(createChainable({ data: null, error: { message: 'DB error' } }));
 
-      const result = await verifyStudentAccess('s1', 'teacher-1');
+      const result = await verifyStudentAccess(supabaseAdmin, 's1', 'teacher-1');
 
       expect(result).toBeNull();
     });
@@ -75,7 +75,7 @@ describe('enrollmentChain', () => {
       const chain = createChainable({ data: null, error: null });
       supabaseAdmin.from.mockReturnValue(chain);
 
-      await verifyStudentAccess('student-42', 'teacher-99');
+      await verifyStudentAccess(supabaseAdmin, 'student-42', 'teacher-99');
 
       expect(chain.eq).toHaveBeenCalledWith('student_id', 'student-42');
       expect(chain.eq).toHaveBeenCalledWith('teacher_id', 'teacher-99');
@@ -89,7 +89,7 @@ describe('enrollmentChain', () => {
       const offering = { id: 'o1', teacher_id: 'teacher-1' };
       supabaseAdmin.from.mockReturnValue(createChainable({ data: offering, error: null }));
 
-      const result = await verifyOfferingAccess('o1', 'teacher-1');
+      const result = await verifyOfferingAccess(supabaseAdmin, 'o1', 'teacher-1');
 
       expect(result).toEqual(offering);
       expect(supabaseAdmin.from).toHaveBeenCalledWith('offerings');
@@ -98,7 +98,7 @@ describe('enrollmentChain', () => {
     it('should return null when teacher does not own offering', async () => {
       supabaseAdmin.from.mockReturnValue(createChainable({ data: null, error: null }));
 
-      const result = await verifyOfferingAccess('o1', 'teacher-1');
+      const result = await verifyOfferingAccess(supabaseAdmin, 'o1', 'teacher-1');
 
       expect(result).toBeNull();
     });
@@ -106,7 +106,7 @@ describe('enrollmentChain', () => {
     it('should return null on database error', async () => {
       supabaseAdmin.from.mockReturnValue(createChainable({ data: null, error: { message: 'Not found' } }));
 
-      const result = await verifyOfferingAccess('o1', 'teacher-1');
+      const result = await verifyOfferingAccess(supabaseAdmin, 'o1', 'teacher-1');
 
       expect(result).toBeNull();
     });
@@ -115,7 +115,7 @@ describe('enrollmentChain', () => {
       const chain = createChainable({ data: null, error: null });
       supabaseAdmin.from.mockReturnValue(chain);
 
-      await verifyOfferingAccess('o1', 'teacher-1');
+      await verifyOfferingAccess(supabaseAdmin, 'o1', 'teacher-1');
 
       expect(chain.eq).toHaveBeenCalledWith('id', 'o1');
       expect(chain.eq).toHaveBeenCalledWith('teacher_id', 'teacher-1');
@@ -128,7 +128,7 @@ describe('enrollmentChain', () => {
       const groupData = { id: 'g1', offering_id: 'o1', offerings: { id: 'o1', teacher_id: 'teacher-1' } };
       supabaseAdmin.from.mockReturnValue(createChainable({ data: groupData, error: null }));
 
-      const result = await verifyGroupAccess('g1', 'teacher-1');
+      const result = await verifyGroupAccess(supabaseAdmin, 'g1', 'teacher-1');
 
       expect(result).toEqual(groupData);
       expect(supabaseAdmin.from).toHaveBeenCalledWith('groups');
@@ -137,7 +137,7 @@ describe('enrollmentChain', () => {
     it('should return null when teacher does not own group', async () => {
       supabaseAdmin.from.mockReturnValue(createChainable({ data: null, error: null }));
 
-      const result = await verifyGroupAccess('g1', 'teacher-1');
+      const result = await verifyGroupAccess(supabaseAdmin, 'g1', 'teacher-1');
 
       expect(result).toBeNull();
     });
@@ -145,7 +145,7 @@ describe('enrollmentChain', () => {
     it('should return null on database error', async () => {
       supabaseAdmin.from.mockReturnValue(createChainable({ data: null, error: { message: 'Not found' } }));
 
-      const result = await verifyGroupAccess('g1', 'teacher-1');
+      const result = await verifyGroupAccess(supabaseAdmin, 'g1', 'teacher-1');
 
       expect(result).toBeNull();
     });
@@ -159,7 +159,7 @@ describe('enrollmentChain', () => {
       ];
       supabaseAdmin.from.mockReturnValue(createChainable({ data: enrollments, error: null }));
 
-      const result = await getTeacherEnrollments('teacher-1');
+      const result = await getTeacherEnrollments(supabaseAdmin, 'teacher-1');
 
       expect(result).toEqual(enrollments);
       expect(result).toHaveLength(2);
@@ -168,7 +168,7 @@ describe('enrollmentChain', () => {
     it('should return empty array on error', async () => {
       supabaseAdmin.from.mockReturnValue(createChainable({ data: null, error: { message: 'DB error' } }));
 
-      const result = await getTeacherEnrollments('teacher-1');
+      const result = await getTeacherEnrollments(supabaseAdmin, 'teacher-1');
 
       expect(result).toEqual([]);
     });
@@ -176,7 +176,7 @@ describe('enrollmentChain', () => {
     it('should return empty array when no enrollments found', async () => {
       supabaseAdmin.from.mockReturnValue(createChainable({ data: [], error: null }));
 
-      const result = await getTeacherEnrollments('teacher-1');
+      const result = await getTeacherEnrollments(supabaseAdmin, 'teacher-1');
 
       expect(result).toEqual([]);
     });
@@ -185,7 +185,7 @@ describe('enrollmentChain', () => {
       const chain = createChainable({ data: [], error: null });
       supabaseAdmin.from.mockReturnValue(chain);
 
-      await getTeacherEnrollments('teacher-1');
+      await getTeacherEnrollments(supabaseAdmin, 'teacher-1');
 
       expect(chain.eq).toHaveBeenCalledWith('teacher_id', 'teacher-1');
       expect(chain.not).toHaveBeenCalledWith('student_id', 'is', null);
@@ -199,7 +199,7 @@ describe('enrollmentChain', () => {
       ];
       supabaseAdmin.from.mockReturnValue(createChainable({ data: students, error: null }));
 
-      const result = await getTeacherStudents('teacher-1');
+      const result = await getTeacherStudents(supabaseAdmin, 'teacher-1');
 
       expect(result).toEqual(students);
     });
@@ -207,7 +207,7 @@ describe('enrollmentChain', () => {
     it('should return empty array on error', async () => {
       supabaseAdmin.from.mockReturnValue(createChainable({ data: null, error: { message: 'DB error' } }));
 
-      const result = await getTeacherStudents('teacher-1');
+      const result = await getTeacherStudents(supabaseAdmin, 'teacher-1');
 
       expect(result).toEqual([]);
     });
@@ -221,7 +221,7 @@ describe('enrollmentChain', () => {
       ];
       supabaseAdmin.from.mockReturnValue(createChainable({ data: enrollments, error: null }));
 
-      const result = await getStudentEnrollmentsForTeacher('s1', 'teacher-1');
+      const result = await getStudentEnrollmentsForTeacher(supabaseAdmin, 's1', 'teacher-1');
 
       expect(result).toEqual(enrollments);
       expect(result).toHaveLength(2);
@@ -230,7 +230,7 @@ describe('enrollmentChain', () => {
     it('should return empty array when student has no enrollments for teacher', async () => {
       supabaseAdmin.from.mockReturnValue(createChainable({ data: [], error: null }));
 
-      const result = await getStudentEnrollmentsForTeacher('s1', 'teacher-1');
+      const result = await getStudentEnrollmentsForTeacher(supabaseAdmin, 's1', 'teacher-1');
 
       expect(result).toEqual([]);
     });
@@ -238,7 +238,7 @@ describe('enrollmentChain', () => {
     it('should return empty array on error', async () => {
       supabaseAdmin.from.mockReturnValue(createChainable({ data: null, error: { message: 'DB error' } }));
 
-      const result = await getStudentEnrollmentsForTeacher('s1', 'teacher-1');
+      const result = await getStudentEnrollmentsForTeacher(supabaseAdmin, 's1', 'teacher-1');
 
       expect(result).toEqual([]);
     });
@@ -247,7 +247,7 @@ describe('enrollmentChain', () => {
       const chain = createChainable({ data: [], error: null });
       supabaseAdmin.from.mockReturnValue(chain);
 
-      await getStudentEnrollmentsForTeacher('s1', 'teacher-1');
+      await getStudentEnrollmentsForTeacher(supabaseAdmin, 's1', 'teacher-1');
 
       expect(chain.eq).toHaveBeenCalledWith('student_id', 's1');
       expect(chain.eq).toHaveBeenCalledWith('teacher_id', 'teacher-1');
@@ -259,7 +259,7 @@ describe('enrollmentChain', () => {
       const chain = createChainable({ data: [], error: null, count: 0 });
       supabaseAdmin.from.mockReturnValue(chain);
 
-      const query = createStudentsQuery('teacher-1');
+      const query = createStudentsQuery(supabaseAdmin, 'teacher-1');
 
       expect(query).toBeDefined();
       expect(query.select).toBeDefined();
@@ -271,7 +271,7 @@ describe('enrollmentChain', () => {
       const chain = createChainable({ data: [], error: null, count: 0 });
       supabaseAdmin.from.mockReturnValue(chain);
 
-      createStudentsQuery('teacher-1');
+      createStudentsQuery(supabaseAdmin, 'teacher-1');
 
       expect(supabaseAdmin.from).toHaveBeenCalledWith('students');
       const selectArg = chain.select.mock.calls[0][0];
@@ -285,7 +285,7 @@ describe('enrollmentChain', () => {
       const chain = createChainable({ data: [], error: null, count: 0 });
       supabaseAdmin.from.mockReturnValue(chain);
 
-      createStudentsQuery('teacher-42');
+      createStudentsQuery(supabaseAdmin, 'teacher-42');
 
       expect(chain.eq).toHaveBeenCalledWith('enrollments.teacher_id', 'teacher-42');
     });
@@ -294,7 +294,7 @@ describe('enrollmentChain', () => {
       const chain = createChainable({ data: [], error: null, count: 0 });
       supabaseAdmin.from.mockReturnValue(chain);
 
-      createStudentsQuery('teacher-1');
+      createStudentsQuery(supabaseAdmin, 'teacher-1');
 
       expect(chain.order).toHaveBeenCalledWith('created_at', { ascending: false });
     });

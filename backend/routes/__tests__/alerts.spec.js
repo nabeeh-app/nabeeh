@@ -404,3 +404,9 @@ describe('Alerts Routes', () => {
     });
   });
 });
+
+jest.mock('../../lib/privileged/tenantClient', () => {
+  const db = require('../../config/database');
+  return { scopedClient: () => db.supabaseAdmin };
+});
+

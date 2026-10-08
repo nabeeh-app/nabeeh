@@ -90,3 +90,9 @@ describe('Self Registration link route', () => {
     expect(res.body.code).toBe('FORBIDDEN');
   });
 });
+
+jest.mock('../../lib/privileged/tenantClient', () => {
+  const db = require('../../config/database');
+  return { scopedClient: () => db.supabaseAdmin };
+});
+

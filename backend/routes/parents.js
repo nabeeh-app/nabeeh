@@ -1,5 +1,5 @@
 const express = require('express');
-const { supabaseAdmin } = require('../config/database');
+const { scopedClient } = require('../lib/privileged/tenantClient');
 
 const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
 const { authenticateToken } = require('../middleware/auth');
@@ -14,17 +14,18 @@ const router = express.Router();
 // @route   GET /api/parents
 // @access  Private
 const getParents = async (req, res) => {
+  const db = scopedClient(req);
   const { student_id, search } = req.query;
   const teacher_id = getEffectiveTeacherId(req);
 
-  const enrollments = await getTeacherEnrollments(teacher_id);
+  const enrollments = await getTeacherEnrollments(db, teacher_id);
   const studentIds = new Set(enrollments.map(e => e.student_id));
 
   if (studentIds.size === 0) {
     return res.status(200).json({ success: true, data: [] });
   }
 
-  let parentQuery = supabaseAdmin
+  let parentQuery = db
     .from('parents')
     .select(`
           *,
@@ -64,7 +65,8 @@ const getParents = async (req, res) => {
 // @route   GET /api/parents/:id
 // @access  Private
 const getParent = async (req, res) => {
-  const { data: parent, error } = await supabaseAdmin
+  const db = scopedClient(req);
+  const { data: parent, error } = await db
     .from('parents')
     .select(`
       *,
@@ -77,7 +79,7 @@ const getParent = async (req, res) => {
     return res.status(404).json({ success: false, message: 'Parent not found', messageAr: 'لم يتم العثور على ولي الأمر', code: 'NOT_FOUND' });
   }
 
-  const enrollment = await verifyStudentAccess(parent.student_id, getEffectiveTeacherId(req));
+  const enrollment = await verifyStudentAccess(db, parent.student_id, getEffectiveTeacherId(req));
   if (!enrollment) {
     return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
   }
@@ -89,6 +91,7 @@ const getParent = async (req, res) => {
 // @route   POST /api/parents
 // @access  Private
 const createParent = async (req, res) => {
+  const db = scopedClient(req);
   const {
     student_id,
     name,
@@ -108,7 +111,7 @@ const createParent = async (req, res) => {
     });
   }
 
-  const enrollment = await verifyStudentAccess(student_id, getEffectiveTeacherId(req));
+  const enrollment = await verifyStudentAccess(db, student_id, getEffectiveTeacherId(req));
   if (!enrollment) {
     return res.status(404).json({
       success: false,
@@ -118,7 +121,7 @@ const createParent = async (req, res) => {
     });
   }
 
-  const { data: parent, error } = await supabaseAdmin
+  const { data: parent, error } = await db
     .from('parents')
     .insert([{
       student_id,
@@ -154,6 +157,7 @@ const createParent = async (req, res) => {
 // @route   PUT /api/parents/:id
 // @access  Private
 const updateParent = async (req, res) => {
+  const db = scopedClient(req);
   const allowedFields = [
     'name', 'phone', 'email', 'relationship',
     'is_primary', 'preferred_language', 'telegram_username',
@@ -167,7 +171,7 @@ const updateParent = async (req, res) => {
     }
   });
 
-  const { data: accessCheck } = await supabaseAdmin
+  const { data: accessCheck } = await db
     .from('parents')
     .select('student_id')
     .eq('id', req.params.id)
@@ -177,12 +181,12 @@ const updateParent = async (req, res) => {
     return res.status(404).json({ success: false, message: 'Parent not found', messageAr: 'لم يتم العثور على ولي الأمر', code: 'NOT_FOUND' });
   }
 
-  const enrollment = await verifyStudentAccess(accessCheck.student_id, getEffectiveTeacherId(req));
+  const enrollment = await verifyStudentAccess(db, accessCheck.student_id, getEffectiveTeacherId(req));
   if (!enrollment) {
     return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
   }
 
-  const { data: parent, error } = await supabaseAdmin
+  const { data: parent, error } = await db
     .from('parents')
     .update(updates)
     .eq('id', req.params.id)
@@ -211,7 +215,8 @@ const updateParent = async (req, res) => {
 // @route   DELETE /api/parents/:id
 // @access  Private
 const deleteParent = async (req, res) => {
-  const { data: parent } = await supabaseAdmin
+  const db = scopedClient(req);
+  const { data: parent } = await db
     .from('parents')
     .select('student_id')
     .eq('id', req.params.id)
@@ -226,7 +231,7 @@ const deleteParent = async (req, res) => {
     });
   }
 
-  const enrollment = await verifyStudentAccess(parent.student_id, getEffectiveTeacherId(req));
+  const enrollment = await verifyStudentAccess(db, parent.student_id, getEffectiveTeacherId(req));
   if (!enrollment) {
     return res.status(403).json({
       success: false,
@@ -236,7 +241,7 @@ const deleteParent = async (req, res) => {
     });
   }
 
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('parents')
     .delete()
     .eq('id', req.params.id);

@@ -1,6 +1,6 @@
 const express = require('express');
 const { z } = require('zod');
-const { supabaseAdmin } = require('../config/database');
+const { scopedClient } = require('../lib/privileged/tenantClient');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -45,26 +45,27 @@ const bulkGenerateSchema = z.object({
 });
 
 const generateComment = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = getTeacherId(req);
   const { student_id, group_id } = req.validated.body;
 
-  const enrollment = await verifyStudentAccess(student_id, teacherId);
+  const enrollment = await verifyStudentAccess(db, student_id, teacherId);
   if (!enrollment) {
     return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
   }
 
   if (group_id) {
-    const groupAccess = await verifyGroupAccess(group_id, teacherId);
+    const groupAccess = await verifyGroupAccess(db, group_id, teacherId);
     if (!groupAccess) {
       return res.status(404).json({ success: false, message: 'Group not found', messageAr: 'لم يتم العثور على المجموعة', code: 'NOT_FOUND' });
     }
   }
 
-  const { data: student } = await supabaseAdmin
+  const { data: student } = await db
     .from('students').select('id, name').eq('id', student_id).single();
   if (!student) return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
 
-  const { data: teacher } = await supabaseAdmin
+  const { data: teacher } = await db
     .from('teachers').select('name, business_name, preferred_language').eq('id', teacherId).single();
 
   const gradesResult = await whatsappQuery.getStudentGrades(student_id, undefined, teacherId);
@@ -84,7 +85,7 @@ const generateComment = async (req, res) => {
     businessName: teacher?.business_name || '',
   });
 
-  const { data: draft, error } = await supabaseAdmin
+  const { data: draft, error } = await db
     .from('report_drafts')
     .insert([{
       teacher_id: teacherId,
@@ -108,11 +109,12 @@ const generateComment = async (req, res) => {
 };
 
 const getDrafts = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = getTeacherId(req);
   const { page, limit, status } = req.validated.query;
   const offset = (page - 1) * limit;
 
-  let query = supabaseAdmin
+  let query = db
     .from('report_drafts')
     .select('*, students(name, student_id)', { count: 'exact' })
     .eq('teacher_id', teacherId);
@@ -136,6 +138,7 @@ const getDrafts = async (req, res) => {
 };
 
 const updateDraft = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = getTeacherId(req);
   const { id } = req.validated.params;
   const { edited_text, status } = req.validated.body;
@@ -144,7 +147,7 @@ const updateDraft = async (req, res) => {
   if (status) updates.status = status;
   else updates.status = 'edited';
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('report_drafts')
     .update(updates)
     .eq('id', id).eq('teacher_id', teacherId)
@@ -157,10 +160,11 @@ const updateDraft = async (req, res) => {
 };
 
 const approveDraft = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = getTeacherId(req);
   const { id } = req.validated.params;
 
-  const { data: draft } = await supabaseAdmin
+  const { data: draft } = await db
     .from('report_drafts')
     .select('*, students(name, id)')
     .eq('id', id).eq('teacher_id', teacherId).single();
@@ -170,7 +174,7 @@ const approveDraft = async (req, res) => {
   const finalText = draft.edited_text || draft.draft_text;
 
   // Find student's parent (parents carry student_id; no junction table)
-  const { data: parentRows } = await supabaseAdmin
+  const { data: parentRows } = await db
     .from('parents')
     .select('id, name, phone')
     .eq('student_id', draft.student_id)
@@ -198,14 +202,14 @@ const approveDraft = async (req, res) => {
   }
 
   // Update draft status
-  await supabaseAdmin
+  await db
     .from('report_drafts')
     .update({ status: waSent ? 'sent' : 'approved', sent_at: waSent ? new Date().toISOString() : null })
     .eq('id', id)
     .eq('teacher_id', teacherId);
 
   // Create notification
-  await supabaseAdmin
+  await db
     .from('notifications')
     .insert([{
       teacher_id: teacherId,
@@ -226,9 +230,10 @@ const approveDraft = async (req, res) => {
 };
 
 const rejectDraft = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = getTeacherId(req);
   const { id } = req.validated.params;
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('report_drafts')
     .update({ status: 'rejected' })
     .eq('id', id).eq('teacher_id', teacherId);
@@ -237,10 +242,11 @@ const rejectDraft = async (req, res) => {
 };
 
 const bulkGenerate = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = getTeacherId(req);
   const { group_id } = req.validated.body;
 
-  const group = await verifyGroupAccess(group_id, teacherId);
+  const group = await verifyGroupAccess(db, group_id, teacherId);
   if (!group) {
     return res.status(404).json({ success: false, message: 'Group not found', messageAr: 'لم يتم العثور على المجموعة', code: 'NOT_FOUND' });
   }
@@ -250,8 +256,9 @@ const bulkGenerate = async (req, res) => {
 };
 
 const getLatestDigest = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = getTeacherId(req);
-  const { data } = await supabaseAdmin
+  const { data } = await db
     .from('weekly_digests')
     .select('*')
     .eq('teacher_id', teacherId)
@@ -263,9 +270,10 @@ const getLatestDigest = async (req, res) => {
 };
 
 const getDigestByWeek = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = getTeacherId(req);
   const { weekStart } = req.params;
-  const { data } = await supabaseAdmin
+  const { data } = await db
     .from('weekly_digests')
     .select('*')
     .eq('teacher_id', teacherId)

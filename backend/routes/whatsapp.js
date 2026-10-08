@@ -4,6 +4,7 @@ const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { perTeacherLimiter } = require('../middleware/security');
 const sessionManager = require('../lib/sessionManager');
+const { scopedClient } = require('../lib/privileged/tenantClient');
 const { supabaseAdmin } = require('../config/database');
 const logger = require('../lib/logger');
 const whatsappQuery = require('../lib/whatsappQuery');
@@ -87,12 +88,14 @@ sessionManager.on('sessionCreated', ({ teacherId, client }) => {
 });
 
 async function processIncomingMessage(teacherId, phone, messageContent, remoteJid, messageId) {
+  // Background socket path, no request identity: service-mediated.
+  const db = supabaseAdmin;
   const logContext = { teacherId, phone: redactPhone(phone), messageId };
   const isEgyptian = phone.startsWith('20');
 
   // Idempotency: skip if we already processed this WhatsApp message
   if (messageId) {
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await db
       .from('messages')
       .select('id')
       .eq('whatsapp_message_id', messageId)
@@ -134,7 +137,7 @@ async function processIncomingMessage(teacherId, phone, messageContent, remoteJi
       return;
     }
 
-    const { data: teacher } = await supabaseAdmin
+    const { data: teacher } = await db
       .from('teachers')
       .select('id, name, business_name, subscription_tier')
       .eq('id', teacherId)
@@ -398,6 +401,7 @@ router.get('/status', (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/pair', perTeacherLimiter(5, 60000), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = getEffectiveTeacherId(req);
   const client = await sessionManager.getOrCreateSession(teacherId, { autoConnect: false });
   await client.startPairing();
@@ -478,6 +482,7 @@ const resumeSchema = z.object({
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/pair-code', perTeacherLimiter(5, 60000), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
   const parsed = pairCodeSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ success: false, message: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' });
@@ -588,6 +593,7 @@ router.get('/qr', (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/logout', asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
   const success = await sessionManager.destroySession(getEffectiveTeacherId(req), { deleteCredentials: true });
   res.json({ success: true, message: success ? 'Logged out successfully' : 'No active session to logout' });
 }));
@@ -657,6 +663,7 @@ router.post('/logout', asyncHandler(async (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/send-to-number', requirePermission('send_whatsapp'), perTeacherLimiter(30, 60000), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
   const parsed = sendMessageSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ success: false, message: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' });
@@ -680,7 +687,7 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), perTeacherLim
 
   // Auto-pause bot for this conversation when teacher/assistant sends manual message
   try {
-    const { data: parent } = await supabaseAdmin
+    const { data: parent } = await db
       .from('parents')
       .select('id, students(id, enrollments(id, group:groups(id, offering:offerings(id, teacher_id))))')
       .eq('phone', `+${cleaned}`)
@@ -691,11 +698,11 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), perTeacherLim
         (s.enrollments || []).some(e => e?.group?.offering?.teacher_id === teacherId)
       );
       if (belongsToTeacher) {
-        const { data: conversation } = await supabaseAdmin.from('conversations')
+        const { data: conversation } = await db.from('conversations')
           .select('id').eq('parent_id', parent.id).eq('teacher_id', teacherId).maybeSingle();
         if (conversation) {
           const pauseHours = 4;
-          await supabaseAdmin.from('conversations').update({
+          await db.from('conversations').update({
             last_responder_id: teacherId,
             last_responder_type: req.user.role,
             bot_paused_until: new Date(Date.now() + pauseHours * 3600000).toISOString()
@@ -787,13 +794,14 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), perTeacherLim
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/bot/resume', asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
   const parsed = resumeSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ success: false, message: parsed.error.issues[0].message, messageAr: 'معرّف المحادثة مطلوب', code: 'VALIDATION_ERROR' });
   }
   const { conversation_id } = parsed.data;
 
-  const { data: conversation, error: fetchError } = await supabaseAdmin
+  const { data: conversation, error: fetchError } = await db
     .from('conversations')
     .select('id, teacher_id')
     .eq('id', conversation_id)
@@ -804,7 +812,7 @@ router.post('/bot/resume', asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Conversation not found', messageAr: 'لم يتم العثور على المحادثة', code: 'NOT_FOUND' });
   }
 
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('conversations')
     .update({ bot_paused_until: null })
     .eq('id', conversation_id);
@@ -874,15 +882,16 @@ router.post('/bot/resume', asyncHandler(async (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.get('/conversations', validate(getConversationsSchema), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
   const { page, limit } = req.validated.query;
   const offset = (page - 1) * limit;
 
-  const { count } = await supabaseAdmin
+  const { count } = await db
     .from('conversations')
     .select('*', { count: 'exact', head: true })
     .eq('teacher_id', getEffectiveTeacherId(req));
 
-  const { data: conversations, error } = await supabaseAdmin
+  const { data: conversations, error } = await db
     .from('conversations')
     .select(`
       *,
@@ -945,6 +954,7 @@ router.get('/sessions', requirePermission('manage_settings'), (req, res) => {
  *         description: Unauthorized
  */
 router.delete('/sessions/:teacherId', requirePermission('manage_settings'), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
   const parsed = sessionParamsSchema.safeParse(req.params);
   if (!parsed.success) {
     return res.status(400).json({ success: false, message: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' });

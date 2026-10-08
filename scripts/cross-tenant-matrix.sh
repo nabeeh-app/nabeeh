@@ -60,6 +60,9 @@ BG=$(curl -s -m 20 $CB -X POST $BASE/api/offerings/$BO/groups -H 'Content-Type: 
 BST=$(curl -s -m 20 $CB -X POST $BASE/api/students -H 'Content-Type: application/json' -d "{\"name\":\"mx b student\",\"group_id\":\"$BG\"}" | j "['data']['id']")
 [ -z "$BST" ] && BST=$(curl -s -m 20 $CB -X POST $BASE/api/students -H 'Content-Type: application/json' -d "{\"name\":\"mx b student\",\"group_id\":\"$BG\"}" | j "['data']['student']['id']")
 printf "POST reports/comment B-student A-group => "; code $CB -H 'Content-Type: application/json' -X POST $BASE/api/reports/generate-comment -d "{\"student_id\":\"$BST\",\"group_id\":\"$GR\"}"; echo
+SLTOK=$(curl -s -m 20 $CA -X POST $BASE/api/students/self-register/link -H 'Content-Type: application/json' -d "{\"groupId\":\"$GR\"}" | j "['data']['token']")
+[ -z "$SLTOK" ] && SLTOK=$(curl -s -H "$H1" -H "$H2" "$SUPABASE_URL/rest/v1/self_registration_tokens?select=token&group_id=eq.$GR&order=created_at.desc&limit=1" | j "[0]['token']")
+printf "POST self-register submit anon => "; code -H 'Content-Type: application/json' -X POST $BASE/api/students/self-register/submit/$SLTOK -d '{"name":"mx selfreg","phone":"+201000000099"}'; echo
 printf "PUT alerts-rule => "; code $CB -H 'Content-Type: application/json' -X PUT $BASE/api/alerts/rules/$AR -d '{"threshold_value":10}'; echo
 printf "DELETE alerts-rule => "; code $CB -X DELETE $BASE/api/alerts/rules/$AR; echo
 printf "GET conversations => "; code $CB $BASE/api/messages/conversations; echo

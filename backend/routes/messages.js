@@ -1,6 +1,6 @@
 const express = require('express');
 const { z } = require('zod');
-const { supabaseAdmin } = require('../config/database');
+const { scopedClient } = require('../lib/privileged/tenantClient');
 
 const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
 const { authenticateToken } = require('../middleware/auth');
@@ -21,7 +21,8 @@ const router = express.Router();
 // @route   GET /api/messages/conversations
 // @access  Private
 const getConversations = async (req, res) => {
-  const { data: conversations, error } = await supabaseAdmin
+  const db = scopedClient(req);
+  const { data: conversations, error } = await db
     .from('conversations')
     .select(`
       *,
@@ -54,10 +55,11 @@ const getConversations = async (req, res) => {
 // @route   GET /api/messages/conversations/:id
 // @access  Private
 const getConversationMessages = async (req, res) => {
+  const db = scopedClient(req);
   const { page, limit } = req.validated.query;
   const offset = (page - 1) * limit;
 
-  const { data: conversation } = await supabaseAdmin
+  const { data: conversation } = await db
     .from('conversations')
     .select('id')
     .eq('id', req.params.id)
@@ -73,7 +75,7 @@ const getConversationMessages = async (req, res) => {
     });
   }
 
-  const { data: messages, error } = await supabaseAdmin
+  const { data: messages, error } = await db
     .from('messages')
     .select('*')
     .eq('conversation_id', req.params.id)
@@ -89,7 +91,7 @@ const getConversationMessages = async (req, res) => {
     });
   }
 
-  const { count: total } = await supabaseAdmin
+  const { count: total } = await db
     .from('messages')
     .select('id', { count: 'exact', head: true })
     .eq('conversation_id', req.params.id);
@@ -114,11 +116,12 @@ const getConversationMessages = async (req, res) => {
 // @route   GET /api/messages/stats
 // @access  Private
 const getMessageStats = async (req, res) => {
+  const db = scopedClient(req);
   const { start_date, end_date } = req.query;
   const startDate = start_date || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const endDate = end_date || new Date().toISOString();
 
-  const { data: statsRow, error: rpcError } = await supabaseAdmin
+  const { data: statsRow, error: rpcError } = await db
     .rpc('message_stats', {
       p_teacher_id: getEffectiveTeacherId(req),
       p_start_date: startDate,
@@ -132,7 +135,7 @@ const getMessageStats = async (req, res) => {
   const incomingMessages = Number(statsRow.incoming_count) || 0;
   const automatedMessages = Number(statsRow.automated_count) || 0;
 
-  const { data: intents } = await supabaseAdmin
+  const { data: intents } = await db
     .from('messages')
     .select(`
       intent,

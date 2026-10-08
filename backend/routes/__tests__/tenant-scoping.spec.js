@@ -39,6 +39,11 @@ jest.mock('../../lib/enrollmentChain', () => ({
   verifyGroupAccess: jest.fn()
 }));
 
+jest.mock('../../lib/privileged/tenantClient', () => {
+  const db = require('../../config/database');
+  return { scopedClient: () => db.supabaseAdmin };
+});
+
 const studentsRouter = require('../students');
 const offeringsRouter = require('../offerings');
 const { supabaseAdmin } = require('../../config/database');
@@ -75,7 +80,7 @@ describe('Tenant scoping for assistants', () => {
 
     await request(app).get('/api/students').expect(200);
 
-    expect(createStudentsQuery).toHaveBeenCalledWith('owner-1');
+    expect(createStudentsQuery).toHaveBeenCalledWith(expect.anything(), 'owner-1');
   });
 
   it('verifies enrollment against the owner teacher id', async () => {
@@ -86,7 +91,7 @@ describe('Tenant scoping for assistants', () => {
       .post('/api/offerings/off-1/groups/grp-1/enroll')
       .send({ student_id: 'stu-1' });
 
-    expect(verifyStudentAccess).toHaveBeenCalledWith('stu-1', 'owner-1');
+    expect(verifyStudentAccess).toHaveBeenCalledWith(expect.anything(), 'stu-1', 'owner-1');
   });
 
   it('rejects enrollment of a foreign student with 404', async () => {

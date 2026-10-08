@@ -1,4 +1,3 @@
-const { supabaseAdmin } = require('../config/database');
 const logger = require('./logger');
 
 /**
@@ -6,8 +5,8 @@ const logger = require('./logger');
  * Uses the direct teacher_id column on enrollments (simplest pattern).
  * Returns the enrollment record if access is granted, null otherwise.
  */
-async function verifyStudentAccess(studentId, teacherId) {
-  const { data, error } = await supabaseAdmin
+async function verifyStudentAccess(db, studentId, teacherId) {
+  const { data, error } = await db
     .from('enrollments')
     .select('id, student_id, group_id, status')
     .eq('student_id', studentId)
@@ -26,8 +25,8 @@ async function verifyStudentAccess(studentId, teacherId) {
  * Verify that an offering belongs to the authenticated teacher.
  * Returns the offering if access is granted, null otherwise.
  */
-async function verifyOfferingAccess(offeringId, teacherId) {
-  const { data, error } = await supabaseAdmin
+async function verifyOfferingAccess(db, offeringId, teacherId) {
+  const { data, error } = await db
     .from('offerings')
     .select('id, teacher_id')
     .eq('id', offeringId)
@@ -45,8 +44,8 @@ async function verifyOfferingAccess(offeringId, teacherId) {
  * Verify that a group belongs to the authenticated teacher's offering.
  * Returns the group with offering info if access is granted, null otherwise.
  */
-async function verifyGroupAccess(groupId, teacherId) {
-  const { data, error } = await supabaseAdmin
+async function verifyGroupAccess(db, groupId, teacherId) {
+  const { data, error } = await db
     .from('groups')
     .select('id, offering_id, offerings!inner(id, teacher_id)')
     .eq('id', groupId)
@@ -64,8 +63,8 @@ async function verifyGroupAccess(groupId, teacherId) {
  * Get all enrollments for a teacher's students.
  * Returns minimal enrollment records (id, student_id, group_id).
  */
-async function getTeacherEnrollments(teacherId) {
-  const { data, error } = await supabaseAdmin
+async function getTeacherEnrollments(db, teacherId) {
+  const { data, error } = await db
     .from('enrollments')
     .select('id, student_id, group_id')
     .eq('teacher_id', teacherId)
@@ -83,8 +82,8 @@ async function getTeacherEnrollments(teacherId) {
  * Returns enrollments with full student, group, offering, and subject info.
  * Used by getStudents route.
  */
-async function getTeacherStudents(teacherId) {
-  const { data, error } = await supabaseAdmin
+async function getTeacherStudents(db, teacherId) {
+  const { data, error } = await db
     .from('students')
     .select(`
       *,
@@ -126,8 +125,8 @@ async function getTeacherStudents(teacherId) {
  * Returns enrollments with student, group, offering, and subject info.
  * Used when verifying access to a specific student.
  */
-async function getStudentEnrollmentsForTeacher(studentId, teacherId) {
-  const { data, error } = await supabaseAdmin
+async function getStudentEnrollmentsForTeacher(db, studentId, teacherId) {
+  const { data, error } = await db
     .from('enrollments')
     .select(`
       id, student_id, group_id, enrolled_at, status,
@@ -159,8 +158,8 @@ async function getStudentEnrollmentsForTeacher(studentId, teacherId) {
  * Returns the base Supabase query with enrollment chain joins and teacher filter applied.
  * The caller can chain additional filters (search, status, group_id) and pagination.
  */
-function createStudentsQuery(teacherId) {
-  return supabaseAdmin
+function createStudentsQuery(db, teacherId) {
+  return db
     .from('students')
     .select(`
       *,
@@ -196,8 +195,8 @@ function createStudentsQuery(teacherId) {
  * Accepts arrays of student IDs and group IDs.
  * Returns a Map keyed by "studentId_groupId" → enrollment ID.
  */
-async function batchResolveEnrollments(studentIds, groupIds, teacherId) {
-  const { data: enrollments, error } = await supabaseAdmin
+async function batchResolveEnrollments(db, studentIds, groupIds, teacherId) {
+  const { data: enrollments, error } = await db
     .from('enrollments')
     .select('id, student_id, group_id')
     .in('group_id', groupIds)
@@ -222,8 +221,8 @@ async function batchResolveEnrollments(studentIds, groupIds, teacherId) {
  * Returns enrollment records with enrollment_id, offering_id, and subject details.
  * Used by grades bulk import.
  */
-async function batchResolveEnrollmentsWithOfferings(studentIds, teacherId) {
-  const { data: enrollments, error } = await supabaseAdmin
+async function batchResolveEnrollmentsWithOfferings(db, studentIds, teacherId) {
+  const { data: enrollments, error } = await db
     .from('enrollments')
     .select(`
       id,

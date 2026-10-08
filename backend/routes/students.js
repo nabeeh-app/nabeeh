@@ -1,6 +1,6 @@
 const express = require('express');
 const { z } = require('zod');
-const { supabaseAdmin } = require('../config/database');
+const { scopedClient } = require('../lib/privileged/tenantClient');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createStudentSchema, updateStudentSchema } = require('../middleware/validate');
 const { createStudentsQuery, verifyStudentAccess, verifyGroupAccess, getStudentEnrollmentsForTeacher } = require('../lib/enrollmentChain');
@@ -32,12 +32,13 @@ const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
 // @route   GET /api/students
 // @access  Private
 const getStudents = async (req, res) => {
+  const db = scopedClient(req);
   const { page, limit, search, status } = req.validated.query;
   const offset = (page - 1) * limit;
 
   // Filter by Teacher's Offerings
   // We select students who have an enrollment in a group belonging to an offering owned by the teacher
-  let query = createStudentsQuery(getEffectiveTeacherId(req));
+  let query = createStudentsQuery(db, getEffectiveTeacherId(req));
 
   // Optional: Filter by specific Group
   if (req.validated.query.group_id) {
@@ -85,8 +86,9 @@ const getStudents = async (req, res) => {
 // @route   GET /api/students/:id
 // @access  Private
 const getStudent = async (req, res) => {
+  const db = scopedClient(req);
   // Verify access via Enrollment check
-  const { data: student, error } = await supabaseAdmin
+  const { data: student, error } = await db
     .from('students')
     .select(`
       *,
@@ -133,6 +135,7 @@ const getStudent = async (req, res) => {
 // @route   POST /api/students
 // @access  Private
 const createStudent = async (req, res) => {
+  const db = scopedClient(req);
   const {
     student_id, // external code
     name,
@@ -152,13 +155,13 @@ const createStudent = async (req, res) => {
   }
 
   // Verify Group Ownership (Security)
-  const groupAccess = await verifyGroupAccess(group_id, getEffectiveTeacherId(req));
+  const groupAccess = await verifyGroupAccess(db, group_id, getEffectiveTeacherId(req));
   if (!groupAccess) {
     return res.status(403).json({ success: false, message: 'Unauthorized to add to this group', messageAr: 'غير مصرح بالإضافة إلى هذه المجموعة', code: 'FORBIDDEN' });
   }
 
   // 1. Create Student
-  const { data: student, error: studentError } = await supabaseAdmin
+  const { data: student, error: studentError } = await db
     .from('students')
     .insert([{
       teacher_id: getEffectiveTeacherId(req),
@@ -172,7 +175,7 @@ const createStudent = async (req, res) => {
   if (studentError) throw studentError;
 
   // 2. Create Enrollment
-  const { error: enrollError } = await supabaseAdmin
+  const { error: enrollError } = await db
     .from('enrollments')
     .insert({
       student_id: student.id,
@@ -195,7 +198,7 @@ const createStudent = async (req, res) => {
       preferred_language: parent.preferred_language || 'ar'
     }));
 
-    await supabaseAdmin.from('parents').insert(parentsData);
+    await db.from('parents').insert(parentsData);
   }
 
   res.status(201).json({
@@ -209,6 +212,7 @@ const createStudent = async (req, res) => {
 // @route   PUT /api/students/:id
 // @access  Private
 const updateStudent = async (req, res) => {
+  const db = scopedClient(req);
   const allowedFields = ['student_code', 'name', 'phone'];
   const updates = {};
   Object.keys(req.validated.body).forEach(key => {
@@ -220,10 +224,10 @@ const updateStudent = async (req, res) => {
   // Check ownership via finding ANY enrollment with this teacher
   // For simplicity, we assume if you can getStudent() you can update.
   // But strict check:
-  const enrollment = await verifyStudentAccess(req.params.id, getEffectiveTeacherId(req));
+  const enrollment = await verifyStudentAccess(db, req.params.id, getEffectiveTeacherId(req));
   if (!enrollment) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
-  const { data: student, error } = await supabaseAdmin
+  const { data: student, error } = await db
     .from('students')
     .update(updates)
     .eq('id', req.params.id)
@@ -242,6 +246,7 @@ const updateStudent = async (req, res) => {
 // @route   DELETE /api/students/:id
 // @access  Private
 const deleteStudent = async (req, res) => {
+  const db = scopedClient(req);
   // Strategy: Delete enrollments for this teacher.
   // If we want to fully delete the student, we should check if they have other enrollments? 
   // Core Rules didn't specify behavior for multi-teacher students, but safest is:
@@ -250,7 +255,7 @@ const deleteStudent = async (req, res) => {
   // For now, let's delete the specific enrollments for this teacher's groups.
 
   // Find enrollments for this teacher
-  const { data: enrollments } = await supabaseAdmin
+  const { data: enrollments } = await db
     .from('enrollments')
     .select('id, teacher_id')
     .eq('student_id', req.params.id)
@@ -263,7 +268,7 @@ const deleteStudent = async (req, res) => {
   const enrollmentIds = enrollments.map(e => e.id);
 
   // Delete enrollments
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('enrollments')
     .delete()
     .in('id', enrollmentIds);
@@ -283,10 +288,11 @@ const deleteStudent = async (req, res) => {
 // @route   GET /api/students/:id/stats
 // @access  Private
 const getStudentStats = async (req, res) => {
+  const db = scopedClient(req);
   const { id } = req.params;
 
     // Verify access via all enrollments for this student under this teacher
-    const enrollments = await getStudentEnrollmentsForTeacher(id, getEffectiveTeacherId(req));
+    const enrollments = await getStudentEnrollmentsForTeacher(db, id, getEffectiveTeacherId(req));
     if (!enrollments || enrollments.length === 0) {
       return res.status(404).json({ success: false, message: 'Student not found or unauthorized', messageAr: 'لم يتم العثور على الطالب أو غير مصرح', code: 'NOT_FOUND' });
     }
@@ -294,7 +300,7 @@ const getStudentStats = async (req, res) => {
     const enrollmentIds = enrollments.map(e => e.id);
 
     // 1. Attendance Stats
-    const { data: attendance } = await supabaseAdmin
+    const { data: attendance } = await db
       .from('attendance')
       .select('status')
       .in('enrollment_id', enrollmentIds);
@@ -324,7 +330,7 @@ const getStudentStats = async (req, res) => {
 
     // 2. Academic Stats (Grades)
     // Get average score across all assessments?
-    const { data: grades } = await supabaseAdmin
+    const { data: grades } = await db
       .from('grades')
       .select(`
             score,
@@ -363,6 +369,7 @@ const getStudentStats = async (req, res) => {
 
 const createStudentOriginal = createStudent;
 const createStudentWithAudit = async (req, res) => {
+  const db = scopedClient(req);
   await createStudentOriginal(req, res);
   if (res.statusCode < 400) {
     await logAudit({
@@ -377,7 +384,7 @@ const createStudentWithAudit = async (req, res) => {
 
     // Auto-remove demo data when first real student is added
     try {
-      const { data: hasRealStudents } = await supabaseAdmin
+      const { data: hasRealStudents } = await db
         .from('students')
         .select('id', { count: 'exact', head: true })
         .eq('teacher_id', getEffectiveTeacherId(req))

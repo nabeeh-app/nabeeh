@@ -1,5 +1,5 @@
 const express = require('express');
-const { supabaseAdmin } = require('../config/database');
+const { scopedClient } = require('../lib/privileged/tenantClient');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createGradeSchema, bulkGradeSchema, updateGradeSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
@@ -24,8 +24,8 @@ const router = express.Router();
 const getActorType = (req) => req.user.role === 'teacher' ? 'teacher' : 'assistant';
 const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
 
-async function verifyGradeOwnership(gradeId, teacherId) {
-  const { data: grade } = await supabaseAdmin
+async function verifyGradeOwnership(db, gradeId, teacherId) {
+  const { data: grade } = await db
     .from('grades')
     .select('id, assessment_id, assessment:assessments!inner(offering:offerings!inner(teacher_id))')
     .eq('id', gradeId)
@@ -45,10 +45,10 @@ function computeStatsSummary(scores) {
 // @route   GET /api/grades
 // @access  Private
 // Helper to resolve enrollment and offering from legacy inputs
-const resolveEnrollmentAndOffering = async (student_id, subject_name, teacher_id) => {
+const resolveEnrollmentAndOffering = async (db, student_id, subject_name, teacher_id) => {
   // Find enrollment for student in a group belonging to teacher for specific subject
   // We check against name_en, name_ar, or code
-  const { data: enrollments, error } = await supabaseAdmin
+  const { data: enrollments, error } = await db
     .from('enrollments')
     .select(`
           id, 
@@ -75,6 +75,7 @@ const resolveEnrollmentAndOffering = async (student_id, subject_name, teacher_id
 };
 
 const getGrades = async (req, res) => {
+  const db = scopedClient(req);
   const {
     student_id,
     subject,
@@ -83,7 +84,7 @@ const getGrades = async (req, res) => {
     end_date
   } = req.validated.query;
 
-  let query = supabaseAdmin
+  let query = db
     .from('grades')
     .select(`
       id,
@@ -159,6 +160,7 @@ const getGrades = async (req, res) => {
 // @route   POST /api/grades
 // @access  Private
 const createGrade = async (req, res) => {
+  const db = scopedClient(req);
   const {
     student_id,
     subject,
@@ -180,7 +182,7 @@ const createGrade = async (req, res) => {
     });
   }
 
-  const resolved = await resolveEnrollmentAndOffering(student_id, subject, getEffectiveTeacherId(req));
+  const resolved = await resolveEnrollmentAndOffering(db, student_id, subject, getEffectiveTeacherId(req));
   if (!resolved) {
     return res.status(404).json({ success: false, message: 'Student enrollment not found for this subject', messageAr: 'لم يتم العثور على تسجيل الطالب في هذاالمادة', code: 'NOT_FOUND' });
   }
@@ -188,7 +190,7 @@ const createGrade = async (req, res) => {
 
   const assessmentDate = date || new Date().toISOString().split('T')[0];
 
-  let { data: assessment } = await supabaseAdmin
+  let { data: assessment } = await db
     .from('assessments')
     .select('id')
     .eq('offering_id', offering_id)
@@ -197,7 +199,7 @@ const createGrade = async (req, res) => {
     .single();
 
   if (!assessment) {
-    const { data: newAssessment, error: assessError } = await supabaseAdmin
+    const { data: newAssessment, error: assessError } = await db
       .from('assessments')
       .insert([{
         offering_id,
@@ -213,7 +215,7 @@ const createGrade = async (req, res) => {
     assessment = newAssessment;
   }
 
-  const { data: grade, error } = await supabaseAdmin
+  const { data: grade, error } = await db
     .from('grades')
     .upsert([{
       enrollment_id,
@@ -238,6 +240,7 @@ const createGrade = async (req, res) => {
 // @route   POST /api/grades/bulk
 // @access  Private
 const createBulkGrades = async (req, res) => {
+  const db = scopedClient(req);
   const { grades } = req.validated.body;
 
   if (!grades || !Array.isArray(grades)) {
@@ -259,7 +262,7 @@ const createBulkGrades = async (req, res) => {
   ).values()];
 
   const studentIds = [...new Set(uniquePairs.map(p => p.student_id))];
-  const allEnrollments = await batchResolveEnrollmentsWithOfferings(studentIds, teacherId);
+  const allEnrollments = await batchResolveEnrollmentsWithOfferings(db, studentIds, teacherId);
 
   const enrollmentLookup = {};
   allEnrollments?.forEach(e => {
@@ -318,7 +321,7 @@ const createBulkGrades = async (req, res) => {
   ).values()];
 
   const offeringIds = [...new Set(assessmentKeys.map(k => k.offering_id))];
-  const { data: existingAssessments } = await supabaseAdmin
+  const { data: existingAssessments } = await db
     .from('assessments')
     .select('id, offering_id, name, date')
     .in('offering_id', offeringIds);
@@ -331,7 +334,7 @@ const createBulkGrades = async (req, res) => {
   const toCreate = assessmentKeys.filter(k => !assessmentLookup[`${k.offering_id}|${k.name}|${k.date}`]);
 
   if (toCreate.length > 0) {
-    const { data: created, error: createError } = await supabaseAdmin
+    const { data: created, error: createError } = await db
       .from('assessments')
       .insert(toCreate.map(a => ({
         offering_id: a.offering_id,
@@ -355,7 +358,7 @@ const createBulkGrades = async (req, res) => {
     notes: g.notes
   })).filter(g => g.assessment_id);
 
-  const { data: upserted, error: upsertError } = await supabaseAdmin
+  const { data: upserted, error: upsertError } = await db
     .from('grades')
     .upsert(gradeRows, { onConflict: 'enrollment_id,assessment_id' })
     .select(`
@@ -389,6 +392,7 @@ const createBulkGrades = async (req, res) => {
 // @route   PUT /api/grades/:id
 // @access  Private
 const updateGrade = async (req, res) => {
+  const db = scopedClient(req);
   const allowedFields = [
     'subject', 'assessment_name',
     'score', 'max_score', 'date', 'notes', 'is_published'
@@ -418,14 +422,14 @@ const updateGrade = async (req, res) => {
     }
   });
 
-  const currentGrade = await verifyGradeOwnership(req.params.id, getEffectiveTeacherId(req));
+  const currentGrade = await verifyGradeOwnership(db, req.params.id, getEffectiveTeacherId(req));
 
   if (!currentGrade) {
     return res.status(404).json({ success: false, message: 'Grade not found or unauthorized', messageAr: 'لم يتم العثور على الدرجة أو غير مصرح', code: 'NOT_FOUND' });
   }
 
   if (hasAssessmentUpdates) {
-    const { error: assessUpdateError } = await supabaseAdmin
+    const { error: assessUpdateError } = await db
       .from('assessments')
       .update(assessmentUpdates)
       .eq('id', currentGrade.assessment_id);
@@ -434,7 +438,7 @@ const updateGrade = async (req, res) => {
   }
 
   if (Object.keys(gradeUpdates).length > 0) {
-    const { error: gradeUpdateError } = await supabaseAdmin
+    const { error: gradeUpdateError } = await db
       .from('grades')
       .update(gradeUpdates)
       .eq('id', req.params.id);
@@ -442,7 +446,7 @@ const updateGrade = async (req, res) => {
     if (gradeUpdateError) throw gradeUpdateError;
   }
 
-  const { data: updatedGrade } = await supabaseAdmin
+  const { data: updatedGrade } = await db
     .from('grades')
     .select(`
           id, score, notes,
@@ -479,13 +483,14 @@ const updateGrade = async (req, res) => {
 // @route   DELETE /api/grades/:id
 // @access  Private
 const deleteGrade = async (req, res) => {
-  const grade = await verifyGradeOwnership(req.params.id, getEffectiveTeacherId(req));
+  const db = scopedClient(req);
+  const grade = await verifyGradeOwnership(db, req.params.id, getEffectiveTeacherId(req));
 
   if (!grade) {
     return res.status(404).json({ success: false, message: 'Grade not found or unauthorized', messageAr: 'لم يتم العثور على الدرجة أو غير مصرح', code: 'NOT_FOUND' });
   }
 
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('grades')
     .delete()
     .eq('id', req.params.id);
@@ -502,9 +507,10 @@ const deleteGrade = async (req, res) => {
 // @route   GET /api/grades/stats
 // @access  Private
 const getGradeStats = async (req, res) => {
+  const db = scopedClient(req);
   const { subject, student_id } = req.query;
 
-  let query = supabaseAdmin
+  let query = db
     .from('grades')
     .select(`
       score,
@@ -588,6 +594,7 @@ const getGradeStats = async (req, res) => {
 
 const createGradeOriginal = createGrade;
 const createGradeWithAudit = async (req, res) => {
+  const db = scopedClient(req);
   await createGradeOriginal(req, res);
   if (res.statusCode < 400) {
     await logAudit({
@@ -605,6 +612,7 @@ const createGradeWithAudit = async (req, res) => {
 
 const createBulkGradesOriginal = createBulkGrades;
 const createBulkGradesWithAudit = async (req, res) => {
+  const db = scopedClient(req);
   await createBulkGradesOriginal(req, res);
   if (res.statusCode < 400) {
     await logAudit({
@@ -621,6 +629,7 @@ const createBulkGradesWithAudit = async (req, res) => {
 
 const updateGradeOriginal = updateGrade;
 const updateGradeWithAudit = async (req, res) => {
+  const db = scopedClient(req);
   await updateGradeOriginal(req, res);
   if (res.statusCode < 400) {
     await logAudit({
@@ -638,6 +647,7 @@ const updateGradeWithAudit = async (req, res) => {
 
 const deleteGradeOriginal = deleteGrade;
 const deleteGradeWithAudit = async (req, res) => {
+  const db = scopedClient(req);
   await deleteGradeOriginal(req, res);
   if (res.statusCode < 400) {
     await logAudit({

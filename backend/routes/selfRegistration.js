@@ -1,5 +1,6 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
+const { scopedClient } = require('../lib/privileged/tenantClient');
 const { supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { selfRegLimiter } = require('../middleware/security');
@@ -112,10 +113,11 @@ const router = express.Router();
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/link', authenticateToken, requirePermission('manage_students'), validate(createLinkSchema), asyncHandler(async (req, res) => {
+  const db = scopedClient(req);
   const { groupId, expiresInHours = 168 } = req.validated.body;
 
 
-  const { data: group, error: groupError } = await supabaseAdmin
+  const { data: group, error: groupError } = await db
     .from('groups')
     .select('id, name, offering:offerings(teacher_id, subject:subjects(name_en, name_ar))')
     .eq('id', groupId)
@@ -132,7 +134,7 @@ router.post('/link', authenticateToken, requirePermission('manage_students'), va
   const token = uuidv4();
   const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString();
 
-  const { error: tokenError } = await supabaseAdmin
+  const { error: tokenError } = await db
     .from('self_registration_tokens')
     .insert([{
       token,
@@ -162,7 +164,7 @@ router.post('/link', authenticateToken, requirePermission('manage_students'), va
         `
       });
 
-      const { error: retryError } = await supabaseAdmin
+      const { error: retryError } = await db
         .from('self_registration_tokens')
         .insert([{
           token,
@@ -261,9 +263,10 @@ router.post('/link', authenticateToken, requirePermission('manage_students'), va
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.get('/form/:token', selfRegLimiter, asyncHandler(async (req, res) => {
+  const db = supabaseAdmin; // anonymous: backend mediates via admin
   const { token } = req.params;
 
-  const { data: tokenRecord, error: tokenError } = await supabaseAdmin
+  const { data: tokenRecord, error: tokenError } = await db
     .from('self_registration_tokens')
     .select('*, group:groups(name, offering:offerings(teacher:teachers(name)))')
     .eq('token', token)
@@ -370,11 +373,12 @@ router.get('/form/:token', selfRegLimiter, asyncHandler(async (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/submit/:token', selfRegLimiter, validate(submitRegistrationSchema), asyncHandler(async (req, res) => {
+  const db = supabaseAdmin; // anonymous: backend mediates via admin
   const { token } = req.params;
   const { name, phone, parent_phone } = req.validated.body;
 
 
-  const { data: tokenRecord, error: tokenError } = await supabaseAdmin
+  const { data: tokenRecord, error: tokenError } = await db
     .from('self_registration_tokens')
     .select('*')
     .eq('token', token)
@@ -394,7 +398,7 @@ router.post('/submit/:token', selfRegLimiter, validate(submitRegistrationSchema)
 
   const studentCode = `REG-${Date.now().toString(36).toUpperCase()}`;
 
-  const { data: student, error: studentError } = await supabaseAdmin
+  const { data: student, error: studentError } = await db
     .from('students')
     .insert([{
       name: name.trim(),
@@ -408,7 +412,7 @@ router.post('/submit/:token', selfRegLimiter, validate(submitRegistrationSchema)
 
   if (studentError) throw studentError;
 
-  const { error: enrollError } = await supabaseAdmin
+  const { error: enrollError } = await db
     .from('enrollments')
     .insert({
       student_id: student.id,
@@ -420,7 +424,7 @@ router.post('/submit/:token', selfRegLimiter, validate(submitRegistrationSchema)
   if (enrollError) throw enrollError;
 
   if (parent_phone) {
-    await supabaseAdmin.from('parents').insert([{
+    await db.from('parents').insert([{
       student_id: student.id,
       name: `Parent of ${name.trim()}`,
       phone: parent_phone,
@@ -430,7 +434,7 @@ router.post('/submit/:token', selfRegLimiter, validate(submitRegistrationSchema)
     }]);
   }
 
-  await supabaseAdmin
+  await db
     .from('self_registration_tokens')
     .update({ use_count: tokenRecord.use_count + 1 })
     .eq('id', tokenRecord.id);

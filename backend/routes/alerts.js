@@ -1,6 +1,6 @@
 const express = require('express');
 const { z } = require('zod');
-const { supabaseAdmin } = require('../config/database');
+const { scopedClient } = require('../lib/privileged/tenantClient');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -39,8 +39,9 @@ const getAlertsSchema = z.object({
 });
 
 const getRules = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('alert_rules')
     .select('*')
     .eq('teacher_id', teacherId)
@@ -50,9 +51,10 @@ const getRules = async (req, res) => {
 };
 
 const createRule = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
   const { alert_type, threshold_value, comparison, notification_method } = req.validated.body;
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('alert_rules')
     .insert([{ teacher_id: teacherId, alert_type, threshold_value, comparison, notification_method }])
     .select().single();
@@ -61,13 +63,14 @@ const createRule = async (req, res) => {
 };
 
 const updateRule = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
   const { id } = req.validated.params;
   const updates = {};
   for (const key of ['alert_type', 'threshold_value', 'comparison', 'notification_method']) {
     if (req.validated.body[key] !== undefined) updates[key] = req.validated.body[key];
   }
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('alert_rules')
     .update(updates)
     .eq('id', id).eq('teacher_id', teacherId)
@@ -78,9 +81,10 @@ const updateRule = async (req, res) => {
 };
 
 const deleteRule = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
   const { id } = req.validated.params;
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('alert_rules')
     .delete()
     .eq('id', id).eq('teacher_id', teacherId)
@@ -91,13 +95,14 @@ const deleteRule = async (req, res) => {
 };
 
 const toggleRule = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
   const { id } = req.validated.params;
-  const { data: rule } = await supabaseAdmin
+  const { data: rule } = await db
     .from('alert_rules').select('is_enabled')
     .eq('id', id).eq('teacher_id', teacherId).single();
   if (!rule) return res.status(404).json({ success: false, message: 'Alert rule not found', messageAr: 'لم يتم العثور على قاعدة التنبيه', code: 'NOT_FOUND' });
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('alert_rules')
     .update({ is_enabled: !rule.is_enabled })
     .eq('id', id).select().single();
@@ -106,10 +111,11 @@ const toggleRule = async (req, res) => {
 };
 
 const getAlerts = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
   const { page, limit, severity, alert_type, unread_only } = req.validated.query;
   const offset = (page - 1) * limit;
-  let query = supabaseAdmin
+  let query = db
     .from('alerts')
     .select('*, students(name, student_id)', { count: 'exact' })
     .eq('teacher_id', teacherId);
@@ -132,9 +138,10 @@ const getAlerts = async (req, res) => {
 };
 
 const markAlertRead = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
   const { id } = req.validated.params;
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('alerts').update({ is_read: true })
     .eq('id', id).eq('teacher_id', teacherId);
   if (error) throw error;
@@ -142,8 +149,9 @@ const markAlertRead = async (req, res) => {
 };
 
 const markAllAlertsRead = async (req, res) => {
+  const db = scopedClient(req);
   const teacherId = req.user.teacherId || req.user.id;
-  const { error } = await supabaseAdmin
+  const { error } = await db
     .from('alerts').update({ is_read: true })
     .eq('teacher_id', teacherId).eq('is_read', false);
   if (error) throw error;
