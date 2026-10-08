@@ -1,4 +1,23 @@
+'use client';
+
+import { useLocale } from 'next-intl';
+import enMessages from '@/messages/en.json';
+import arMessages from '@/messages/ar.json';
+
 const baseUrl = "https://nabeeh.app";
+
+type FaqEntry = { question: string; answer: string };
+
+function getFaqEntries(locale: string): FaqEntry[] {
+  const messages = locale === 'ar' ? arMessages : enMessages;
+  const questions = (messages as { landing?: { faq?: { questions?: Record<string, FaqEntry> } } })
+    .landing?.faq?.questions;
+  if (!questions) return [];
+  return Object.values(questions).filter(
+    (q): q is FaqEntry =>
+      typeof q?.question === 'string' && typeof q?.answer === 'string'
+  );
+}
 
 const organizationData = {
   "@context": "https://schema.org",
@@ -120,9 +139,29 @@ const breadcrumbData = {
 };
 
 export function LandingJsonLd() {
+  const locale = useLocale();
+  const faqEntries = getFaqEntries(locale);
+  const faqData = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    inLanguage: locale === 'ar' ? 'ar-EG' : 'en',
+    mainEntity: faqEntries.map((entry) => ({
+      "@type": "Question",
+      name: entry.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: entry.answer,
+      },
+    })),
+  };
   return (
     <>
-      <script
+      {faqEntries.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqData) }}
+        />
+      )}      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationData) }}
       />

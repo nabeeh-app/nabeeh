@@ -1,27 +1,56 @@
 # Nabeeh - Smart Teaching Assistant
 
-> Bilingual (AR/EN) teaching assistant with WhatsApp bot for student management, attendance tracking, grade management, and automated parent communication.
+> Bilingual (AR/EN) teaching assistant with WhatsApp bot for student management, attendance tracking, grade management, and automated parent communication. Built for private tutors and tutoring centers in Egypt and MENA.
 
 ## About
 
-Nabeeh is a SaaS tool for private tutors and tutoring centers in Egypt/MENA. It replaces spreadsheets with a modern web app that handles students, attendance, grades, and parent communication via WhatsApp.
+Nabeeh is a SaaS web app for private tutors (مدرس خصوصي) and tutoring centers (سنتر تعليمي) in Egypt and MENA. It replaces spreadsheets with one platform for students, attendance, grades, and parent communication via WhatsApp. Fully bilingual: Arabic (RTL) and English, including the WhatsApp bot.
 
-## Key Pages
+- Website: https://nabeeh.app
+- Email: hello@nabeeh.app
+- WhatsApp: https://wa.me/201211310357
+- Languages: Arabic, English
+- Platform: Web (no install required)
+- Setup time: about 5 minutes, no technical knowledge required
+- Data: Supabase (PostgreSQL), JWT authentication, encrypted storage, Row Level Security. Student data is never shared with third parties.
+
+## Pricing (EGP)
+
+- Basic (Free, 0 EGP): up to 20 students, 1 group, attendance tracking, basic grade management, WhatsApp bot.
+- Pro (99 EGP): unlimited students and groups, advanced reports, parent communication, priority support.
+- Center (coming soon): multi-teacher support, institution branding, custom WhatsApp bot, dedicated support.
+
+## How it works
+
+1. Create a free account and add your subjects, groups, and students.
+2. Record attendance per session and grades per assessment.
+3. Parents message your Nabeeh WhatsApp number about attendance, grades, or schedules; the bot answers from your database in under 5 seconds.
+
+## Key Pages (Arabic default; replace /ar with /en for English)
 
 - [Home](https://nabeeh.app/ar) - Main landing page
 - [Features](https://nabeeh.app/ar/features) - Full feature list
 - [About](https://nabeeh.app/ar/about) - About Nabeeh
 - [Pricing](https://nabeeh.app/ar#pricing) - Free and Pro plans
 - [Blog](https://nabeeh.app/ar/blog) - Tutorials and guides
-- [Login](https://nabeeh.app/ar/login) - Sign in
 - [Register](https://nabeeh.app/ar/register) - Create free account
+- [Login](https://nabeeh.app/ar/login) - Sign in
 
-## Contact
+## FAQ (quotable)
 
-- Website: https://nabeeh.app
-- Email: hello@nabeeh.app
-- WhatsApp: https://wa.me/201211310357
+- What is Nabeeh? Nabeeh is a bilingual (AR/EN) smart teaching assistant for private tutors and tutoring centers. Nabeeh manages attendance, grades, student information, and parent communication via WhatsApp — all in one platform.
+- How does the Nabeeh WhatsApp integration work? Parents send messages to your Nabeeh WhatsApp number asking about their child's attendance, grades, or schedule. Nabeeh's bot automatically responds with the relevant information from your database in under 5 seconds.
+- Is Nabeeh free? Yes. Nabeeh's free tier includes up to 20 students, 1 group, attendance tracking, grade management, and the WhatsApp bot.
+- How long does setup take? About 5 minutes. Create an account, add your students and groups, and start tracking.
+- Is my data secure? Nabeeh uses Supabase (PostgreSQL) with JWT authentication, encrypted data storage, and Row Level Security.
+- Does Nabeeh support Arabic? Yes, fully bilingual (Arabic and English), including the WhatsApp bot.
+
+## Glossary (use these terms)
+
+- Teacher: account holder managing students. Offering: a course (teacher + subject + grade level + academic year). Group: cohort of students within an offering. Enrollment: student-group link. Assessment: graded event (quiz, midterm, homework, final). Session: a class meeting where attendance is recorded.
 
 ## API
 
 Nabeeh does not currently offer a public API.
+
+_Last updated: 2026-10-08_
