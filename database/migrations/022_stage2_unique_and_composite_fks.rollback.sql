@@ -18,6 +18,11 @@ ALTER TABLE parents DROP CONSTRAINT IF EXISTS fk_parents_tenant_student;
 ALTER TABLE conversations DROP CONSTRAINT IF EXISTS fk_conversations_tenant_parent;
 ALTER TABLE messages DROP CONSTRAINT IF EXISTS fk_messages_tenant_conversation;
 ALTER TABLE report_drafts DROP CONSTRAINT IF EXISTS fk_report_drafts_tenant_student;
+ALTER TABLE alerts DROP CONSTRAINT IF EXISTS fk_alerts_tenant_student;
+ALTER TABLE alerts DROP CONSTRAINT IF EXISTS fk_alerts_tenant_rule;
+ALTER TABLE report_drafts DROP CONSTRAINT IF EXISTS fk_report_drafts_tenant_group;
+ALTER TABLE payments DROP CONSTRAINT IF EXISTS fk_payments_tenant_subscription;
+ALTER TABLE self_registration_tokens DROP CONSTRAINT IF EXISTS fk_selfreg_tenant_group;
 
 ALTER TABLE students DROP CONSTRAINT IF EXISTS uq_students_tenant_id;
 ALTER TABLE parents DROP CONSTRAINT IF EXISTS uq_parents_tenant_id;
@@ -27,6 +32,8 @@ ALTER TABLE enrollments DROP CONSTRAINT IF EXISTS uq_enrollments_tenant_id;
 ALTER TABLE sessions DROP CONSTRAINT IF EXISTS uq_sessions_tenant_id;
 ALTER TABLE assessments DROP CONSTRAINT IF EXISTS uq_assessments_tenant_id;
 ALTER TABLE conversations DROP CONSTRAINT IF EXISTS uq_conversations_tenant_id;
+ALTER TABLE alert_rules DROP CONSTRAINT IF EXISTS uq_alert_rules_tenant_id;
+ALTER TABLE subscriptions DROP CONSTRAINT IF EXISTS uq_subscriptions_tenant_id;
 
 ALTER TABLE groups ADD CONSTRAINT groups_offering_id_fkey
   FOREIGN KEY (offering_id) REFERENCES offerings(id) ON DELETE CASCADE;
@@ -58,3 +65,13 @@ ALTER TABLE messages ADD CONSTRAINT messages_conversation_id_fkey
   FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE;
 ALTER TABLE report_drafts ADD CONSTRAINT report_drafts_student_id_fkey
   FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE;
+ALTER TABLE alerts ADD CONSTRAINT alerts_student_id_fkey
+  FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE SET NULL;
+ALTER TABLE alerts ADD CONSTRAINT alerts_alert_rule_id_fkey
+  FOREIGN KEY (alert_rule_id) REFERENCES alert_rules(id) ON DELETE SET NULL;
+ALTER TABLE report_drafts ADD CONSTRAINT report_drafts_group_id_fkey
+  FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE SET NULL;
+ALTER TABLE payments ADD CONSTRAINT payments_subscription_id_fkey
+  FOREIGN KEY (subscription_id) REFERENCES subscriptions(id);
+ALTER TABLE self_registration_tokens ADD CONSTRAINT self_registration_tokens_group_id_fkey
+  FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE;

@@ -5,24 +5,34 @@
 -- their original ON DELETE actions.
 --
 -- NULLABILITY (operator rule: composite members NOT NULL, else MATCH FULL):
--- every composite pair below is NOT NULL on both sides (verified against
--- prod information_schema 2026-10-08). The three nullable references
--- stay single-column and are documented, not converted:
---   alerts.student_id, alerts.alert_rule_id (nullable, ON DELETE SET NULL)
---   report_drafts.group_id (nullable, ON DELETE SET NULL)
---   payments.subscription_id (nullable, no action)
---   self_registration_tokens.group_id / teacher_id (nullable, CASCADE)
--- No MATCH FULL needed: nothing nullable is composited.
+-- every composite pair below is tenant_id NOT NULL on the child. The five
+-- nullable references are composited anyway under MATCH SIMPLE (the
+-- default): a NULL ref_id means "no reference" and skips the check, while
+-- a non-null ref_id must match (tenant_id, id) on the parent. No MATCH
+-- FULL needed. tenant_id itself stays NOT NULL everywhere, so a row can
+-- never float tenantless.
 --
--- SET NULL audit: the only SET NULL FKs in the schema are the three above.
--- None involves tenant_id. No SET NULL touches tenant_id anywhere.
+-- SET NULL audit: the only SET NULL FKs in the schema are alerts.student,
+-- alerts.alert_rule, and report_drafts.group. All three become composite
+-- with ON DELETE SET NULL (ref_id) column lists: the ref nulls, tenant_id
+-- is never nulled. No SET NULL touches tenant_id anywhere.
 --
--- Kept single-column by design (target has no tenant_id):
+-- Kept single-column by design (target has no tenant_id, or no parent):
 --   *.teacher_id -> teachers(id), locked_by -> auth.users(id),
 --   assistant_id -> auth.users(id), teacher_subjects -> subjects(id),
---   offerings -> subjects/grade_levels, verified_by -> admin_users(id).
+--   offerings -> subjects/grade_levels, verified_by -> admin_users(id),
+--   self_registration_tokens.teacher_id -> teachers(id) (nullable owner).
 --   enrollments.teacher_id (008 denormalized crutch) stays until stage 5
 --   code stops reading it; its cleanup is a later deletion, not this stage.
+--
+-- OLD vs NEW ON DELETE (all 15 replacements verified on prod pg_constraint):
+--   15 singles, every one ON DELETE CASCADE -> composite ON DELETE CASCADE.
+--   Zero behavior changes. Table in the stage report.
+--   5 nullable singles -> composites preserving their actions:
+--   alerts.student SET NULL -> SET NULL (student_id); alerts.rule SET NULL
+--   -> SET NULL (alert_rule_id); report_drafts.group SET NULL ->
+--   SET NULL (group_id); payments.subscription NO ACTION -> NO ACTION;
+--   selfreg.group CASCADE -> CASCADE. Only addition is the tenant match.
 
 -- ============================================================
 -- 0. PRE-ADD ASSERTS: every child tenant must equal its parent tenant
@@ -61,6 +71,16 @@ BEGIN
   IF n > 0 THEN RAISE EXCEPTION 'stage2: % messages tenant != conversation tenant', n; END IF;
   SELECT COUNT(*) INTO n FROM report_drafts r JOIN students s ON r.student_id = s.id WHERE r.tenant_id IS DISTINCT FROM s.tenant_id;
   IF n > 0 THEN RAISE EXCEPTION 'stage2: % report_drafts tenant != student tenant', n; END IF;
+  SELECT COUNT(*) INTO n FROM alerts a JOIN students s ON a.student_id = s.id WHERE a.tenant_id IS DISTINCT FROM s.tenant_id;
+  IF n > 0 THEN RAISE EXCEPTION 'stage2: % alerts tenant != student tenant', n; END IF;
+  SELECT COUNT(*) INTO n FROM alerts a JOIN alert_rules r ON a.alert_rule_id = r.id WHERE a.tenant_id IS DISTINCT FROM r.tenant_id;
+  IF n > 0 THEN RAISE EXCEPTION 'stage2: % alerts tenant != rule tenant', n; END IF;
+  SELECT COUNT(*) INTO n FROM report_drafts r JOIN groups g ON r.group_id = g.id WHERE r.tenant_id IS DISTINCT FROM g.tenant_id;
+  IF n > 0 THEN RAISE EXCEPTION 'stage2: % report_drafts tenant != group tenant', n; END IF;
+  SELECT COUNT(*) INTO n FROM payments p JOIN subscriptions s ON p.subscription_id = s.id WHERE p.tenant_id IS DISTINCT FROM s.tenant_id;
+  IF n > 0 THEN RAISE EXCEPTION 'stage2: % payments tenant != subscription tenant', n; END IF;
+  SELECT COUNT(*) INTO n FROM self_registration_tokens t JOIN groups g ON t.group_id = g.id WHERE t.tenant_id IS DISTINCT FROM g.tenant_id;
+  IF n > 0 THEN RAISE EXCEPTION 'stage2: % selfreg tenant != group tenant', n; END IF;
 END $$;
 
 -- ============================================================
@@ -76,6 +96,8 @@ ALTER TABLE enrollments ADD CONSTRAINT uq_enrollments_tenant_id UNIQUE (tenant_i
 ALTER TABLE sessions ADD CONSTRAINT uq_sessions_tenant_id UNIQUE (tenant_id, id);
 ALTER TABLE assessments ADD CONSTRAINT uq_assessments_tenant_id UNIQUE (tenant_id, id);
 ALTER TABLE conversations ADD CONSTRAINT uq_conversations_tenant_id UNIQUE (tenant_id, id);
+ALTER TABLE alert_rules ADD CONSTRAINT uq_alert_rules_tenant_id UNIQUE (tenant_id, id);
+ALTER TABLE subscriptions ADD CONSTRAINT uq_subscriptions_tenant_id UNIQUE (tenant_id, id);
 
 -- ============================================================
 -- 2. DROP replaced single-column FKs (names verified on prod)
@@ -95,6 +117,11 @@ ALTER TABLE parents DROP CONSTRAINT IF EXISTS parents_student_id_fkey;
 ALTER TABLE conversations DROP CONSTRAINT IF EXISTS conversations_parent_id_fkey;
 ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_conversation_id_fkey;
 ALTER TABLE report_drafts DROP CONSTRAINT IF EXISTS report_drafts_student_id_fkey;
+ALTER TABLE alerts DROP CONSTRAINT IF EXISTS alerts_student_id_fkey;
+ALTER TABLE alerts DROP CONSTRAINT IF EXISTS alerts_alert_rule_id_fkey;
+ALTER TABLE report_drafts DROP CONSTRAINT IF EXISTS report_drafts_group_id_fkey;
+ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_subscription_id_fkey;
+ALTER TABLE self_registration_tokens DROP CONSTRAINT IF EXISTS self_registration_tokens_group_id_fkey;
 
 -- ============================================================
 -- 3. Composite FKs, ON DELETE explicit (CASCADE everywhere, as before)
@@ -129,6 +156,19 @@ ALTER TABLE messages ADD CONSTRAINT fk_messages_tenant_conversation
   FOREIGN KEY (tenant_id, conversation_id) REFERENCES conversations(tenant_id, id) ON DELETE CASCADE;
 ALTER TABLE report_drafts ADD CONSTRAINT fk_report_drafts_tenant_student
   FOREIGN KEY (tenant_id, student_id) REFERENCES students(tenant_id, id) ON DELETE CASCADE;
+-- Nullable composites under MATCH SIMPLE (default): NULL ref_id means no
+-- reference and skips the check; non-null must match the parent pair.
+-- SET NULL lists name only the ref column: tenant_id is never nulled.
+ALTER TABLE alerts ADD CONSTRAINT fk_alerts_tenant_student
+  FOREIGN KEY (tenant_id, student_id) REFERENCES students(tenant_id, id) ON DELETE SET NULL (student_id);
+ALTER TABLE alerts ADD CONSTRAINT fk_alerts_tenant_rule
+  FOREIGN KEY (tenant_id, alert_rule_id) REFERENCES alert_rules(tenant_id, id) ON DELETE SET NULL (alert_rule_id);
+ALTER TABLE report_drafts ADD CONSTRAINT fk_report_drafts_tenant_group
+  FOREIGN KEY (tenant_id, group_id) REFERENCES groups(tenant_id, id) ON DELETE SET NULL (group_id);
+ALTER TABLE payments ADD CONSTRAINT fk_payments_tenant_subscription
+  FOREIGN KEY (tenant_id, subscription_id) REFERENCES subscriptions(tenant_id, id) ON DELETE NO ACTION;
+ALTER TABLE self_registration_tokens ADD CONSTRAINT fk_selfreg_tenant_group
+  FOREIGN KEY (tenant_id, group_id) REFERENCES groups(tenant_id, id) ON DELETE CASCADE;
 
 -- ============================================================
 -- 4. POST-ADD VERIFY: composites resolve on every existing row

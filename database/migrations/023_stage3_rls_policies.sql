@@ -20,6 +20,10 @@
 --   "admin-only gets nothing": anything with tenant_id is uniform.
 --   Global lookups (subjects, grade_levels) and revoked_tokens keep their
 --   existing policies untouched.
+--   teachers (tenant root, no tenant_id): gets its own policy below.
+--   Predicate: own row by id or OAuth-linked auth_id, plus delegated read
+--   for linked assistants. WITH CHECK stays owner-only so assistants can
+--   never modify the owner profile.
 --
 -- Correction to the design doc: NO anonymous exception policy on
 -- self_registration_tokens. Anonymous submitters never touch PostgREST;
@@ -44,6 +48,15 @@ AS $$
 $$;
 -- Deliberately no SECURITY DEFINER: must read the CALLER jwt claim.
 -- Returns NULL when no JWT or no claim: policies deny, fail closed.
+
+-- Actor id for tables without tenant_id (teachers root lookup).
+CREATE OR REPLACE FUNCTION public.current_actor_id()
+RETURNS UUID
+LANGUAGE SQL
+STABLE
+AS $$
+  SELECT NULLIF(auth.jwt() ->> 'sub', '')::UUID
+$$;
 
 -- ============================================================
 -- 1. Drop every legacy policy on the uniform set.
@@ -201,10 +214,43 @@ CREATE POLICY tenant_isolation ON failed_messages TO authenticated
   WITH CHECK ((SELECT current_tenant_id()) = tenant_id);
 
 -- ============================================================
+-- 3b. teachers root policy (no tenant_id by design).
+-- Legacy auth.uid() policies dropped, replaced with sub/auth_id match
+-- plus delegated assistant read. Owner-only writes.
+-- ============================================================
+DROP POLICY IF EXISTS "Teachers can view own profile" ON teachers;
+DROP POLICY IF EXISTS "Teachers can update own profile" ON teachers;
+
+CREATE POLICY teacher_self_access ON teachers TO authenticated
+  USING (
+    id = (SELECT public.current_actor_id())
+    OR auth_id = (SELECT public.current_actor_id())
+    OR EXISTS (
+      SELECT 1 FROM public.teacher_assistants ta
+      WHERE ta.tenant_id = teachers.id
+      AND ta.assistant_id = (SELECT public.current_actor_id())
+    )
+  )
+  WITH CHECK (
+    id = (SELECT public.current_actor_id())
+    OR auth_id = (SELECT public.current_actor_id())
+  );
+
+-- ============================================================
 -- 4. Revoke table grants from anon (present and future tables)
 -- ============================================================
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon;
+-- Default-deny for future tables regardless of which role creates them.
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM anon;
+ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public REVOKE ALL ON TABLES FROM anon;
+-- No GRANTs to authenticated are added here, and none are needed:
+-- authenticated already holds all 7 privileges on all 40 public tables
+-- (measured on prod information_schema 2026-10-08), so policies become
+-- the gate with no grant change. Sequences: public schema holds zero
+-- sequences (all UUID PKs), so no sequence usage to grant.
+-- service_role has BYPASSRLS and is never ALTERed anywhere in this
+-- project: it keeps full access before, during, and after this stage.
 
 -- ============================================================
 -- 5. PROBES (run at apply time, all inside rolled-back txns).
@@ -219,6 +265,11 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon;
 --   d. tenant B token: POST enrollment/update on A row id ->
 --      expect 404/403, and the row unchanged afterwards.
 --   e. service_role: reads/writes unaffected (bypasses RLS).
+--   f. teachers predicate: owner token reads own row; assistant token
+--      reads owner row, cannot update it; stranger token sees nothing.
+-- The minting helper reads the legacy HS256 secret from env
+-- (SUPABASE_JWT_SECRET) at runtime only. It is never printed, never
+-- written to disk, never committed. Unset secret aborts the probe run.
 -- Backend traffic is unaffected at this stage: it uses service_role
 -- until the stage 5 route migration. Matrix plus suite rerun after apply.
 -- ============================================================
