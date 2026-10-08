@@ -147,7 +147,8 @@
     "institutionPlaceholder": "Math Academy",
     "subjectsPlaceholder": "Mathematics, Physics, Chemistry",
     "brandName": "Nabeeh - نبيه",
-    "emailPlaceholder": "teacher@example.com"
+    "emailPlaceholder": "teacher@example.com",
+    "captchaRequired": "Please complete the security check."
   },
   "statuses": {
     "active": "Active",

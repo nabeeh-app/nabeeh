@@ -147,7 +147,8 @@
     "institutionPlaceholder": "أكاديمية الرياضيات",
     "subjectsPlaceholder": "الرياضيات، الفيزياء، الكيمياء",
     "brandName": "نبيه - Nabeeh",
-    "emailPlaceholder": "teacher@example.com"
+    "emailPlaceholder": "teacher@example.com",
+    "captchaRequired": "يرجى إكمال التحقق الأمني."
   },
   "statuses": {
     "active": "نشط",

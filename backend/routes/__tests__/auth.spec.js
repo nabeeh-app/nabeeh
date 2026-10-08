@@ -34,6 +34,12 @@ jest.mock('../../middleware/auth', () => ({
   requireRole: (role) => (req, res, next) => next()
 }));
 
+const mockVerifyTurnstileToken = jest.fn();
+jest.mock('../../lib/turnstile', () => ({
+  verifyTurnstileToken: (...args) => mockVerifyTurnstileToken(...args),
+  isConfigured: () => !!process.env.TURNSTILE_SECRET_KEY
+}));
+
 const mockAuthenticateUser = jest.fn();
 const mockGenerateToken = jest.fn().mockReturnValue('mock-jwt-token');
 const mockVerifyToken = jest.fn().mockReturnValue({ user_id: 'teacher-1', email: 'test@example.com' });
@@ -135,8 +141,26 @@ describe('Auth Routes', () => {
       expect(res.body.message).toBe('Registration successful');
     });
 
-    it('should reject registration with invalid email', async () => {
+    it('should reject registration when captcha fails and secret is set', async () => {
+      process.env.TURNSTILE_SECRET_KEY = 'test-secret';
+      mockVerifyTurnstileToken.mockResolvedValueOnce(false);
+
       const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Bot',
+          email: 'bot@example.com',
+          password: 'StrongPass123!',
+          turnstileToken: 'bad-token'
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe('INVALID_CAPTCHA');
+      expect(mockVerifyTurnstileToken).toHaveBeenCalledWith('bad-token', expect.anything());
+      delete process.env.TURNSTILE_SECRET_KEY;
+    });
+
+    it('should reject registration with invalid email', async () => {      const res = await request(app)
         .post('/api/auth/register')
         .send({
           name: 'New Teacher',

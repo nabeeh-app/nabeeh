@@ -13,6 +13,9 @@ import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Phone, Mail, User, Building, BookOpen } from 'lucide-react';
 import { GridPattern } from '@/components/ui/grid-pattern';
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button';
+import { TurnstileWidget } from '@/components/auth/turnstile-widget';
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 import logger from '@/lib/logger';
 import { apiClient } from '@/lib/client';
 
@@ -48,6 +51,7 @@ export default function RegisterPage(_props: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
 
   const router = useRouter();
   const t = useTranslations('auth');
@@ -109,6 +113,11 @@ export default function RegisterPage(_props: Props) {
     
     if (!validateForm()) return;
 
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      setErrors({ general: t('captchaRequired') });
+      return;
+    }
+
     setIsLoading(true);
     setErrors({});
     setSuccessMessage('');
@@ -122,7 +131,8 @@ export default function RegisterPage(_props: Props) {
         business_name: formData.business_name.trim() || undefined,
         subjects: formData.subjects ? formData.subjects.split(',').map(s => s.trim()).filter(Boolean) : undefined,
         whatsapp_number: formData.whatsapp_number || formData.phone,
-        preferred_language: locale === 'ar' ? 'ar' : 'en'
+        preferred_language: locale === 'ar' ? 'ar' : 'en',
+        turnstileToken: turnstileToken || undefined
       };
 
       await apiClient.register(registrationData);
@@ -373,6 +383,11 @@ export default function RegisterPage(_props: Props) {
               </div>
 
               <div className="flex flex-col space-y-4">
+                <TurnstileWidget
+                  siteKey={TURNSTILE_SITE_KEY}
+                  onVerify={setTurnstileToken}
+                  onExpire={() => setTurnstileToken('')}
+                />
                 <Button 
                   type="submit" 
                   className="w-full" 

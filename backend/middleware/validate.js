@@ -31,7 +31,8 @@ const registerSchema = z.object({
     business_name: z.string().max(255).optional().nullable(),
     subjects: z.array(z.string()).optional().nullable(),
     whatsapp_number: z.string().regex(/^\+?[1-9]\d{6,14}$/).optional().nullable(),
-    preferred_language: z.enum(['ar', 'en']).default('ar')
+    preferred_language: z.enum(['ar', 'en']).default('ar'),
+    turnstileToken: z.string().min(1).max(2048).optional()
   })
 });
 

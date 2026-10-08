@@ -74,6 +74,7 @@ export interface RegisterRequest {
   business_name?: string;
   subjects?: string[];
   whatsapp_number?: string;
+  turnstileToken?: string;
 }
 
 // Student Types

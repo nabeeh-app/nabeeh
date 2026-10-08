@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const logger = require('../lib/logger');
 const crypto = require('crypto');
 const { sendEmail } = require('../lib/email');
+const { verifyTurnstileToken, isConfigured: isTurnstileConfigured } = require('../lib/turnstile');
 const { getWelcomeTemplate, getPasswordResetTemplate } = require('../lib/emailTemplates');
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -341,6 +342,13 @@ async function provisionTeacherAccount(payload) {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/register', registerLimiter, validate(registerSchema), asyncHandler(async (req, res) => {
+    if (isTurnstileConfigured()) {
+        const human = await verifyTurnstileToken(req.validated.body.turnstileToken, getClientIp(req));
+        if (!human) {
+            return res.status(403).json({ success: false, message: 'Captcha verification failed', messageAr: 'فشل التحقق الأمني', code: 'INVALID_CAPTCHA' });
+        }
+    }
+
     const teacher = await provisionTeacherAccount(req.validated.body);
 
     const token = authService.tokenService.generateToken(teacher);
