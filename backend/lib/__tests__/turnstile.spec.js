@@ -14,9 +14,17 @@ describe('turnstile', () => {
     process.env = OLD_ENV;
   });
 
-  it('skips verification when no secret is configured', async () => {
+  it('skips verification when no secret is configured outside production', async () => {
+    process.env.NODE_ENV = 'test';
     expect(isConfigured()).toBe(false);
     await expect(verifyTurnstileToken(undefined)).resolves.toBe(true);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('fails closed in production when no secret is configured', async () => {
+    process.env.NODE_ENV = 'production';
+    expect(isConfigured()).toBe(false);
+    await expect(verifyTurnstileToken('any-token')).resolves.toBe(false);
     expect(global.fetch).not.toHaveBeenCalled();
   });
 

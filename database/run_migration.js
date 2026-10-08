@@ -14,6 +14,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const migrationsDir = path.join(__dirname, 'migrations');
+const { listMigrationFiles } = require('../backend/lib/migrationFiles');
 
 async function runMigrationFile(fileName) {
   try {
@@ -36,10 +37,7 @@ async function runMigrationFile(fileName) {
 }
 
 async function runAllMigrations() {
-  const files = fs
-    .readdirSync(migrationsDir)
-    .filter((file) => file.endsWith('.sql'))
-    .sort();
+  const files = listMigrationFiles(migrationsDir);
 
   if (files.length === 0) {
     console.log('No migration files found.');
@@ -53,4 +51,8 @@ async function runAllMigrations() {
   console.log('\n🎉 All migrations executed successfully!');
 }
 
-runAllMigrations();
+module.exports = { listMigrationFiles, runMigrationFile };
+
+if (require.main === module) {
+  runAllMigrations();
+}

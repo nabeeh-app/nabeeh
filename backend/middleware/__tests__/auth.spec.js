@@ -395,3 +395,108 @@ describe('requirePermission', () => {
     expect(next).not.toHaveBeenCalled();
   });
 });
+
+describe('session invalidation on password change', () => {
+  it('should reject a token issued before password_changed_at', async () => {
+    const token = generateToken({ user_id: 'teacher-1', email: 't@test.com', role: 'teacher' });
+
+    supabaseAdmin.from.mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        or: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: {
+              id: 'teacher-1', email: 't@test.com', name: 'T', role: 'teacher',
+              preferred_language: 'en', is_active: true, auth_id: null,
+              password_changed_at: new Date(Date.now() + 3600000).toISOString()
+            },
+            error: null
+          })
+        })
+      })
+    });
+
+    const req = createMockReq(token);
+    const res = createMockRes();
+    const next = jest.fn();
+
+    await authenticateToken(req, res, next);
+
+    expect(res.statusCode).toBe(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('should accept a token issued after password_changed_at', async () => {
+    const token = generateToken({ user_id: 'teacher-1', email: 't@test.com', role: 'teacher' });
+
+    supabaseAdmin.from.mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        or: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: {
+              id: 'teacher-1', email: 't@test.com', name: 'T', role: 'teacher',
+              preferred_language: 'en', is_active: true, auth_id: null,
+              password_changed_at: new Date(Date.now() - 3600000).toISOString()
+            },
+            error: null
+          })
+        })
+      })
+    });
+
+    const req = createMockReq(token);
+    const res = createMockRes();
+    const next = jest.fn();
+
+    await authenticateToken(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+  });
+});
+
+describe('assistant permissions fail closed', () => {
+  function mockAssistantLink(storedPermissions) {
+    supabaseAdmin.from.mockImplementation((table) => {
+      if (table === 'teachers') {
+        return {
+          select: jest.fn().mockReturnValue({
+            or: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({ data: null, error: { message: 'none' } })
+            })
+          })
+        };
+      }
+      return {
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({
+                data: {
+                  id: 'link-1', teacher_id: 'owner-1', permissions: storedPermissions, status: 'active',
+                  teachers: { id: 'owner-1', email: 'o@test.com', name: 'O', is_active: true, password_changed_at: null }
+                },
+                error: null
+              })
+            })
+          })
+        })
+      };
+    });
+  }
+
+  it('should deny keys absent from stored permissions', async () => {
+    const token = generateToken({ user_id: 'asst-1', email: 'a@test.com', role: 'assistant' });
+    mockAssistantLink({ manage_grades: true });
+
+    const req = createMockReq(token);
+    const res = createMockRes();
+    const next = jest.fn();
+
+    await authenticateToken(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+    expect(req.user.permissions.manage_grades).toBe(true);
+    expect(req.user.permissions.manage_students).toBe(false);
+    expect(req.user.permissions.send_whatsapp).toBe(false);
+    expect(req.user.permissions.manage_attendance).toBe(false);
+  });
+});

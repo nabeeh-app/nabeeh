@@ -6,12 +6,16 @@ const isConfigured = () => Boolean(process.env.TURNSTILE_SECRET_KEY);
 
 /**
  * Verify a Cloudflare Turnstile token with the siteverify API.
- * Returns true when verification passes, or when no secret is configured
- * (local development without captcha). Callers in production must set
- * TURNSTILE_SECRET_KEY, otherwise bots walk through an open door.
+ * Fail closed in production: a missing secret rejects registration
+ * instead of waving bots through. Local development without a secret
+ * still skips the check so contributors need no Cloudflare account.
  */
 async function verifyTurnstileToken(token, remoteIp) {
   if (!isConfigured()) {
+    if (process.env.NODE_ENV === 'production') {
+      logger.error('Turnstile secret missing in production, rejecting registration');
+      return false;
+    }
     logger.warn('Turnstile secret missing, captcha check skipped');
     return true;
   }

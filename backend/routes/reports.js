@@ -53,6 +53,13 @@ const generateComment = async (req, res) => {
     return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
   }
 
+  if (group_id) {
+    const groupAccess = await verifyGroupAccess(group_id, teacherId);
+    if (!groupAccess) {
+      return res.status(404).json({ success: false, message: 'Group not found', messageAr: 'لم يتم العثور على المجموعة', code: 'NOT_FOUND' });
+    }
+  }
+
   const { data: student } = await supabaseAdmin
     .from('students').select('id, name').eq('id', student_id).single();
   if (!student) return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
@@ -162,16 +169,18 @@ const approveDraft = async (req, res) => {
 
   const finalText = draft.edited_text || draft.draft_text;
 
-  // Find student's parent
-  const { data: parentLink } = await supabaseAdmin
-    .from('student_parents')
-    .select('parents(id, name, phone)')
+  // Find student's parent (parents carry student_id; no junction table)
+  const { data: parentRows } = await supabaseAdmin
+    .from('parents')
+    .select('id, name, phone')
     .eq('student_id', draft.student_id)
+    .eq('is_primary', true)
     .limit(1);
 
-  if (parentLink && parentLink.length > 0) {
-    const parent = parentLink[0].parents;
+  const parent = parentRows && parentRows.length > 0 ? parentRows[0] : null;
 
+  let waSent = false;
+  if (parent) {
     // Try to send via WhatsApp
     try {
       const conversation = await whatsappQuery.findOrCreateConversation(
@@ -179,16 +188,19 @@ const approveDraft = async (req, res) => {
       );
       if (conversation) {
         await whatsappQuery.saveMessage(conversation.id, 'outbound', finalText, {}, teacherId);
+        waSent = true;
       }
     } catch (waError) {
       logger.warn('WhatsApp send failed for report', { error: waError.message });
     }
+  } else {
+    logger.warn('Report approved with no primary parent, message unsent', { draftId: id });
   }
 
   // Update draft status
   await supabaseAdmin
     .from('report_drafts')
-    .update({ status: 'sent', sent_at: new Date().toISOString() })
+    .update({ status: waSent ? 'sent' : 'approved', sent_at: waSent ? new Date().toISOString() : null })
     .eq('id', id)
     .eq('teacher_id', teacherId);
 

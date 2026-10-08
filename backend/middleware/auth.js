@@ -63,6 +63,17 @@ const authenticateToken = async (req, res, next) => {
 
         req.user = user;
         req.token = decoded;
+
+        // Session invalidation: tokens issued before the last password
+        // change are dead, even with a valid signature and expiry.
+        if (user.pwdChangedAt && decoded.iat && decoded.iat * 1000 < new Date(user.pwdChangedAt).getTime()) {
+            return res.status(401).json({
+                success: false,
+                message: 'Password changed, please log in again',
+                messageAr: 'تم تغيير كلمة المرور، يرجى تسجيل الدخول مجدداً'
+            });
+        }
+
         return next();
 
     } catch (error) {
@@ -96,9 +107,26 @@ const resolveUser = async (decoded) => {
     // Single query: teacher by id OR auth_id
     const { data: teacher, error: teacherError } = await supabaseAdmin
         .from('teachers')
-        .select('id, email, name, role, preferred_language, is_active, auth_id')
+        .select('id, email, name, role, preferred_language, is_active, auth_id, password_changed_at')
         .or(`id.eq.${userId},auth_id.eq.${userId}`)
         .single();
+
+    if (teacher && !teacherError) {
+        if (!teacher.is_active) {
+            return { user: null, error: 'User account is deactivated' };
+        }
+
+        return {
+            user: {
+                ...teacher,
+                role: 'teacher',
+                permissions: TEACHER_DEFAULT_PERMISSIONS,
+                teacherId: teacher.id,
+                pwdChangedAt: teacher.password_changed_at || null
+            },
+            error: null
+        };
+    }
 
     if (teacher && !teacherError) {
         if (!teacher.is_active) {
@@ -128,7 +156,8 @@ const resolveUser = async (decoded) => {
                 id,
                 email,
                 name,
-                is_active
+                is_active,
+                password_changed_at
             )
         `)
         .eq('assistant_id', userId)
@@ -142,10 +171,13 @@ const resolveUser = async (decoded) => {
             return { user: null, error: 'Associated teacher account is deactivated' };
         }
 
-        const permissions = {
-            ...TEACHER_DEFAULT_PERMISSIONS,
-            ...assistantLink.permissions
-        };
+        // Fail closed: only explicitly granted keys are true. Absent keys
+        // deny. Merging over all-true defaults escalated by omission.
+        const stored = assistantLink.permissions || {};
+        const permissions = {};
+        for (const key of Object.keys(TEACHER_DEFAULT_PERMISSIONS)) {
+            permissions[key] = stored[key] === true;
+        }
 
         return {
             user: {
@@ -155,7 +187,8 @@ const resolveUser = async (decoded) => {
                 role: 'assistant',
                 permissions,
                 teacherId: assistantLink.teacher_id,
-                assistantLinkId: assistantLink.id
+                assistantLinkId: assistantLink.id,
+                pwdChangedAt: ownerTeacher.password_changed_at || null
             },
             error: null
         };

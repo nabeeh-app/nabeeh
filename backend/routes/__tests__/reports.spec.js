@@ -100,6 +100,18 @@ describe('Reports Routes', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.draft_text).toBe('AI generated comment');
     });
+
+    it('should reject a cross-tenant group_id with 404', async () => {
+      verifyStudentAccess.mockResolvedValueOnce({ id: 'e1', student_id: 's1', group_id: 'g1', status: 'active' });
+      verifyGroupAccess.mockResolvedValueOnce(null);
+
+      const res = await request(app)
+        .post('/api/reports/generate-comment')
+        .send({ student_id: 's1', group_id: 'victim-group' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.code).toBe('NOT_FOUND');
+    });
   });
 
   describe('GET /api/reports/drafts', () => {
@@ -138,7 +150,7 @@ describe('Reports Routes', () => {
     it('should approve and send draft', async () => {
       supabaseAdmin.from
         .mockReturnValueOnce(createChainable({ data: { id: 'd1', draft_text: 'Report', student_id: 's1', students: { name: 'Ahmed', id: 's1' } }, error: null }))
-        .mockReturnValueOnce(createChainable({ data: [{ parents: { id: 'p1', name: 'Father' } }], error: null }));
+        .mockReturnValueOnce(createChainable({ data: [{ id: 'p1', name: 'Father', phone: '+2010' }], error: null }));
       supabaseAdmin.from
         .mockReturnValueOnce(createChainable({ data: null, error: null }))
         .mockReturnValueOnce(createChainable({ data: null, error: null }));
@@ -147,6 +159,25 @@ describe('Reports Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+    });
+
+    it('should approve without sending when no primary parent exists', async () => {
+      const whatsappQuery = require('../../lib/whatsappQuery');
+      supabaseAdmin.from
+        .mockReturnValueOnce(createChainable({ data: { id: 'd1', draft_text: 'Report', student_id: 's1', students: { name: 'Ahmed', id: 's1' } }, error: null }))
+        .mockReturnValueOnce(createChainable({ data: [], error: null }));
+      const statusUpdate = createChainable({ data: null, error: null });
+      supabaseAdmin.from
+        .mockReturnValueOnce(statusUpdate)
+        .mockReturnValueOnce(createChainable({ data: null, error: null }));
+
+      const res = await request(app).post('/api/reports/drafts/d1/approve');
+
+      expect(res.status).toBe(200);
+      expect(whatsappQuery.findOrCreateConversation).not.toHaveBeenCalled();
+      expect(statusUpdate.update).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'approved' })
+      );
     });
   });
 

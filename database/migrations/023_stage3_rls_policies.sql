@@ -214,14 +214,23 @@ CREATE POLICY tenant_isolation ON failed_messages TO authenticated
   WITH CHECK ((SELECT current_tenant_id()) = tenant_id);
 
 -- ============================================================
--- 3b. teachers root policy (no tenant_id by design).
--- Legacy auth.uid() policies dropped, replaced with sub/auth_id match
--- plus delegated assistant read. Owner-only writes.
+-- 3b. teachers root policies (no tenant_id by design).
+-- Legacy auth.uid() policies dropped. One policy per command so each
+-- predicate reads plainly. Column restriction lives one layer up, in the
+-- Zod updateProfileSchema: name, phone, business_name, bio, subjects,
+-- address, city, country, timezone, whatsapp_number, telegram_username.
+-- id, auth_id, and email are not API-writable by anyone.
 -- ============================================================
 DROP POLICY IF EXISTS "Teachers can view own profile" ON teachers;
 DROP POLICY IF EXISTS "Teachers can update own profile" ON teachers;
+DROP POLICY IF EXISTS teacher_self_select ON teachers;
+DROP POLICY IF EXISTS teacher_self_insert ON teachers;
+DROP POLICY IF EXISTS teacher_self_update ON teachers;
+DROP POLICY IF EXISTS teacher_self_delete ON teachers;
 
-CREATE POLICY teacher_self_access ON teachers TO authenticated
+-- SELECT: own row by id or OAuth-linked auth_id, plus delegated read for
+-- linked assistants (needed for future scoped-client owner lookups).
+CREATE POLICY teacher_self_select ON teachers FOR SELECT TO authenticated
   USING (
     id = (SELECT public.current_actor_id())
     OR auth_id = (SELECT public.current_actor_id())
@@ -230,8 +239,32 @@ CREATE POLICY teacher_self_access ON teachers TO authenticated
       WHERE ta.tenant_id = teachers.id
       AND ta.assistant_id = (SELECT public.current_actor_id())
     )
+  );
+
+-- INSERT: owner row only. Backend registration writes through service_role;
+-- this governs scoped-client inserts only.
+CREATE POLICY teacher_self_insert ON teachers FOR INSERT TO authenticated
+  WITH CHECK (
+    id = (SELECT public.current_actor_id())
+    OR auth_id = (SELECT public.current_actor_id())
+  );
+
+-- UPDATE: owner row only. Which columns is decided by updateProfileSchema
+-- (profile fields listed above); id, auth_id, email never writable.
+CREATE POLICY teacher_self_update ON teachers FOR UPDATE TO authenticated
+  USING (
+    id = (SELECT public.current_actor_id())
+    OR auth_id = (SELECT public.current_actor_id())
   )
   WITH CHECK (
+    id = (SELECT public.current_actor_id())
+    OR auth_id = (SELECT public.current_actor_id())
+  );
+
+-- DELETE: owner row only (account closure cascades the tenant by design).
+-- Assistants can never delete the owner row.
+CREATE POLICY teacher_self_delete ON teachers FOR DELETE TO authenticated
+  USING (
     id = (SELECT public.current_actor_id())
     OR auth_id = (SELECT public.current_actor_id())
   );
@@ -272,4 +305,19 @@ ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public REVOKE ALL ON 
 -- written to disk, never committed. Unset secret aborts the probe run.
 -- Backend traffic is unaffected at this stage: it uses service_role
 -- until the stage 5 route migration. Matrix plus suite rerun after apply.
+
+-- ============================================================
+-- 6. POST-APPLY CATALOG PROOF (run after apply, expect 1 row, n=32).
+-- All 32 uniform policies must be textually identical modulo table name.
+-- The tenant_id Var renders without table qualification, so identical
+-- policies group into exactly one row.
+-- ============================================================
+-- SELECT pg_get_expr(polqual, polrelid) AS using_expr,
+--        pg_get_expr(polwithcheck, polrelid) AS check_expr,
+--        polroles::regrole::text AS to_role,
+--        COUNT(*) AS n
+-- FROM pg_policy WHERE polname = 'tenant_isolation'
+-- GROUP BY 1, 2, 3;
+-- Expected: one row, to_role = {authenticated}, n = 32.
+-- Any second row is a divergent policy: stop, diff, fix, re-run.
 -- ============================================================

@@ -10,14 +10,14 @@ const securityHeaders = [
       // Base: only same-origin by default
       "default-src 'self'",
 
-      // Scripts: self + Clarity (consent-gated).
+      // Scripts: self + Clarity (consent-gated) + Turnstile challenge.
       // 'unsafe-inline' required for Next.js bootstrap (__NEXT_DATA__, chunks, hydration).
       // 'unsafe-eval' intentionally omitted — no frontend code uses eval/new Function().
       // Clarity loaded dynamically via consent-gated component.
-      "script-src 'self' 'unsafe-inline' https://www.clarity.ms",
+      "script-src 'self' 'unsafe-inline' https://www.clarity.ms https://challenges.cloudflare.com",
 
       // Element-level <script> control (overrides script-src for script elements).
-      'script-src-elem \'self\' \'unsafe-inline\' https://www.clarity.ms',
+      'script-src-elem \'self\' \'unsafe-inline\' https://www.clarity.ms https://challenges.cloudflare.com',
 
       // Styles: self + Tailwind/CSS-in-JS inline styles.
       "style-src 'self' 'unsafe-inline'",
@@ -30,16 +30,17 @@ const securityHeaders = [
       "font-src 'self'",
 
       // API connections: backend (self via rewrite + direct api subdomain),
-      // Supabase, Clarity analytics beacon.
+      // Supabase, Clarity analytics beacon, Turnstile verification calls.
       // *.supabase.in removed (legacy deprecated domain — not used).
-      "connect-src 'self' https://api.nabeeh.app https://*.onrender.com https://*.supabase.co wss://*.supabase.co https://www.clarity.ms",
+      "connect-src 'self' https://api.nabeeh.app https://*.onrender.com https://*.supabase.co wss://*.supabase.co https://www.clarity.ms https://challenges.cloudflare.com",
 
       // Media: self-hosted only.
       "media-src 'self'",
 
-      // No plugins, no frames, no form hijacking, no base injection.
+      // No plugins, no frames except the Turnstile challenge iframe,
+      // no form hijacking, no base injection.
       "object-src 'none'",
-      "frame-src 'none'",
+      "frame-src https://challenges.cloudflare.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

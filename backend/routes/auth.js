@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 const logger = require('../lib/logger');
 const crypto = require('crypto');
 const { sendEmail } = require('../lib/email');
-const { verifyTurnstileToken, isConfigured: isTurnstileConfigured } = require('../lib/turnstile');
+const { verifyTurnstileToken } = require('../lib/turnstile');
 const { getWelcomeTemplate, getPasswordResetTemplate } = require('../lib/emailTemplates');
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -342,11 +342,11 @@ async function provisionTeacherAccount(payload) {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/register', registerLimiter, validate(registerSchema), asyncHandler(async (req, res) => {
-    if (isTurnstileConfigured()) {
-        const human = await verifyTurnstileToken(req.validated.body.turnstileToken, getClientIp(req));
-        if (!human) {
-            return res.status(403).json({ success: false, message: 'Captcha verification failed', messageAr: 'فشل التحقق الأمني', code: 'INVALID_CAPTCHA' });
-        }
+    // Unconditional: verifyTurnstileToken fails closed in production when
+    // the secret is missing, so registration can never silently skip captcha.
+    const human = await verifyTurnstileToken(req.validated.body.turnstileToken, getClientIp(req));
+    if (!human) {
+        return res.status(403).json({ success: false, message: 'Captcha verification failed', messageAr: 'فشل التحقق الأمني', code: 'INVALID_CAPTCHA' });
     }
 
     const teacher = await provisionTeacherAccount(req.validated.body);
@@ -654,7 +654,12 @@ router.post('/login', loginLimiter, validate(loginSchema), asyncHandler(async (r
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/logout', authenticateToken, asyncHandler(async (req, res) => {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    // Revoke whichever credential authenticated this request. Browsers send
+    // the httpOnly cookie and cannot set an Authorization header from JS,
+    // so header-only revocation left cookie sessions valid after logout.
+    const token = req.headers.authorization?.replace('Bearer ', '')
+        || req.cookies?.nabeeh_token
+        || null;
     const ipAddress = getClientIp(req);
     const userAgent = getUserAgent(req);
 
@@ -1254,7 +1259,7 @@ router.get('/reset/:token', asyncHandler(async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/reset-password', validate(resetPasswordSchema), asyncHandler(async (req, res) => {
+router.post('/reset-password', resetLimiter, validate(resetPasswordSchema), asyncHandler(async (req, res) => {
     const { token, newPassword } = req.validated.body;
     const ipAddress = getClientIp(req);
     const userAgent = getUserAgent(req);
@@ -1308,6 +1313,20 @@ router.post('/reset-password', validate(resetPasswordSchema), asyncHandler(async
         .from('password_reset_tokens')
         .update({ used: true })
         .eq('id', resetToken.id);
+
+    // Invalidate every sibling reset token for this teacher
+    await supabaseAdmin
+        .from('password_reset_tokens')
+        .update({ used: true })
+        .eq('teacher_id', resetToken.teacher_id)
+        .eq('used', false);
+
+    // Kill all live sessions: tokens issued before this instant fail the
+    // pwdChangedAt check in authenticateToken, teacher and assistant alike.
+    await supabaseAdmin
+        .from('teachers')
+        .update({ password_changed_at: new Date().toISOString() })
+        .eq('id', resetToken.teacher_id);
 
     // Log password reset completion
     await logAuthEvent(
@@ -1530,7 +1549,7 @@ router.post('/oauth/check-profile', authenticateToken, validate(checkProfileSche
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/oauth/callback', validate(oauthCallbackSchema), asyncHandler(async (req, res) => {
+router.post('/oauth/callback', registerLimiter, validate(oauthCallbackSchema), asyncHandler(async (req, res) => {
     const { access_token, provider } = req.validated.body;
 
     // Exchange access token for user info via Supabase

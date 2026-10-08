@@ -35,9 +35,11 @@ for r in postgres supabase_admin; do
     || { echo "FAIL: default-privs revoke for $r missing in 023"; fail=1; }
 done
 
-# teachers root must carry its own predicate, never the uniform one
-grep -qE "CREATE POLICY .* ON teachers TO authenticated" "$M23" \
-  || { echo "FAIL: teachers policy missing in 023"; fail=1; }
+# teachers root must carry its own predicates, never the uniform one
+grep -qE "CREATE POLICY teacher_self_(select|insert|update|delete) ON teachers FOR (SELECT|INSERT|UPDATE|DELETE) TO authenticated" "$M23" \
+  || { echo "FAIL: teachers per-command policies missing in 023"; fail=1; }
+grep -qE "CREATE POLICY tenant_isolation ON teachers" "$M23" \
+  && { echo "FAIL: teachers must not use the uniform policy"; fail=1; }
 
 [ "$fail" -eq 0 ] && echo "RLS coverage OK: $(echo "$tables" | wc -l) tenant tables checked"
 exit "$fail"

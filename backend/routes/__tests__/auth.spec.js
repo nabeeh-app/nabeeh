@@ -77,6 +77,7 @@ const { supabase, supabaseAdmin } = require('../../config/database');
 
 const app = express();
 app.use(express.json());
+app.use(require('cookie-parser')());
 app.use('/api/auth', authRouter);
 app.use(require('../../middleware/errorHandler'));
 
@@ -84,6 +85,7 @@ describe('Auth Routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockValidatePasswordStrength.mockReturnValue({ isValid: true, errors: [] });
+    mockVerifyTurnstileToken.mockResolvedValue(true);
   });
 
   describe('POST /api/auth/register', () => {
@@ -200,8 +202,22 @@ describe('Auth Routes', () => {
       expect(res.body.code).toBe('VALIDATION_ERROR');
     });
 
-    it('should return 409 for duplicate email', async () => {
-      // getUserByEmail now uses supabaseAdmin
+    it('should reject registration when captcha fails', async () => {
+      mockVerifyTurnstileToken.mockResolvedValueOnce(false);
+
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'New Teacher',
+          email: 'captcha@example.com',
+          password: 'StrongPass123!'
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe('INVALID_CAPTCHA');
+    });
+
+    it('should return 409 for duplicate email', async () => {      // getUserByEmail now uses supabaseAdmin
       supabaseAdmin.from.mockReturnValueOnce({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -427,6 +443,20 @@ describe('Auth Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+    });
+
+    it('should revoke the cookie session on logout without a Bearer header', async () => {
+      mockVerifyToken.mockReturnValueOnce({ user_id: 'teacher-1', email: 'test@example.com' });
+      supabaseAdmin.from.mockReturnValueOnce({
+        insert: jest.fn().mockResolvedValue({ error: null })
+      });
+
+      const res = await request(app)
+        .post('/api/auth/logout')
+        .set('Cookie', 'nabeeh_token=cookie-jwt-token');
+
+      expect(res.status).toBe(200);
+      expect(mockRevokeToken).toHaveBeenCalledWith('cookie-jwt-token');
     });
   });
 
@@ -833,11 +863,27 @@ describe('Auth Routes', () => {
 
       supabaseAdmin.auth.admin.updateUserById.mockResolvedValueOnce({ error: null });
 
-      supabaseAdmin.from.mockReturnValueOnce({
+      const markUsed = {
         update: jest.fn().mockReturnValue({
           eq: jest.fn().mockResolvedValue({ error: null })
         })
-      });
+      };
+      const killSiblings = {
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ error: null })
+          })
+        })
+      };
+      const killSessions = {
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: null })
+        })
+      };
+      supabaseAdmin.from
+        .mockReturnValueOnce(markUsed)
+        .mockReturnValueOnce(killSiblings)
+        .mockReturnValueOnce(killSessions);
 
       supabaseAdmin.from.mockReturnValueOnce({
         insert: jest.fn().mockResolvedValue({ error: null })
@@ -852,6 +898,9 @@ describe('Auth Routes', () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.message).toBe('Password has been reset successfully');
+      expect(killSessions.update).toHaveBeenCalledWith(
+        expect.objectContaining({ password_changed_at: expect.any(String) })
+      );
     });
 
     it('should return 400 for weak password', async () => {
