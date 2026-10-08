@@ -11,3 +11,4 @@ ts	phase	decision	why	evidence	result
 2026-10-08T14:44:47Z	023-blocked	023 apply failed line 275 FOR ROLE default-privs, txn rolled back clean	platform denies changing other roles defaults on every channel	prod verified at pre-023 state, 0 new policies	stopped, awaiting word
 2026-10-08T14:56:55Z	iat-floor-fix	fixed ms-vs-second race killing fresh logins, matrix clean, suite 572	floor both sides, subsecond reset window accepted	phase2-wip	gate green
 2026-10-08T16:59:43Z	stage4-live	027 bucket private plus 4 path policies verified on prod	matrix clean, suite 578, fixtures zeroed	master 860a836 live both	batch A done, stage5 blocked on jwt secret
+2026-10-08T20:04:13Z	stage6-live	029 forced 34 tables, matrix clean, suite 582, fixtures zeroed	catalog 26/3/4/four-zeros holds	shipping master	stages complete
