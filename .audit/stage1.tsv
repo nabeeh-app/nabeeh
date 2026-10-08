@@ -4,3 +4,4 @@ ts	phase	decision	why	evidence	result
 2026-10-08T06:58:07Z	stage1-apply	stage 1 applied to prod via pooler psql, 190 statements, ON_ERROR_STOP clean	MCP channel denied, pooler was the working path	commit 19f24dc local only, migration stage1_tenant_id_columns	33 cols, 33 triggers, 32 NOT NULL
 2026-10-08T06:58:07Z	stage1-verify	live probes plus matrix plus suite all green, zero leftovers	checked the real tables, not the migration output	matrix no 200 with A data, suite 561 pass, probe rows rolled back	gate met, waiting next
 2026-10-08T07:04:51Z	stage2-built	stage 2 plus rollback harness tested, stage 3 file written unapplied	cross tenant insert rejected 23503, rollback clean	commit local only, no push, no apply	built, stopped
+2026-10-08T07:17:29Z	stage2-applied	revised 022 applied to prod, 20 composites, matrix plus suite green	harness probes plus prod rolled-back probe all reject cross-tenant	commit local only, no push, 023 unapplied	gate met, waiting next
