@@ -40,7 +40,13 @@ export async function GET(request: Request) {
   const { session } = data;
 
   try {
+    // BACKEND_URL is the backend origin in some environments (e.g. Render:
+    // https://api.nabeeh.app) and already includes /api in others. Normalize
+    // so the callback always lands on /api/auth/oauth/callback.
     let backendUrl = process.env.BACKEND_URL;
+    if (backendUrl && !backendUrl.replace(/\/+$/, '').endsWith('/api')) {
+      backendUrl = `${backendUrl.replace(/\/+$/, '')}/api`;
+    }
     if (!backendUrl) {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
       backendUrl = apiUrl.startsWith('http') ? apiUrl : `${origin}${apiUrl}`;
