@@ -210,7 +210,12 @@ async function trackTokenUsage(teacherId, result) {
     await supabaseAdmin.rpc('increment_token_usage', {
       p_teacher_id: teacherId,
       p_tokens: estimatedTokens,
-    }).then(() => {}).catch(() => {
+    }).then(({ error } = {}) => {
+      // supabase-js resolves missing functions as { error }, it does not
+      // reject: without this check the fallback below never runs and
+      // usage is silently dropped.
+      if (error) throw error;
+    }).catch(() => {
       // Fallback: direct update if RPC doesn't exist
       supabaseAdmin
         .from('teacher_settings')
@@ -404,4 +409,5 @@ module.exports = {
   generateReportComment,
   buildConversationContext,
   checkTokenBudget,
+  trackTokenUsage,
 };
