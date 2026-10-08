@@ -35,6 +35,14 @@ would hand out the tenant claim to whoever holds it, so the mint
 function returns the configured client, never the raw token, and callers
 have no accessor for the token string.
 
+Migration tracking decision (2026-10-08): stages 021, 022, and 024 went
+in through psql, not the Supabase CLI, and no supabase/migrations
+directory exists. supabase_migrations holds only the 17 older CLI
+entries. Do NOT run migration repair against prod: it would pollute
+history with invented versions while fixing nothing, since db push never
+reads database/migrations. Revisit only if db push ever reads our
+directory, at which point mirror timestamped copies first, then repair.
+
 SQL helper, created once:
 
 ```sql
