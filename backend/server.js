@@ -53,6 +53,9 @@ const {
 const app = express();
 const PORT = process.env.PORT || 5000;
 app.disable('etag');
+// Behind Render's router (+ Cloudflare proxy): one trusted hop so req.ip
+// reflects the forwarded client instead of internal IPs.
+app.set('trust proxy', 1);
 
 // Configure Winston logger
 const winstonLogger = require('./lib/logger');

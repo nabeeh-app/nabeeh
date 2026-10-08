@@ -6,6 +6,7 @@ const logger = require('../lib/logger');
 const isProd = process.env.NODE_ENV === 'production';
 
 // Rate limiting middleware
+const HEALTH_PATHS = new Set(['/health', '/api/health', '/ready']);
 const createRateLimit = (windowMs, max, message) => {
   return rateLimit({
     windowMs,
@@ -16,6 +17,11 @@ const createRateLimit = (windowMs, max, message) => {
     },
     standardHeaders: true,
     legacyHeaders: false,
+    // Render's health checker + uptime pings hit /api/health every few
+    // seconds from one IP — never count platform probes against the budget.
+    skip: (req) => HEALTH_PATHS.has(req.path),
+    // Behind Cloudflare all users share edge IPs: key on the real client IP.
+    keyGenerator: (req) => req.headers['cf-connecting-ip'] || req.ip,
   });
 };
 
