@@ -5,3 +5,4 @@ ts	phase	decision	why	evidence	result
 2026-10-08T06:58:07Z	stage1-verify	live probes plus matrix plus suite all green, zero leftovers	checked the real tables, not the migration output	matrix no 200 with A data, suite 561 pass, probe rows rolled back	gate met, waiting next
 2026-10-08T07:04:51Z	stage2-built	stage 2 plus rollback harness tested, stage 3 file written unapplied	cross tenant insert rejected 23503, rollback clean	commit local only, no push, no apply	built, stopped
 2026-10-08T07:17:29Z	stage2-applied	revised 022 applied to prod, 20 composites, matrix plus suite green	harness probes plus prod rolled-back probe all reject cross-tenant	commit local only, no push, 023 unapplied	gate met, waiting next
+2026-10-08T14:08:00Z	steer-done	runner guard, CSP, fail-closed, 5 fixes, 024 applied, phase2-wip pushed	matrix green, suite 572, no push to master, 023 unapplied	phase2-wip eeae3a4 plus doc commit	stopped, waiting next
