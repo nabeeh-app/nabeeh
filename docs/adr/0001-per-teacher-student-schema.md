@@ -1,7 +1,18 @@
 # 0001 — Per-teacher student ownership and normalized schema
 
-**Status:** Accepted  
-**Schema:** `database/migrations/001_initial_schema.sql` + `002_rls_policies.sql`
+**Status:** Accepted, amended 2026-10-08 for Phase 2 DB-enforced tenancy.
+
+**Amendment (Phase 2, operator-approved):** per-teacher ownership becomes
+per-tenant rows. A child studying with two teachers is two student rows,
+one per tenant. Every tenant table carries `tenant_id uuid NOT NULL`
+(`teachers` is the root, `auth.users`-linked admin tables and global
+lookups excluded), child references become composite
+`(tenant_id, parent_id)`, and every RLS policy is uniformly
+`tenant_id = current_tenant_id()` where the claim is minted per request
+with the owner teacher id. `auth_audit_log.tenant_id` is the single
+nullable exception for pre-authentication events. No cross-teacher
+student sharing exists in any product flow; the audit is recorded in
+`docs/phase2-tenancy-design.md`.
 
 The original `schema.sql` used a flat model where students had a direct `teacher_id` foreign key. A later `schema_v2.sql` normalized everything but made students global (shared across teachers), which doesn't match the business model — each teacher owns their students.
 

@@ -1,8 +1,9 @@
 # Phase 2 design: database-enforced multi-tenancy
 
-Status: DESIGN ONLY. No migration in this change. Operator approval required
-before applying anything. Tracked debt: the Phase 0 switch of reads to
-`supabaseAdmin` in `backend/` is reversed by D3 once this phase lands.
+Status: APPROVED WITH CHANGES 2026-10-08. P1 decided per-tenant rows
+(operator override). Push of related commits waits for operator env
+confirmation. Stage gates: fresh pg_dump before stage 1, tested rollback
+SQL per stage, STOP + matrix + suite + "next" after every stage.
 
 ## D0. Identity path (decided from live evidence)
 
@@ -13,12 +14,19 @@ Dashboard, Project Settings, API, section JWT Secret legacy, into the
 backend env as `SUPABASE_JWT_SECRET`. It never enters the repo.
 
 Per request the backend mints a short-lived JWT, HS256, with claims
-`sub` = actor auth id, `role` = `authenticated`, `tenant_id` = owner
-`teachers.id`, `actor_role` = teacher or assistant, `exp` = 60 seconds.
+`sub` = actor auth id, `role` = `authenticated` ONLY, never
+`service_role`, `tenant_id` = owner `teachers.id`, `actor_id` = actor auth
+id, `actor_role` = teacher or assistant, `exp` <= 60 seconds.
 Assistants always carry the OWNER tenant id, the actor id stays separate
 for audit. The per-request client is built from the anon key with
 `Authorization: Bearer <minted>` and nothing else. `supabaseAdmin` leaves
 request handlers entirely.
+
+Minting lives in exactly one function in one module,
+`backend/lib/privileged/` or equivalent. The legacy JWT secret is read
+from env in that module only. A later JWKS switch touches that one file.
+No other file imports the secret, builds tenant JWTs, or constructs
+privileged clients.
 
 SQL helper, created once:
 
@@ -34,19 +42,37 @@ per-request Supabase Auth session, which costs a sign-in per request and
 needs its own design. Do not invent a SET LOCAL scheme. PostgREST gives
 one transaction per request with no hook for session state.
 
-## P1. Can a student have more than one teacher? Yes.
+## P1. DECIDED: per-tenant student rows. No cross-teacher sharing.
 
-Schema proof: `enrollments` carries `UNIQUE(student_id, group_id)` only.
-Nothing stops one student row from enrolling under two teachers groups.
-`UNIQUE(teacher_id, student_code)` scopes codes, not rows. Live proof: the
-Phase 0 battery enrolled teacher A student under teacher B before the fix.
+Operator decision 2026-10-08, overrides the earlier keep-sharing
+recommendation. The Phase 0 repro enrollment was the enroll leak itself,
+not a product requirement. A child studying with two teachers is two
+student rows, one per tenant.
 
-Recommendation: keep sharing legal. `students.tenant_id` records the
-creator owner. `enrollments.tenant_id` records the enrolling owner and must
-equal the group owner via composite FK. Reads scope through the caller own
-enrollments, never through `students.tenant_id` alone. Strict single-owner
-would break legitimate re-enrollment and buys nothing RLS cannot enforce
-per row.
+- `students.tenant_id` and `parents.tenant_id` NOT NULL.
+- `enrollments` carries `tenant_id` with composite FKs
+  `(tenant_id, student_id)` to `students(tenant_id, id)`,
+  `(tenant_id, group_id)` to `groups(tenant_id, id)`. Same pattern for
+  every child to parent reference: groups to offerings, sessions to
+  groups, attendance to enrollments and sessions, assessments to
+  offerings, grades to enrollments and assessments, parents to students,
+  messages to conversations, locks to sessions and students.
+- Policies are uniformly `tenant_id = current_tenant_id()`. No reads
+  scoped through enrollments. The enrollment chain stays as the domain
+  navigation path, but isolation comes from the tenant predicate, not
+  from chain traversal.
+- Sharing-flow audit 2026-10-08: no legitimate flow assumes
+  cross-teacher student sharing. All creates (`students.js` create,
+  `import.js` execute, `selfRegistration.js` submit) mint a fresh
+  student plus enrollment plus parents under the caller or token owner.
+  All reads resolve through the caller own enrollments
+  (`verifyStudentAccess`, `getTeacherEnrollments`,
+  `batchResolveEnrollmentsWithOfferings`, bot `getParentByPhone` scoped
+  to the session teacher). The single flow that ever accepted a foreign
+  student id was manual `POST enroll`, the Phase 0 leak, now blocked and
+  to be hardened in stage 5 with an explicit `students.tenant_id` check
+  plus the composite FK as the backstop. Same-phone parents under two
+  teachers become two parent rows; each teacher bot sees its own.
 
 ## Table list
 
@@ -71,8 +97,20 @@ offering, grades via enrollment, parents via first enrolled student,
 messages via conversation.
 
 Global by design, no column: subjects, grade_levels, revoked_tokens keyed
-by jti. The `payments` storage bucket goes private with path prefix
-`{tenant_id}/...`, storage RLS on the prefix, short-TTL signed URLs only.
+by jti. Platform scope, no column, admin-path policies unchanged:
+admin_users, support_tickets, admin_audit_log. These are reached through
+the admin app with its own auth, never through teacher JWTs.
+`auth_audit_log.tenant_id` stays NULLABLE: 75 of 153 prod rows are
+pre-authentication login events with no teacher to map to. Backfill what
+maps, keep NULL for pre-auth rows, policy is tenant-match only so NULL
+rows are service-role forensics, invisible to tenants. This is the single
+documented exception to NOT NULL. The `payments` storage bucket goes
+private with path prefix `{tenant_id}/...`, storage RLS on the prefix,
+short-TTL signed URLs only.
+
+Stage 1 adds columns plus backfill plus stamp triggers plus NOT NULL
+(auth_audit_log excepted) so pre-stage-5 code keeps writing while every
+new row lands stamped. Triggers also lock `tenant_id` against UPDATE.
 
 ## RLS policy templates
 
@@ -88,9 +126,10 @@ create policy teacher_isolation on students
   with check (tenant_id = current_tenant_id());
 ```
 
-Chain tables add no extra predicate. The composite FK already guarantees
-the parent belongs to the tenant, and the parent policy enforces the rest.
-One policy per table keeps the audit readable.
+Chain tables carry the SAME uniform predicate on their own `tenant_id`.
+The composite FK guarantees the parent belongs to the same tenant, the
+policy enforces it per row anyway. One identical policy per table keeps
+the audit readable and leaves no table relying on traversal.
 
 Token-bound tables keep bearer-secret access by unguessable token plus the
 tenant check where a teacher column exists:
@@ -116,14 +155,25 @@ create policy tenant_receipts on storage.objects
 Serve receipts through signed URLs with short TTL. Rotate any URL minted
 while the bucket was public.
 
-## Rollout order for approval
+## Rollout order, staged with gates
 
-1. pg_dump taken, done 2026-10-08.
-2. Migration A: add nullable `tenant_id`, backfill, verify zero NULLs and
-   zero orphans, set NOT NULL, add UNIQUE and composite FKs, add
-   `current_tenant_id()`.
-3. Migration B: rewrite policies per templates, enable plus FORCE RLS on
-   every tenant table, storage bucket private plus storage policies.
-4. Backend: per-request mint plus scoped client, remove `supabaseAdmin`
-   from handlers into the allowlisted module, CI guard stays green.
-5. Live matrix rerun plus full suite, then Phase 4 pgTAP tests.
+0. Fresh pg_dump before stage 1. Tested rollback SQL per stage, stored
+   next to the migration.
+1. `tenant_id` columns plus backfill plus stamp triggers plus NOT NULL
+   (auth_audit_log excepted, see above). `failed_messages` and
+   `self_registration_tokens` are created IF NOT EXISTS with the column
+   where missing in prod. STOP, report, matrix plus suite, wait "next".
+2. `UNIQUE (tenant_id, id)` plus composite FKs plus indexes. STOP,
+   report, matrix plus suite, wait "next".
+3. `current_tenant_id()` plus policies with USING and WITH CHECK on
+   every tenant table. RLS enabled but NOT forced yet. New CI test:
+   every table with `tenant_id` must have RLS enabled and at least one
+   policy. STOP, report, matrix plus suite, wait "next".
+4. Storage private plus path policies plus signed URLs. Rotate any URL
+   minted while the bucket was public. STOP, report, wait "next".
+5. Route migration from `supabaseAdmin` to the per-request scoped
+   client, route by route. Keep `supabaseAdmin` on a route until its
+   scoped version passes the matrix. Never leave a route half migrated.
+   STOP per route group, report, wait "next".
+6. FORCE RLS everywhere. STOP, full matrix, full suite, then Phase 4
+   pgTAP tests.

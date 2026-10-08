@@ -13,7 +13,7 @@ Nabeeh is a bilingual (AR/EN) smart teaching assistant for classroom management,
 | Term | Definition | Avoid |
 |------|-----------|-------|
 | **Teacher** | Account holder who manages students, attendance, grades | instructor, tutor, educator |
-| **Student** | Learner enrolled in a teacher's offering. Owned by one teacher — not global. | pupil, learner, user |
+| **Student** | Learner row owned by exactly one teacher tenant. A child with two teachers is two rows, never shared. | pupil, learner, user |
 | **Parent** | Contact linked to one or more students. Communicates via WhatsApp. | guardian, contact |
 | **Offering** | A course: (teacher + subject + grade_level + academic_year). Contains groups. | course, class, program |
 | **Group** | Cohort of students within an offering. Has a schedule and capacity. | cohort, section |
@@ -144,9 +144,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);      // reads
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY); // admin writes
 ```
 
-**NEVER create Supabase clients in route files or middleware.** Import from `config/database.js`. The anon client for reads, the admin client for operations that bypass RLS (creating auth users, etc.).
+**NEVER create Supabase clients in route files or middleware.** Import from `config/database.js`. The anon client for reads, the admin client for operations that bypass RLS (creating auth users, etc.). Per-request tenant JWT minting lives in exactly one function in `backend/lib/privileged/` (single module owns the secret, HS256, `role=authenticated` only, TTL <= 60s); a JWKS switch touches that file alone.
 
-### 2. Data Access Chain
+### 2. Data Access Chain + Tenant Predicate (Phase 2, enforced in DB)
 
 All student data is accessed through the enrollment chain:
 
@@ -157,6 +157,12 @@ teacher → offerings → groups → enrollments → students
                           ↓
                        assessments → grades
 ```
+
+Every tenant table carries `tenant_id` (owner `teachers.id`), child
+references are composite `(tenant_id, parent_id)`, and every RLS policy
+is uniformly `tenant_id = current_tenant_id()`. The chain is the domain
+navigation path; isolation comes from the tenant predicate, never from
+traversal alone.
 
 **Never query students directly with a `teacher_id` filter.** Always go through the chain. This enforces data isolation between teachers.
 
