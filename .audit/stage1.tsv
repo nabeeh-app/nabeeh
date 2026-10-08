@@ -6,3 +6,4 @@ ts	phase	decision	why	evidence	result
 2026-10-08T07:04:51Z	stage2-built	stage 2 plus rollback harness tested, stage 3 file written unapplied	cross tenant insert rejected 23503, rollback clean	commit local only, no push, no apply	built, stopped
 2026-10-08T07:17:29Z	stage2-applied	revised 022 applied to prod, 20 composites, matrix plus suite green	harness probes plus prod rolled-back probe all reject cross-tenant	commit local only, no push, 023 unapplied	gate met, waiting next
 2026-10-08T14:08:00Z	steer-done	runner guard, CSP, fail-closed, 5 fixes, 024 applied, phase2-wip pushed	matrix green, suite 572, no push to master, 023 unapplied	phase2-wip eeae3a4 plus doc commit	stopped, waiting next
+2026-10-08T14:24:04Z	023-revised	revised 023 harness proven, wip pushed, master untouched	exec_sql anon RCE flagged for 023 lockdown	phase2-wip f6151e2	stopped, waiting next
