@@ -131,15 +131,9 @@ The composite FK guarantees the parent belongs to the same tenant, the
 policy enforces it per row anyway. One identical policy per table keeps
 the audit readable and leaves no table relying on traversal.
 
-Token-bound tables keep bearer-secret access by unguessable token plus the
-tenant check where a teacher column exists:
-
-```sql
-create policy self_registration_submit on self_registration_tokens
-  for select using (true);
-```
-
-Scope that exception narrowly. It exists only for anonymous submit links.
+Anonymous self-registration needs no DB exception: submitters never touch
+PostgREST. The backend mediates every token read and write through
+service_role. No anon policy exists on any table after stage 3.
 Everything else follows the tenant template with both USING and WITH CHECK
 clauses. Never write USING without WITH CHECK on insert or update paths.
 
