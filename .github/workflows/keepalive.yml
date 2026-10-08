@@ -1,0 +1,21 @@
+# Keep Render Free backend warm: ping the light health endpoint every 10 min.
+# Without this the service sleeps after 15 min idle (60s cold starts + stale
+# WhatsApp sockets). Cost: ~4.3k req/mo, seconds of Actions time (free tier).
+name: keepalive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping backend health
+        run: |
+          code=$(curl -s -o /dev/null -m 60 -w "%{http_code}" https://api.nabeeh.app/api/health || echo "000")
+          echo "health=$code"
+          # 200 healthy, 000 cold-start in progress (next run retries) — fail loudly otherwise
+          if [ "$code" != "200" ] && [ "$code" != "000" ]; then exit 1; fi
