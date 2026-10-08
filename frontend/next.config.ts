@@ -29,9 +29,10 @@ const securityHeaders = [
       // next/font/google downloads at build time and serves from same origin.
       "font-src 'self'",
 
-      // API connections: backend (self via rewrite), Supabase, Clarity analytics beacon.
+      // API connections: backend (self via rewrite + direct api subdomain),
+      // Supabase, Clarity analytics beacon.
       // *.supabase.in removed (legacy deprecated domain — not used).
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.clarity.ms",
+      "connect-src 'self' https://api.nabeeh.app https://*.onrender.com https://*.supabase.co wss://*.supabase.co https://www.clarity.ms",
 
       // Media: self-hosted only.
       "media-src 'self'",
