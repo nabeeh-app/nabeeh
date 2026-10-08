@@ -14,7 +14,9 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const migrationsDir = path.join(__dirname, 'migrations');
-const { listMigrationFiles } = require('../backend/lib/migrationFiles');
+const { listMigrationFiles, assertLocalDatabase } = require('../backend/lib/migrationFiles');
+
+assertLocalDatabase(supabaseUrl);
 
 async function runMigrationFile(fileName) {
   try {

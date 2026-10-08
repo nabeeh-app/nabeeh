@@ -1,0 +1,7 @@
+file	sha256	status	applied_at	dump
+migrations/025_lockdown_exec_sql.sql	aa438ca6f5722d3a9de8e475f5ccba03e430b7692901ec38e003524a53a1ef3a	applied	2026-10-08	.backups/pre-025-20261008.sql
+migrations/021_stage1_tenant_id_columns.sql	607dc7e9f10c20707a73add51081c774796d301906848317383cb1adbd5f5189	applied	2026-10-08	.backups/stage1-predump-20261008.sql
+migrations/022_stage2_unique_and_composite_fks.sql	7cfa80f69c605a5739c8462dd8fecdc2c3cb3e7fdba350b9ca9ead8fbbd2cdf3	applied	2026-10-08	.backups/stage2-predump-20261008.sql
+migrations/024_password_changed_at.sql	58beeed5d0fd3a7c18ecdb753bf2bf032aaebe9a739904552752eb0949086a31	applied	2026-10-08	none-pre-dump-covered-by-pre-023-post-facto
+migrations/023_stage3_rls_policies.sql	92efe7fa873ffe63c5d0fe408c29d9a43ad9ee8d7690ce509f2ba66fba9c1d6e	pending	-	.backups/pre-023-20261008.sql
+migrations/026_followup_hardening.sql	cf92329d1e247b29ef43b0238ba92c7285e931b547b7ba214c7342ecef27ac04	pending	-	-

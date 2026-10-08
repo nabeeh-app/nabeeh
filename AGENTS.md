@@ -521,6 +521,7 @@ Each PR must include:
 - `backend/database/schema_v2.sql` — Previous normalized attempt. Reference only.
 - `database/migrations/` — Active migrations. Apply in order.
 - New schema changes go in `database/migrations/` with sequential numbering.
+- Never run `supabase db push/pull` on this project: migrations apply via pooler psql, CLI history is unrelated, and the runner is dev-only (refuses non-local URLs).
 
 ---
 

@@ -31,3 +31,17 @@ describe('run_migration file selection', () => {
     expect(() => listMigrationFiles(real)).not.toThrow();
   });
 });
+
+describe('assertLocalDatabase', () => {
+  const { assertLocalDatabase } = require('../lib/migrationFiles');
+
+  it('allows localhost variants', () => {
+    expect(() => assertLocalDatabase('postgresql://u:p@localhost:5432/db')).not.toThrow();
+    expect(() => assertLocalDatabase('postgresql://u:p@127.0.0.1:5432/db')).not.toThrow();
+  });
+
+  it('refuses remote urls including supabase', () => {
+    expect(() => assertLocalDatabase('https://agzctzcplssulcwsosmo.supabase.co')).toThrow(/dev-only/);
+    expect(() => assertLocalDatabase(undefined)).toThrow(/dev-only/);
+  });
+});
