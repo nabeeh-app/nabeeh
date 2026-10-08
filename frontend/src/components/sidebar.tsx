@@ -86,7 +86,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.href === '/dashboard'

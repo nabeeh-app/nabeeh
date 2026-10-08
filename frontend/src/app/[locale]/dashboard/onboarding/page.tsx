@@ -143,7 +143,7 @@ export default function OnboardingPage() {
 
             {/* Step 0: Profile */}
             {step === 0 && (
-              <div className="w-full space-y-4 text-left">
+              <div className="w-full space-y-4 text-start">
                 <div className="space-y-2">
                   <Label htmlFor="name">{t('profile.nameLabel')}</Label>
                   <Input
@@ -168,7 +168,7 @@ export default function OnboardingPage() {
 
             {/* Step 1: Subjects */}
             {step === 1 && (
-              <div className="w-full text-left">
+              <div className="w-full text-start">
                 <div className="space-y-2">
                   <Label htmlFor="subjects">{t('subjects.title')}</Label>
                   <Input

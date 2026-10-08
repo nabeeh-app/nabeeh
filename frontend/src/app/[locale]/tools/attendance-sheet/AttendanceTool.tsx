@@ -122,7 +122,7 @@ export function AttendanceTool() {
             <button
               type="button"
               onClick={() => setRawNames((rtl ? SAMPLE_AR : SAMPLE_EN).join('\n'))}
-              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline py-2.5 -my-2.5"
             >
               <Sparkles className="h-3.5 w-3.5" />
               {t('sampleBtn')}
@@ -214,7 +214,7 @@ export function AttendanceTool() {
                 {days.map((d, i) => (
                   <th key={i} className="border p-1.5 min-w-9 text-center">
                     <div className="font-bold">{d.date}</div>
-                    <div className="text-[10px] font-normal text-ink/50">{d.weekday}</div>
+                    <div className="text-xs font-normal text-ink/50">{d.weekday}</div>
                   </th>
                 ))}
                 <th className="border p-2 min-w-16">{t('totalAbsences')}</th>
@@ -229,7 +229,7 @@ export function AttendanceTool() {
                     <td className="sticky start-0 bg-canvas border p-2 font-medium whitespace-nowrap">
                       {si + 1}. {name}
                       {risk && (
-                        <span className="ms-2 text-[10px] font-bold text-red-700 dark:text-red-300">
+                        <span className="ms-2 text-xs font-bold text-red-700 dark:text-red-300">
                           {t('atRisk')}
                         </span>
                       )}

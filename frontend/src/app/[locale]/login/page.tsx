@@ -207,8 +207,8 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className={cn(
-                    "absolute top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink/60 transition-colors flex items-center justify-center w-5 h-5",
-                    "end-3"
+                    "absolute top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink/60 transition-colors flex items-center justify-center w-9 h-9",
+                    "end-0"
                   )}
                 >
                   {showPassword ? (
@@ -233,7 +233,7 @@ export default function LoginPage() {
               </label>
               <Link
                 href={`/${locale}/forgot-password`}
-                className="text-sm text-primary hover:text-primary/80 font-medium font-body"
+                className="text-sm text-primary hover:text-primary/80 font-medium font-body py-1"
               >
                 {t('forgotPassword')}
               </Link>
@@ -270,7 +270,7 @@ export default function LoginPage() {
               {t('dontHaveAccount')}{' '}
               <Link
                 href={`/${locale}/register`}
-                className="text-primary hover:text-primary/80 font-medium"
+                className="text-primary hover:text-primary/80 font-medium py-1"
               >
                 {t('register')}
               </Link>

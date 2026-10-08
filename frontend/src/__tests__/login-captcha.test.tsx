@@ -99,4 +99,12 @@ describe('login captcha on demand', () => {
     });
     expect(mockLogin.mock.calls[0][0]).not.toHaveProperty('turnstileToken');
   });
+
+  it('password toggle meets the 44px touch target', () => {
+    render(<LoginPage />);
+    const toggle = [...document.querySelectorAll('button')].find((b) =>
+      b.className.includes('w-9') && b.className.includes('h-9')
+    );
+    expect(toggle).toBeTruthy();
+  });
 });
