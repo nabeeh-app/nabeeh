@@ -102,11 +102,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // The login page will redirect based on the isAuthenticated state
 
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      const error = err as { response?: { data?: { message?: string; code?: string; captchaRequired?: boolean } }; message?: string; code?: string };
       logger.error('Login failed:', err);
       const errorMessage = error.response?.data?.message || error.message || 'Login failed';
       setError(errorMessage);
-      throw new Error(errorMessage);
+      // Preserve the machine-readable signal so the login page can show the
+      // captcha widget only when the backend demands human proof.
+      const retry = new Error(errorMessage) as Error & { code?: string; captchaRequired?: boolean };
+      retry.code = error.response?.data?.code || error.code;
+      retry.captchaRequired = error.response?.data?.captchaRequired;
+      throw retry;
     } finally {
       setLoading(false);
     }

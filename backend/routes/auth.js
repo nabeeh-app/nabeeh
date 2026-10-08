@@ -10,6 +10,7 @@ const { sendEmail } = require('../lib/email');
 const { verifyTurnstileToken } = require('../lib/turnstile');
 const { getWelcomeTemplate, getPasswordResetTemplate } = require('../lib/emailTemplates');
 const asyncHandler = require('../middleware/asyncHandler');
+const { loginCaptchaRequired, recordLoginFailure, clearLoginFailures, authLimiter } = require('../middleware/security');
 
 const router = express.Router();
 
@@ -564,10 +565,27 @@ router.post('/login', loginLimiter, validate(loginSchema), asyncHandler(async (r
         });
     }
 
+    // After 3 failures from this IP, demand human proof before checking
+    // credentials. verifyTurnstileToken fails closed in production, so a
+    // missing secret rejects rather than waving bots through.
+    const clientIp = getClientIp(req);
+    if (loginCaptchaRequired(clientIp)) {
+        const human = await verifyTurnstileToken(req.validated.body.turnstileToken, clientIp);
+        if (!human) {
+            return res.status(403).json({
+                success: false,
+                message: 'Captcha verification required',
+                messageAr: 'التحقق الأمني مطلوب',
+                code: 'CAPTCHA_REQUIRED'
+            });
+        }
+    }
+
     // Authenticate user with Supabase Auth
     const result = await authService.authenticateUser(normalizedEmail, password, supabase);
 
     if (result.success) {
+        clearLoginFailures(clientIp);
         // Get teacher profile from database
         const { data: teacherProfile } = await supabaseAdmin
             .from('teachers')
@@ -608,10 +626,15 @@ router.post('/login', loginLimiter, validate(loginSchema), asyncHandler(async (r
             getUserAgent(req),
             { email: normalizedEmail }
         );
+        // The attempt that reaches the threshold tells the client to show
+        // the captcha widget; the next attempt without a token gets 403.
+        recordLoginFailure(clientIp);
+        const captchaRequired = loginCaptchaRequired(clientIp);
         res.status(401).json({
             success: false,
             message: result.message || 'Invalid credentials',
-            messageAr: result.messageAr || 'بيانات الدخول غير صحيحة'
+            messageAr: result.messageAr || 'بيانات الدخول غير صحيحة',
+            ...(captchaRequired ? { captchaRequired: true, code: 'CAPTCHA_REQUIRED' } : {})
         });
     }
 }));
@@ -752,7 +775,7 @@ router.post('/logout', authenticateToken, asyncHandler(async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/verify-token', asyncHandler(async (req, res) => {
+router.get('/verify-token', authLimiter, asyncHandler(async (req, res) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
@@ -1167,7 +1190,7 @@ router.post('/request-reset', resetLimiter, validate(requestResetSchema), asyncH
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/reset/:token', asyncHandler(async (req, res) => {
+router.get('/reset/:token', resetLimiter, asyncHandler(async (req, res) => {
     const { token } = req.params;
 
     // Check if token exists and is not expired

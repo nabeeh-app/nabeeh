@@ -5,6 +5,7 @@ const { supabaseAdmin } = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
+const rateLimit = require('express-rate-limit');
 const { logAudit } = require('../lib/auditLog');
 const { getAssistantInviteTemplate } = require('../lib/emailTemplates');
 const { sendEmail } = require('../lib/email');
@@ -720,7 +721,16 @@ router.get('/invites', authenticateToken, requireRole('teacher'), asyncHandler(l
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/invites/:token', asyncHandler(getInviteByToken));
+// Public invite lookup: UUID-gated but otherwise anonymous, so bound to
+// 20 lookups per 15 minutes per IP against token-probing.
+const inviteLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: { success: false, message: 'Too many invitation lookups, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+router.get('/invites/:token', inviteLimiter, asyncHandler(getInviteByToken));
 /**
  * @openapi
  * /api/assistants/accept:

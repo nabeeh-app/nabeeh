@@ -64,7 +64,7 @@ export function TurnstileWidget({ siteKey, onVerify, onExpire }: TurnstileWidget
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         onLoad={() => setReady(true)}
       />
-      <div ref={containerRef} />
+      <div ref={containerRef} data-testid="turnstile-widget" />
     </>
   );
 }

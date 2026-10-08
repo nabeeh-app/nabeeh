@@ -14,6 +14,9 @@ import { validateEmail, cn } from '@/lib/utils';
 import { GridPattern } from '@/components/ui/grid-pattern';
 import { Eye, EyeOff } from 'lucide-react';
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button';
+import { TurnstileWidget } from '@/components/auth/turnstile-widget';
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,6 +24,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
+  // Set only when the backend answers CAPTCHA_REQUIRED — the widget and its
+  // third-party script stay out of the page until then.
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
 
   const { login, isAuthenticated } = useAuth();
   const router = useRouter();
@@ -73,9 +80,15 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      await login({ email, password });
+      await login({ email, password, ...(turnstileToken ? { turnstileToken } : {}) });
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const code = (err as { code?: string }).code;
+      const flagged = (err as { captchaRequired?: boolean }).captchaRequired;
+      if (code === 'CAPTCHA_REQUIRED' || flagged) {
+        setCaptchaRequired(true);
+        setTurnstileToken('');
+      }
       setErrors({
         general: errorMessage || t('invalidCredentials')
       });
@@ -233,6 +246,14 @@ export default function LoginPage() {
             >
               {isLoading ? t('signingIn') : t('signInButton')}
             </Button>
+
+            {captchaRequired && (
+              <TurnstileWidget
+                siteKey={TURNSTILE_SITE_KEY}
+                onVerify={setTurnstileToken}
+                onExpire={() => setTurnstileToken('')}
+              />
+            )}
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">

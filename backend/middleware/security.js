@@ -212,12 +212,42 @@ const csrfValidate = (req, res, next) => {
   next();
 };
 
+// Failed-login counter per IP. After LOGIN_CAPTCHA_THRESHOLD failures the
+// login route demands a Turnstile token before checking credentials.
+// In-memory like teacherRateLimits: a restart clears counters, which fails
+// open only in the sense that attackers get 3 fresh guesses — loginLimiter
+// still bounds the rate. Successful login clears the counter.
+const LOGIN_CAPTCHA_THRESHOLD = 3;
+const loginFailures = new Map();
+
+function loginCaptchaRequired(ip) {
+  return (loginFailures.get(ip) || 0) >= LOGIN_CAPTCHA_THRESHOLD;
+}
+
+function recordLoginFailure(ip) {
+  loginFailures.set(ip, (loginFailures.get(ip) || 0) + 1);
+}
+
+function clearLoginFailures(ip) {
+  loginFailures.delete(ip);
+}
+
+// Test-only reset. Not used by route code.
+function resetLoginFailures() {
+  loginFailures.clear();
+}
+
 module.exports = {
   apiLimiter,
   authLimiter,
   selfRegLimiter,
   whatsappLimiter,
   perTeacherLimiter,
+  loginCaptchaRequired,
+  recordLoginFailure,
+  clearLoginFailures,
+  resetLoginFailures,
+  LOGIN_CAPTCHA_THRESHOLD,
   securityHeaders,
   sanitizeInput,
   securityLogger,
