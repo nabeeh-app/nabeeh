@@ -44,12 +44,15 @@ describe('whatsappQuery', () => {
       const chain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: mockParent, error: null })
       };
 
       supabaseAdmin.from.mockReturnValueOnce(chain);
 
-      const result = await whatsappQuery.getParentByPhone('+201234567890');
+      const result = await whatsappQuery.getParentByPhone('+201234567890', 'teacher-1');
 
       expect(result).toEqual(mockParent);
       expect(result.students[0].enrollments[0].group.offering.teacher_id).toBe('teacher-1');
@@ -59,12 +62,15 @@ describe('whatsappQuery', () => {
       const chain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: null, error: { message: 'Not found' } })
       };
 
       supabaseAdmin.from.mockReturnValueOnce(chain);
 
-      const result = await whatsappQuery.getParentByPhone('+999999999999');
+      const result = await whatsappQuery.getParentByPhone('+999999999999', 'teacher-1');
 
       expect(result).toBeNull();
     });
@@ -77,6 +83,9 @@ describe('whatsappQuery', () => {
       const chain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: mockConversation, error: null })
       };
 
@@ -94,6 +103,9 @@ describe('whatsappQuery', () => {
       const findChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: null, error: null })
       };
 
@@ -119,6 +131,9 @@ describe('whatsappQuery', () => {
       const findChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: null, error: null })
       };
 
@@ -152,12 +167,15 @@ describe('whatsappQuery', () => {
       const chain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: mockAttendance, error: null })
       };
 
       supabaseAdmin.from.mockReturnValueOnce(chain);
 
-      const result = await whatsappQuery.getStudentAttendance('s1');
+      const result = await whatsappQuery.getStudentAttendance('s1', 'teacher-1');
 
       expect(result).toEqual(mockAttendance);
       expect(result.status).toBe('present');
@@ -167,12 +185,15 @@ describe('whatsappQuery', () => {
       const chain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: null, error: null })
       };
 
       supabaseAdmin.from.mockReturnValueOnce(chain);
 
-      const result = await whatsappQuery.getStudentAttendance('s1');
+      const result = await whatsappQuery.getStudentAttendance('s1', 'teacher-1');
 
       expect(result).toBeNull();
     });
@@ -225,6 +246,9 @@ describe('whatsappQuery', () => {
       const recentChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnValue({
@@ -238,6 +262,9 @@ describe('whatsappQuery', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => {
           resolve({ data: mockAllGrades, error: null });
         })
@@ -247,7 +274,7 @@ describe('whatsappQuery', () => {
         .mockReturnValueOnce(recentChain)
         .mockReturnValueOnce(allChain);
 
-      const result = await whatsappQuery.getStudentGrades('s1', null);
+      const result = await whatsappQuery.getStudentGrades('s1', null, 'teacher-1');
 
       expect(result.recentGrades).toHaveLength(2);
       expect(result.recentGrades[0]).toEqual({
@@ -284,6 +311,9 @@ describe('whatsappQuery', () => {
       const recentChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnValue({
@@ -297,6 +327,9 @@ describe('whatsappQuery', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => {
           resolve({ data: [], error: null });
         })
@@ -306,7 +339,7 @@ describe('whatsappQuery', () => {
         .mockReturnValueOnce(recentChain)
         .mockReturnValueOnce(allChain);
 
-      const result = await whatsappQuery.getStudentGrades('s1', null);
+      const result = await whatsappQuery.getStudentGrades('s1', null, 'teacher-1');
 
       expect(result.recentGrades[0].subject).toBe('رياضيات');
     });
@@ -330,6 +363,9 @@ describe('whatsappQuery', () => {
       const recentChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnValue({
@@ -343,6 +379,9 @@ describe('whatsappQuery', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => {
           resolve({ data: [], error: null });
         })
@@ -352,7 +391,7 @@ describe('whatsappQuery', () => {
         .mockReturnValueOnce(recentChain)
         .mockReturnValueOnce(allChain);
 
-      const result = await whatsappQuery.getStudentGrades('s1', null);
+      const result = await whatsappQuery.getStudentGrades('s1', null, 'teacher-1');
 
       expect(result.recentGrades[0].subject).toBe('Unknown');
     });
@@ -376,6 +415,9 @@ describe('whatsappQuery', () => {
       const recentChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnValue({
@@ -389,6 +431,9 @@ describe('whatsappQuery', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => {
           resolve({ data: [], error: null });
         })
@@ -398,7 +443,7 @@ describe('whatsappQuery', () => {
         .mockReturnValueOnce(recentChain)
         .mockReturnValueOnce(allChain);
 
-      const result = await whatsappQuery.getStudentGrades('s1', null);
+      const result = await whatsappQuery.getStudentGrades('s1', null, 'teacher-1');
 
       expect(result.recentGrades[0].percentage).toBe('N/A');
     });
@@ -415,11 +460,21 @@ describe('whatsappQuery', () => {
         eq: jest.fn().mockResolvedValue({ error: null })
       };
 
+      const ownerChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: { id: 'conv-1' }, error: null })
+      };
+
       supabaseAdmin.from
+        .mockReturnValueOnce(ownerChain)
         .mockReturnValueOnce(insertChain)
         .mockReturnValueOnce(updateChain);
 
-      await whatsappQuery.saveMessage('conv-1', 'incoming', 'Hello', {});
+      await whatsappQuery.saveMessage('conv-1', 'incoming', 'Hello', {}, 'teacher-1');
 
       expect(insertChain.insert).toHaveBeenCalledWith([{
         conversation_id: 'conv-1',
@@ -443,11 +498,21 @@ describe('whatsappQuery', () => {
         eq: jest.fn().mockResolvedValue({ error: null })
       };
 
+      const ownerChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: { id: 'conv-1' }, error: null })
+      };
+
       supabaseAdmin.from
+        .mockReturnValueOnce(ownerChain)
         .mockReturnValueOnce(insertChain)
         .mockReturnValueOnce(updateChain);
 
-      await whatsappQuery.saveMessage('conv-1', 'incoming', 'Hello', {});
+      await whatsappQuery.saveMessage('conv-1', 'incoming', 'Hello', {}, 'teacher-1');
 
       expect(updateChain.update).toHaveBeenCalled();
     });
@@ -464,6 +529,9 @@ describe('whatsappQuery', () => {
       const chain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => {
           resolve({ data: mockAttendance, error: null });
         })
@@ -471,7 +539,7 @@ describe('whatsappQuery', () => {
 
       supabaseAdmin.from.mockReturnValueOnce(chain);
 
-      const result = await whatsappQuery.getAllStudentAttendance('s1');
+      const result = await whatsappQuery.getAllStudentAttendance('s1', 'teacher-1');
 
       expect(result).toEqual(mockAttendance);
       expect(result).toHaveLength(3);
@@ -481,6 +549,9 @@ describe('whatsappQuery', () => {
       const chain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => {
           resolve({ data: [], error: null });
         })
@@ -488,7 +559,7 @@ describe('whatsappQuery', () => {
 
       supabaseAdmin.from.mockReturnValueOnce(chain);
 
-      const result = await whatsappQuery.getAllStudentAttendance('s1');
+      const result = await whatsappQuery.getAllStudentAttendance('s1', 'teacher-1');
 
       expect(result).toEqual([]);
     });
@@ -497,6 +568,9 @@ describe('whatsappQuery', () => {
       const chain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => {
           resolve({ data: null, error: null });
         })
@@ -504,7 +578,7 @@ describe('whatsappQuery', () => {
 
       supabaseAdmin.from.mockReturnValueOnce(chain);
 
-      const result = await whatsappQuery.getAllStudentAttendance('s1');
+      const result = await whatsappQuery.getAllStudentAttendance('s1', 'teacher-1');
 
       expect(result).toEqual([]);
     });
@@ -515,6 +589,9 @@ describe('whatsappQuery', () => {
       const recentChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnValue({
@@ -528,6 +605,9 @@ describe('whatsappQuery', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => {
           resolve({ data: [], error: null });
         })
@@ -537,7 +617,7 @@ describe('whatsappQuery', () => {
         .mockReturnValueOnce(recentChain)
         .mockReturnValueOnce(allChain);
 
-      const result = await whatsappQuery.getStudentGrades('s1', 'Math');
+      const result = await whatsappQuery.getStudentGrades('s1', 'Math', 'teacher-1');
 
       expect(recentChain.or).toHaveBeenCalledWith(
         expect.stringContaining('name_en.ilike.Math')
@@ -562,6 +642,9 @@ describe('whatsappQuery', () => {
       const recentChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnValue({
@@ -575,6 +658,9 @@ describe('whatsappQuery', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => {
           resolve({ data: [], error: null });
         })
@@ -584,7 +670,7 @@ describe('whatsappQuery', () => {
         .mockReturnValueOnce(recentChain)
         .mockReturnValueOnce(allChain);
 
-      const result = await whatsappQuery.getStudentGrades('s1', null);
+      const result = await whatsappQuery.getStudentGrades('s1', null, 'teacher-1');
 
       expect(result.recentGrades[0].percentage).toBe('N/A');
     });
@@ -604,6 +690,9 @@ describe('whatsappQuery', () => {
       const recentChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnValue({
@@ -617,6 +706,9 @@ describe('whatsappQuery', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => {
           resolve({ data: mockAllGrades, error: null });
         })
@@ -626,7 +718,7 @@ describe('whatsappQuery', () => {
         .mockReturnValueOnce(recentChain)
         .mockReturnValueOnce(allChain);
 
-      const result = await whatsappQuery.getStudentGrades('s1', null);
+      const result = await whatsappQuery.getStudentGrades('s1', null, 'teacher-1');
 
       expect(result.allGrades[0].percentage).toBe(0);
     });
@@ -656,6 +748,9 @@ describe('whatsappQuery', () => {
       const selectChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => {
           resolve({ data: mockFaqs, error: null });
         })
@@ -693,6 +788,9 @@ describe('whatsappQuery', () => {
       const selectChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => {
           resolve({ data: mockFaqs, error: null });
         })
@@ -709,6 +807,9 @@ describe('whatsappQuery', () => {
       const selectChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => {
           resolve({ data: [], error: null });
         })
@@ -736,6 +837,9 @@ describe('whatsappQuery', () => {
       const selectChain = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => {
           resolve({ data: mockFaqs, error: null });
         })

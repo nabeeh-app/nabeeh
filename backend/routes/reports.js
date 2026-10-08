@@ -48,20 +48,20 @@ const generateComment = async (req, res) => {
   const teacherId = getTeacherId(req);
   const { student_id, group_id } = req.validated.body;
 
-  const { data: student } = await supabaseAdmin
-    .from('students').select('id, name').eq('id', student_id).single();
-  if (!student) return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
-
   const enrollment = await verifyStudentAccess(student_id, teacherId);
   if (!enrollment) {
     return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
   }
 
+  const { data: student } = await supabaseAdmin
+    .from('students').select('id, name').eq('id', student_id).single();
+  if (!student) return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
+
   const { data: teacher } = await supabaseAdmin
     .from('teachers').select('name, business_name, preferred_language').eq('id', teacherId).single();
 
-  const gradesResult = await whatsappQuery.getStudentGrades(student_id);
-  const attendanceRecords = await whatsappQuery.getAllStudentAttendance(student_id);
+  const gradesResult = await whatsappQuery.getStudentGrades(student_id, undefined, teacherId);
+  const attendanceRecords = await whatsappQuery.getAllStudentAttendance(student_id, teacherId);
   const totalSessions = attendanceRecords.length;
   const presentCount = attendanceRecords.filter(a => a.status === 'present' || a.status === 'late').length;
   const attendanceRate = totalSessions > 0 ? `${Math.round((presentCount / totalSessions) * 100)}%` : 'N/A';
@@ -178,7 +178,7 @@ const approveDraft = async (req, res) => {
         parent.id, teacherId, `report_${draft.id}`
       );
       if (conversation) {
-        await whatsappQuery.saveMessage(conversation.id, 'outbound', finalText);
+        await whatsappQuery.saveMessage(conversation.id, 'outbound', finalText, {}, teacherId);
       }
     } catch (waError) {
       logger.warn('WhatsApp send failed for report', { error: waError.message });
@@ -189,7 +189,8 @@ const approveDraft = async (req, res) => {
   await supabaseAdmin
     .from('report_drafts')
     .update({ status: 'sent', sent_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('teacher_id', teacherId);
 
   // Create notification
   await supabaseAdmin

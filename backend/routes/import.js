@@ -12,6 +12,8 @@ const { seedDemoData, removeDemoData } = require('../scripts/seed_demo_data');
 const { logAudit } = require('../lib/auditLog');
 const logger = require('../lib/logger');
 const { z } = require('zod');
+
+const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
 const { validate } = require('../middleware/validate');
 
 const validateImportSchema = z.object({

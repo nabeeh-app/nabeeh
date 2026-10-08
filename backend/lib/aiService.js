@@ -39,7 +39,8 @@ const TIER_MONTHLY_LIMITS = {
 };
 
 // ── Tools ──────────────────────────────────────────────────────
-const attendanceTool = new DynamicTool({
+function makeAttendanceTool(teacherId) {
+  return new DynamicTool({
   name: 'getStudentAttendance',
   description: 'Get attendance record for a specific student. Input: JSON string with student_id (required) and days (optional, default 10).',
   func: async (input) => {
@@ -49,8 +50,9 @@ const attendanceTool = new DynamicTool({
 
       const { data } = await supabaseAdmin
         .from('attendance')
-        .select('status, notes, session:sessions!inner(date)')
+        .select('status, notes, session:sessions!inner(date), enrollment:enrollments!inner(student_id, group:groups!inner(offering:offerings!inner(teacher_id)))')
         .eq('enrollment.student_id', student_id)
+        .eq('enrollment.group.offering.teacher_id', teacherId)
         .order('session.date', { ascending: false })
         .limit(days);
 
@@ -75,9 +77,11 @@ const attendanceTool = new DynamicTool({
       return JSON.stringify({ error: e.message });
     }
   },
-});
+  });
+}
 
-const gradesTool = new DynamicTool({
+function makeGradesTool(teacherId) {
+  return new DynamicTool({
   name: 'getStudentGrades',
   description: 'Get grades for a specific student across assessments. Input: JSON string with student_id (required) and subject (optional).',
   func: async (input) => {
@@ -85,21 +89,31 @@ const gradesTool = new DynamicTool({
       const { student_id, subject } = JSON.parse(input);
       if (!student_id) return JSON.stringify({ error: 'student_id is required' });
 
-      const result = await whatsappQuery.getStudentGrades(student_id, subject);
+      const result = await whatsappQuery.getStudentGrades(student_id, subject, teacherId);
       return JSON.stringify(result);
     } catch (e) {
       return JSON.stringify({ error: e.message });
     }
   },
-});
+  });
+}
 
-const classPerformanceTool = new DynamicTool({
+function makeClassPerformanceTool(teacherId) {
+  return new DynamicTool({
   name: 'getClassPerformance',
   description: 'Get aggregate class performance stats for a group. Input: JSON string with group_id (required) and assessment_type (optional).',
   func: async (input) => {
     try {
       const { group_id, assessment_type } = JSON.parse(input);
       if (!group_id) return JSON.stringify({ error: 'group_id is required' });
+
+      const { data: group } = await supabaseAdmin
+        .from('groups')
+        .select('id, offerings!inner(teacher_id)')
+        .eq('id', group_id)
+        .eq('offerings.teacher_id', teacherId)
+        .single();
+      if (!group) return JSON.stringify({ error: 'group not found' });
 
       let gradeQuery = supabaseAdmin
         .from('grades')
@@ -136,15 +150,21 @@ const classPerformanceTool = new DynamicTool({
       return JSON.stringify({ error: e.message });
     }
   },
-});
+  });
+}
 
 // ── Tool selection by tier ─────────────────────────────────────
-const TOOLS_BY_TIER = {
-  free: [],
-  basic: [attendanceTool, gradesTool],
-  pro: [attendanceTool, gradesTool, classPerformanceTool],
-  center: [attendanceTool, gradesTool, classPerformanceTool],
-};
+function toolsForTier(tier, teacherId) {
+  const attendanceTool = makeAttendanceTool(teacherId);
+  const gradesTool = makeGradesTool(teacherId);
+  const classPerformanceTool = makeClassPerformanceTool(teacherId);
+  switch (tier) {
+    case 'basic': return [attendanceTool, gradesTool];
+    case 'pro':
+    case 'center': return [attendanceTool, gradesTool, classPerformanceTool];
+    default: return [];
+  }
+}
 
 // ── Token budgeting ────────────────────────────────────────────
 async function checkTokenBudget(teacherId, tier) {
@@ -299,7 +319,7 @@ async function generateWithTools(message, { teacherId, tier, language, conversat
   const budgetCheck = await checkTokenBudget(teacherId, tier);
   if (!budgetCheck.allowed) return null;
 
-  const tools = TOOLS_BY_TIER[tier] || [];
+  const tools = toolsForTier(tier, teacherId);
   const langLabel = language === 'ar' ? 'Arabic' : 'English';
 
   // Fetch teacher info for system prompt

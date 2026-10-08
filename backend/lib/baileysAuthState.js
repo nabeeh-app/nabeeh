@@ -7,11 +7,12 @@ const logger = require('./logger');
  * Each teacher gets isolated credentials and keys.
  *
  * @param {string} [teacherId] - Teacher ID for multi-session support.
- *                                If not provided, falls back to 'default' for backward compatibility.
+ *                                Without credentials the teacher has no session until pairing.
  * @returns {Promise<{state: {creds: object, keys: {get: Function, set: Function}}, saveCreds: Function, flushPendingSave: Function}>}
  */
 async function useSupabaseAuthState(teacherId) {
-  // Build query: prefer teacher-specific creds, fallback to 'default' for migration
+  // Teacher-specific creds only. No shared fallback: a teacher without
+  // credentials has no session until pairing binds one to their id.
   let credsRow = null;
 
   if (teacherId) {
@@ -24,20 +25,6 @@ async function useSupabaseAuthState(teacherId) {
 
     if (!error && data) {
       credsRow = data;
-    }
-  }
-
-  // Fallback to 'default' for backward compatibility
-  if (!credsRow) {
-    const { data, error } = await supabaseAdmin
-      .from('whatsapp_auth_creds')
-      .select('creds')
-      .eq('id', 'default')
-      .single();
-
-    if (!error && data) {
-      credsRow = data;
-      logger.info('Loaded credentials from default session', { teacherId });
     }
   }
 

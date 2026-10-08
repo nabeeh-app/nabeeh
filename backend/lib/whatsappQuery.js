@@ -4,18 +4,19 @@ const logger = require('./logger');
 /**
  * Find parent by phone number with student and teacher joins
  */
-async function getParentByPhone(phone) {
+async function getParentByPhone(phone, teacherId) {
+  if (!teacherId) throw new Error('getParentByPhone requires teacherId');
   const { data: parent, error } = await supabaseAdmin
     .from('parents')
     .select(`
       *,
       students (
         *,
-        enrollments (
+        enrollments!inner (
           id,
-          group:groups (
+          group:groups!inner (
             id,
-            offering:offerings (
+            offering:offerings!inner (
               id,
               teacher_id,
               teacher:teachers (id, name, business_name)
@@ -25,6 +26,7 @@ async function getParentByPhone(phone) {
       )
     `)
     .eq('phone', phone)
+    .eq('students.enrollments.group.offering.teacher_id', teacherId)
     .single();
 
   if (error || !parent) return null;
@@ -66,7 +68,19 @@ async function findOrCreateConversation(parentId, teacherId, chatId) {
 /**
  * Save a message to the database and update last_message_at
  */
-async function saveMessage(conversationId, direction, content, meta = {}) {
+async function saveMessage(conversationId, direction, content, meta = {}, teacherId) {
+  if (teacherId) {
+    const { data: conversation } = await supabaseAdmin
+      .from('conversations')
+      .select('id')
+      .eq('id', conversationId)
+      .eq('teacher_id', teacherId)
+      .single();
+    if (!conversation) {
+      logger.error('saveMessage blocked: conversation belongs to another tenant', { conversationId });
+      return;
+    }
+  }
   const { error } = await supabaseAdmin
     .from('messages')
     .insert([{
@@ -89,23 +103,27 @@ async function saveMessage(conversationId, direction, content, meta = {}) {
 /**
  * Get student attendance for today
  */
-async function getStudentAttendance(studentId) {
+async function getStudentAttendance(studentId, teacherId) {
+  if (!teacherId) throw new Error('getStudentAttendance requires teacherId');
   const today = new Date().toISOString().split('T')[0];
   const { data: attendance } = await supabaseAdmin
     .from('attendance')
     .select('*, session:sessions!inner(date)')
     .eq('enrollment.student_id', studentId)
+    .eq('enrollment.group.offering.teacher_id', teacherId)
     .eq('session.date', today)
     .single();
 
   return attendance;
 }
 
-async function getAllStudentAttendance(studentId) {
+async function getAllStudentAttendance(studentId, teacherId) {
+  if (!teacherId) throw new Error('getAllStudentAttendance requires teacherId');
   const { data: attendance } = await supabaseAdmin
     .from('attendance')
     .select('status')
-    .eq('enrollment.student_id', studentId);
+    .eq('enrollment.student_id', studentId)
+    .eq('enrollment.group.offering.teacher_id', teacherId);
 
   return attendance || [];
 }
@@ -144,7 +162,8 @@ function flattenAllGrades(rawGrades) {
 /**
  * Get student grades (recent + all for average)
  */
-async function getStudentGrades(studentId, subject) {
+async function getStudentGrades(studentId, subject, teacherId) {
+  if (!teacherId) throw new Error('getStudentGrades requires teacherId');
   let query = supabaseAdmin
     .from('grades')
     .select(`
@@ -153,6 +172,7 @@ async function getStudentGrades(studentId, subject) {
       enrollment:enrollments!inner(student_id, group:groups!inner(offering:offerings!inner(subject:subjects!inner(name_en, name_ar, code))))
     `)
     .eq('enrollment.student_id', studentId)
+    .eq('enrollment.group.offering.teacher_id', teacherId)
     .order('created_at', { ascending: false });
 
   if (subject) {
@@ -169,7 +189,8 @@ async function getStudentGrades(studentId, subject) {
       assessment:assessments!inner(max_score, type),
       enrollment:enrollments!inner(student_id, group:groups!inner(offering:offerings!inner(subject:subjects!inner(name_en, code))))
     `)
-    .eq('enrollment.student_id', studentId);
+    .eq('enrollment.student_id', studentId)
+    .eq('enrollment.group.offering.teacher_id', teacherId);
 
   if (subject) {
     allQuery = allQuery.or(`enrollment.group.offering.subject.name_en.ilike.${subject},enrollment.group.offering.subject.code.ilike.${subject}`);

@@ -93,7 +93,8 @@ const createGradeSchema = z.object({
     score: z.number().min(0),
     max_score: z.number().positive(),
     date: z.string().optional(),
-    notes: z.string().optional().nullable()
+    notes: z.string().optional().nullable(),
+    assessment_type: z.enum(['quiz', 'midterm', 'homework', 'final', 'test', 'exam', 'assignment', 'project', 'participation']).optional().default('quiz')
   })
 });
 
@@ -106,7 +107,8 @@ const bulkGradeSchema = z.object({
       score: z.number().min(0),
       max_score: z.number().positive(),
       date: z.string().optional(),
-      notes: z.string().optional().nullable()
+      notes: z.string().optional().nullable(),
+      assessment_type: z.enum(['quiz', 'midterm', 'homework', 'final', 'test', 'exam', 'assignment', 'project', 'participation']).optional().default('quiz')
     })).min(1)
   })
 });

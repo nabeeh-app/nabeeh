@@ -106,7 +106,7 @@ async function processIncomingMessage(teacherId, phone, messageContent, remoteJi
   const endTimer = metrics.whatsappProcessingDuration.startTimer({ teacherId });
 
   try {
-    const parent = await whatsappQuery.getParentByPhone(`+${phone}`);
+    const parent = await whatsappQuery.getParentByPhone(`+${phone}`, teacherId);
 
     if (!parent) {
       const lastResponse = marketingResponseCache.get(phone);
@@ -167,12 +167,12 @@ async function processIncomingMessage(teacherId, phone, messageContent, remoteJi
 
     if (conversation.bot_paused_until && new Date(conversation.bot_paused_until) > new Date()) {
       logger.info('Bot paused for conversation', { conversationId: conversation.id });
-      await whatsappQuery.saveMessage(conversation.id, 'incoming', messageContent, { whatsapp_message_id: messageId });
+      await whatsappQuery.saveMessage(conversation.id, 'incoming', messageContent, { whatsapp_message_id: messageId }, teacherId);
       endTimer();
       return;
     }
 
-    await whatsappQuery.saveMessage(conversation.id, 'incoming', messageContent, { whatsapp_message_id: messageId });
+    await whatsappQuery.saveMessage(conversation.id, 'incoming', messageContent, { whatsapp_message_id: messageId }, teacherId);
 
     try {
       await logAudit({
@@ -205,7 +205,7 @@ async function processIncomingMessage(teacherId, phone, messageContent, remoteJi
           is_automated: true,
           intent: response.intent,
           confidence: response.confidence
-        });
+        }, teacherId);
         metrics.whatsappMessagesSent.inc({ teacherId, direction: 'bot' });
       }
     }
@@ -229,12 +229,12 @@ async function handleBotMessage(message, parent, student, teacher, language, tea
 
     switch (intent) {
       case 'attendance': {
-        const attendance = await whatsappQuery.getStudentAttendance(student.id);
+        const attendance = await whatsappQuery.getStudentAttendance(student.id, teacherId);
         const text = messageParser.formatAttendanceResponse(student.name, attendance, language);
         return { text, intent: 'attendance_query', confidence: 0.9 };
       }
       case 'grades': {
-        const grades = await whatsappQuery.getStudentGrades(student.id, params.subject);
+        const grades = await whatsappQuery.getStudentGrades(student.id, params.subject, teacherId);
         const text = messageParser.formatGradesResponse(student.name, grades, params.subject, language);
         return { text, intent: 'grade_query', confidence: 0.9 };
       }
@@ -886,7 +886,7 @@ router.get('/conversations', validate(getConversationsSchema), asyncHandler(asyn
     .from('conversations')
     .select(`
       *,
-      parents (name, phone, students (name, student_id)),
+      parents (name, phone, students (name, student_code)),
       messages (id, direction, content, created_at)
     `)
     .eq('teacher_id', getEffectiveTeacherId(req))

@@ -107,7 +107,8 @@ async function generateDigest(teacherId, weekStart, weekEnd) {
       await supabaseAdmin
         .from('weekly_digests')
         .update({ digest_data: digestData })
-        .eq('id', existing[0].id);
+        .eq('id', existing[0].id)
+        .eq('teacher_id', teacherId);
     } else {
       await supabaseAdmin
         .from('weekly_digests')

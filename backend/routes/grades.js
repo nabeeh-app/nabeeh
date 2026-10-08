@@ -167,6 +167,7 @@ const createGrade = async (req, res) => {
     max_score,
     date,
     notes,
+    assessment_type = 'quiz',
     is_published = false
   } = req.validated.body;
 
@@ -201,6 +202,7 @@ const createGrade = async (req, res) => {
       .insert([{
         offering_id,
         name: assessment_name,
+        type: assessment_type,
         max_score: max_score,
         date: assessmentDate
       }])
@@ -276,7 +278,7 @@ const createBulkGrades = async (req, res) => {
 
   const resolvedGrades = [];
   for (const gradeData of grades) {
-    const { student_id, subject, assessment_name, score, max_score, date, notes } = gradeData;
+    const { student_id, subject, assessment_name, score, max_score, date, notes, assessment_type = 'quiz' } = gradeData;
     const subjectLower = subject.toLowerCase();
     const resolved = enrollmentLookup[`${student_id}|${subjectLower}`];
 
@@ -310,7 +312,8 @@ const createBulkGrades = async (req, res) => {
       offering_id: g.offering_id,
       name: g.assessment_name,
       date: g.assessmentDate,
-      max_score: g.max_score
+      max_score: g.max_score,
+      type: g.assessment_type || 'quiz'
     }])
   ).values()];
 
@@ -333,6 +336,7 @@ const createBulkGrades = async (req, res) => {
       .insert(toCreate.map(a => ({
         offering_id: a.offering_id,
         name: a.name,
+        type: a.type,
         max_score: a.max_score,
         date: a.date
       })))

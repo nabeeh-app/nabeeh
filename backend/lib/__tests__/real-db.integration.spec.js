@@ -238,22 +238,22 @@ describeOrSkip('Real DB — whatsappQuery', () => {
   });
 
   it('getParentByPhone should query without error', async () => {
-    const result = await whatsappQuery.getParentByPhone('+201012345678');
+    const result = await whatsappQuery.getParentByPhone('+201012345678', '11111111-1111-1111-8111-111111111111');
     if (result) expect(result).toHaveProperty('id');
   });
 
   it('getStudentAttendance should return null for fake student', async () => {
-    const result = await whatsappQuery.getStudentAttendance('00000000-0000-0000-0000-000000000000');
+    const result = await whatsappQuery.getStudentAttendance('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-8111-111111111111');
     expect(result).toBeNull();
   });
 
   it('getAllStudentAttendance should return empty for fake student', async () => {
-    const result = await whatsappQuery.getAllStudentAttendance('00000000-0000-0000-0000-000000000000');
+    const result = await whatsappQuery.getAllStudentAttendance('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-8111-111111111111');
     expect(result).toEqual([]);
   });
 
   it('getStudentGrades should return empty for fake student', async () => {
-    const result = await whatsappQuery.getStudentGrades('00000000-0000-0000-0000-000000000000', null);
+    const result = await whatsappQuery.getStudentGrades('00000000-0000-0000-0000-000000000000', null, '11111111-1111-1111-8111-111111111111');
     expect(result.recentGrades).toEqual([]);
     expect(result.allGrades).toEqual([]);
   });

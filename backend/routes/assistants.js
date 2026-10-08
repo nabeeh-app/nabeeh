@@ -362,7 +362,8 @@ const updatePermissions = async (req, res) => {
   const { error: updateError } = await supabaseAdmin
     .from('teacher_assistants')
     .update({ permissions: filteredPermissions, updated_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('teacher_id', teacherId);
 
   if (updateError) throw updateError;
 
@@ -395,7 +396,8 @@ const updateStatus = async (req, res) => {
   const { error: updateError } = await supabaseAdmin
     .from('teacher_assistants')
     .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('teacher_id', teacherId);
 
   if (updateError) throw updateError;
 
@@ -430,7 +432,8 @@ const removeAssistant = async (req, res) => {
   const { error: deleteError } = await supabaseAdmin
     .from('teacher_assistants')
     .update({ status: 'removed', updated_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('teacher_id', teacherId);
 
   if (deleteError) throw deleteError;
 

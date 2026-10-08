@@ -28,7 +28,7 @@ const getParents = async (req, res) => {
     .from('parents')
     .select(`
           *,
-          student:students (id, name, student_id)
+          student:students (id, name, student_code)
       `)
     .in('student_id', Array.from(studentIds));
 
@@ -68,7 +68,7 @@ const getParent = async (req, res) => {
     .from('parents')
     .select(`
       *,
-      student:students (id, name, student_id)
+      student:students (id, name, student_code)
     `)
     .eq('id', req.params.id)
     .single();
@@ -131,7 +131,7 @@ const createParent = async (req, res) => {
     }])
     .select(`
       *,
-      student:students (name, student_id)
+      student:students (name, student_code)
     `)
     .single();
 
@@ -188,7 +188,7 @@ const updateParent = async (req, res) => {
     .eq('id', req.params.id)
     .select(`
       *,
-      student:students (name, student_id)
+      student:students (name, student_code)
     `)
     .single();
 

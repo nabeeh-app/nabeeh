@@ -334,7 +334,8 @@ router.delete('/:id', authenticateToken, requirePermission('manage_offerings'), 
     const { error } = await supabaseAdmin
         .from('offerings')
         .update({ is_active: false })
-        .eq('id', req.params.id);
+        .eq('id', req.params.id)
+        .eq('teacher_id', getEffectiveTeacherId(req));
 
     if (error) throw error;
     res.json({ success: true, message: 'Offering deleted successfully' });

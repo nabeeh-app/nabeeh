@@ -50,8 +50,8 @@ const handlers = {
       const batch = enrollments.slice(i, i + CONCURRENCY);
       const batchResults = await Promise.all(batch.map(async (enrollment) => {
         try {
-          const gradesResult = await whatsappQuery.getStudentGrades(enrollment.student_id);
-          const attendanceRecords = await whatsappQuery.getAllStudentAttendance(enrollment.student_id);
+          const gradesResult = await whatsappQuery.getStudentGrades(enrollment.student_id, undefined, teacherId);
+          const attendanceRecords = await whatsappQuery.getAllStudentAttendance(enrollment.student_id, teacherId);
           const totalSessions = attendanceRecords.length;
           const presentCount = attendanceRecords.filter(a => a.status === 'present' || a.status === 'late').length;
           const attendanceRate = totalSessions > 0 ? `${Math.round((presentCount / totalSessions) * 100)}%` : 'N/A';

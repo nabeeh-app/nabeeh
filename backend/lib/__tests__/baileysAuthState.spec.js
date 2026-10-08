@@ -63,20 +63,17 @@ describe('baileysAuthState', () => {
       expect(chain.eq).toHaveBeenCalledWith('id', 'teacher-1');
     });
 
-    it('should fallback to default creds when teacher not found', async () => {
-      const defaultCreds = { noiseKey: 'default-noise', signedIdentityKey: 'default-key' };
-
+    it('should init fresh creds when teacher has none, never shared default', async () => {
       const teacherChain = makeChain({ data: null, error: null });
-      const defaultChain = makeChain({ data: { creds: defaultCreds }, error: null });
 
-      supabaseAdmin.from
-        .mockReturnValueOnce(teacherChain)
-        .mockReturnValueOnce(defaultChain);
+      supabaseAdmin.from.mockReturnValueOnce(teacherChain);
 
       const { state } = await useSupabaseAuthState('teacher-1');
 
-      expect(state.creds).toEqual(defaultCreds);
-      expect(defaultChain.eq).toHaveBeenCalledWith('id', 'default');
+      expect(state.creds).toBeDefined();
+      expect(state.creds.noiseKey).toBe('test-noise');
+      expect(teacherChain.eq).toHaveBeenCalledWith('id', 'teacher-1');
+      expect(supabaseAdmin.from).toHaveBeenCalledTimes(1);
     });
 
     it('should init new creds when no existing creds found', async () => {
@@ -91,14 +88,11 @@ describe('baileysAuthState', () => {
   });
 
   describe('useSupabaseAuthState — no teacherId (default)', () => {
-    it('should query with id=default when teacherId not provided', async () => {
-      const chain = makeChain({ data: { creds: { noiseKey: 'd' } }, error: null });
-      supabaseAdmin.from.mockReturnValue(chain);
-
+    it('should query nothing and init fresh creds when teacherId not provided', async () => {
       const { state } = await useSupabaseAuthState();
 
-      expect(state.creds).toEqual({ noiseKey: 'd' });
-      expect(chain.eq).toHaveBeenCalledWith('id', 'default');
+      expect(state.creds).toBeDefined();
+      expect(supabaseAdmin.from).not.toHaveBeenCalled();
     });
   });
 
@@ -217,11 +211,8 @@ describe('baileysAuthState', () => {
     });
 
     it('should not include teacher_id when teacherId is not provided', async () => {
-      const initChain = makeChain({ data: { creds: { noiseKey: 'c' } }, error: null });
       const keysChain = makeChain({ error: null });
-      supabaseAdmin.from
-        .mockReturnValueOnce(initChain)
-        .mockReturnValue(keysChain);
+      supabaseAdmin.from.mockReturnValue(keysChain);
 
       const { state } = await useSupabaseAuthState();
 

@@ -80,11 +80,13 @@ const updateRule = async (req, res) => {
 const deleteRule = async (req, res) => {
   const teacherId = req.user.teacherId || req.user.id;
   const { id } = req.validated.params;
-  const { error } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from('alert_rules')
     .delete()
-    .eq('id', id).eq('teacher_id', teacherId);
+    .eq('id', id).eq('teacher_id', teacherId)
+    .select('id');
   if (error) throw error;
+  if (!data || data.length === 0) return res.status(404).json({ success: false, message: 'Resource not found', messageAr: 'المورد غير موجود', code: 'NOT_FOUND' });
   res.json({ success: true, message: 'Alert rule deleted' });
 };
 

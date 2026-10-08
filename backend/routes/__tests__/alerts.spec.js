@@ -176,7 +176,9 @@ describe('Alerts Routes', () => {
       supabaseAdmin.from.mockReturnValue({
         delete: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ error: null })
+            eq: jest.fn().mockReturnValue({
+              select: jest.fn().mockResolvedValue({ data: [{ id: 'r1' }], error: null })
+            })
           })
         })
       });
@@ -192,7 +194,9 @@ describe('Alerts Routes', () => {
       supabaseAdmin.from.mockReturnValue({
         delete: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockRejectedValue(new Error('DB error'))
+            eq: jest.fn().mockReturnValue({
+              select: jest.fn().mockRejectedValue(new Error('DB error'))
+            })
           })
         })
       });

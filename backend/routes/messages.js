@@ -29,7 +29,7 @@ const getConversations = async (req, res) => {
         name,
         phone,
         preferred_language,
-        students (name, student_id)
+        students (name, student_code)
       )
     `)
     .eq('teacher_id', getEffectiveTeacherId(req))
