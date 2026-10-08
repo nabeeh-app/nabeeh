@@ -28,6 +28,13 @@ from env in that module only. A later JWKS switch touches that one file.
 No other file imports the secret, builds tenant JWTs, or constructs
 privileged clients.
 
+Stage 5 server rule: the minted tenant JWT never leaves the server. No
+cookie, no response body, no log line carries it. It exists only as the
+per-request Authorization header from backend to PostgREST. Leaking it
+would hand out the tenant claim to whoever holds it, so the mint
+function returns the configured client, never the raw token, and callers
+have no accessor for the token string.
+
 SQL helper, created once:
 
 ```sql
