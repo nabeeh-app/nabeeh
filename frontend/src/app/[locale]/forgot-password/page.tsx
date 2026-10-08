@@ -184,9 +184,10 @@ export default function ForgotPasswordPage() {
       {/* Right Side — Hero (hidden on mobile) */}
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
         <Image
-          src="/login-hero.jpeg"
+          src="/login-hero.webp"
           alt={t('forgotPasswordHeroAlt')}
           fill
+          sizes="(min-width: 1024px) 50vw, 100vw"
           className="object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/40 to-ink/10" />

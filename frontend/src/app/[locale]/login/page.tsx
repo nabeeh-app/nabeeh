@@ -262,9 +262,11 @@ export default function LoginPage() {
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
         {/* Hero Image */}
         <Image
-          src="/login-hero.jpeg"
+          src="/login-hero.webp"
           alt={t('loginHeroAlt')}
           fill
+          priority
+          sizes="(min-width: 1024px) 50vw, 100vw"
           className="object-cover object-center"
         />
 
