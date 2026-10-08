@@ -65,3 +65,11 @@ printf "DELETE alerts-rule => "; code $CB -X DELETE $BASE/api/alerts/rules/$AR; 
 printf "GET conversations => "; code $CB $BASE/api/messages/conversations; echo
 printf "GET whatsapp-status => "; code $CB $BASE/api/whatsapp/status; echo
 printf "GET teachers/profile => "; code $CB $BASE/api/teachers/profile; echo
+ASE="mx_asst_$TS@nabeeh.app"
+curl -s -m 20 -X POST $BASE/api/auth/register -H 'Content-Type: application/json' -d "{\"name\":\"mxasst\",\"email\":\"$ASE\",\"password\":\"$PW\"}" -o /dev/null
+curl -s -m 20 -c /tmp/opencode/mS.txt -X POST $BASE/api/auth/login -H 'Content-Type: application/json' -d "{\"email\":\"$ASE\",\"password\":\"$PW\"}" -o /dev/null
+CS="-b /tmp/opencode/mS.txt -H X-CSRF-Token:$(grep -oP 'csrf_token\s+\K\S+' /tmp/opencode/mS.txt)"
+ITOK=$(curl -s -m 20 $CA -X POST $BASE/api/assistants/invite -H 'Content-Type: application/json' -d "{\"email\":\"$ASE\"}" | j "['data']['token']")
+[ -z "$ITOK" ] && ITOK=$(curl -s -m 20 $CA $BASE/api/assistants/invites | j "['data'][0]['token']")
+curl -s -m 20 $CS -X POST $BASE/api/assistants/accept -H 'Content-Type: application/json' -d "{\"token\":\"$ITOK\"}" -o /dev/null
+printf "GET dashboard as assistant => "; code $CS $BASE/api/teachers/dashboard; echo

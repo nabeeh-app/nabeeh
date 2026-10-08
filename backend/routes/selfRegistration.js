@@ -6,6 +6,8 @@ const { selfRegLimiter } = require('../middleware/security');
 const asyncHandler = require('../middleware/asyncHandler');
 const { logAudit } = require('../lib/auditLog');
 const logger = require('../lib/logger');
+
+const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
 const { z } = require('zod');
 const { validate } = require('../middleware/validate');
 

@@ -8,6 +8,8 @@ const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
+const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
+
 // @desc    Get teacher profile
 // @route   GET /api/teachers/profile
 // @access  Private
@@ -15,13 +17,13 @@ const getProfile = async (req, res) => {
   const { data: teacher, error } = await supabaseAdmin
     .from('teachers')
     .select('id, email, name, phone, business_name, bio, subjects, address, city, country, timezone, whatsapp_number, telegram_username, preferred_language, role, is_active, created_at, updated_at')
-    .eq('id', req.user.id)
+    .eq('id', getEffectiveTeacherId(req))
     .single();
 
   if (error) throw error;
 
   const { data: studentCount } = await supabaseAdmin
-    .rpc('teacher_student_count', { p_teacher_id: req.user.id });
+    .rpc('teacher_student_count', { p_teacher_id: getEffectiveTeacherId(req) });
 
   const teacherProfile = {
     ...teacher,
@@ -38,7 +40,7 @@ const getProfile = async (req, res) => {
 // @route   GET /api/teachers/dashboard
 // @access  Private
 const getDashboardStats = async (req, res) => {
-  const teacherId = req.user.id;
+  const teacherId = getEffectiveTeacherId(req);
 
   const { data: statsJson, error: rpcError } = await supabaseAdmin
     .rpc('dashboard_stats', { p_teacher_id: teacherId });
@@ -106,7 +108,7 @@ const getSettings = async (req, res) => {
   const { data: settings, error } = await supabaseAdmin
     .from('teacher_settings')
     .select('notifications, theme, language')
-    .eq('teacher_id', req.user.id)
+    .eq('teacher_id', getEffectiveTeacherId(req))
     .single();
 
   if (error || !settings) {
@@ -127,7 +129,7 @@ const getSettings = async (req, res) => {
 // @access  Private
 const updateSettings = async (req, res) => {
   const { notifications, theme, language } = req.validated.body;
-  const teacherId = req.user.id;
+  const teacherId = getEffectiveTeacherId(req);
 
   const updates = {};
   if (notifications !== undefined) updates.notifications = notifications;
@@ -176,7 +178,7 @@ const notificationPreferencesSchema = z.object({
 // @route   PUT /api/teachers/notification-preferences
 // @access  Private
 const updateNotificationPreferences = async (req, res) => {
-  const teacherId = req.user.id;
+  const teacherId = getEffectiveTeacherId(req);
   const prefs = req.validated.body;
 
   const { data: existing } = await supabaseAdmin
@@ -493,3 +495,4 @@ router.put('/settings', authenticateToken, validate(updateSettingsSchema), async
 router.put('/notification-preferences', authenticateToken, validate(notificationPreferencesSchema), asyncHandler(updateNotificationPreferences));
 
 module.exports = router;
+module.exports.getEffectiveTeacherId = getEffectiveTeacherId;

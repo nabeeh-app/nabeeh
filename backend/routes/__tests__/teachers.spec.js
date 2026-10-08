@@ -244,3 +244,15 @@ describe('Teachers Routes', () => {
     });
   });
 });
+
+describe('getEffectiveTeacherId', () => {
+  const { getEffectiveTeacherId } = require('../teachers');
+
+  it('resolves the owner scope for assistants', () => {
+    expect(getEffectiveTeacherId({ user: { id: 'asst-9', teacherId: 'owner-1' } })).toBe('owner-1');
+  });
+
+  it('falls back to the user id for teachers', () => {
+    expect(getEffectiveTeacherId({ user: { id: 'teacher-1' } })).toBe('teacher-1');
+  });
+});
