@@ -1,0 +1,25 @@
+name: Tenancy Guard
+
+on:
+  pull_request:
+    paths:
+      - 'backend/routes/**'
+      - 'backend/lib/**'
+      - 'scripts/check-tenant-scope.sh'
+      - 'scripts/tenant-scope-allowlist.txt'
+  push:
+    branches: [master]
+    paths:
+      - 'backend/routes/**'
+      - 'backend/lib/**'
+
+jobs:
+  tenant-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every service-role query carries an owner predicate or allowlist entry
+        run: ./scripts/check-tenant-scope.sh
+      - name: Backend unit tests
+        working-directory: backend
+        run: npm ci && npm test

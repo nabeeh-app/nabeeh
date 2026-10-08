@@ -1,0 +1,58 @@
+alert_rules | select | id
+assessments | insert |
+assessments | select | date+name+offering_id
+assessments | select | offering_id
+assessments | update | id
+assistant_invites | update | id
+attendance | select |
+attendance | select | enrollment_id
+attendance | select | id
+attendance_locks | delete | id
+attendance_locks | delete | locked_by+session_id+student_id
+attendance_locks | insert |
+attendance_locks | select | session_id+student_id
+conversations | update | id
+enrollments | delete | id
+enrollments | insert |
+enrollments | select | group.offering_id
+enrollments | select | group_id
+enrollments | select | group_id+status
+enrollments | select | group_id+student_id
+enrollments | select | id
+enrollments | update | group_id+student_id
+faqs | update | id
+grades | delete | id
+grades | select |
+grades | select | assessment.offerings.id
+grades | select | assessment_id
+grades | select | enrollment.group_id
+grades | select | enrollment_id
+grades | select | id
+grades | update | id
+groups | insert |
+groups | select | id+offering_id
+groups | select | offering_id
+messages | insert |
+messages | select | conversation_id
+parents | delete | id
+parents | insert |
+parents | select | id
+parents | select | student_id
+password_reset_tokens | update | id
+revoked_tokens | insert |
+self_registration_tokens | update | id
+sessions | select | group_id
+student_parents | select | student_id
+students | insert |
+students | select | id
+teacher_assistants | select | assistant_id+status
+teacher_assistants | update | id
+teachers | insert |
+teachers | select | auth_id
+teachers | select | email
+teachers | select | id
+teachers | select | subscription_tier
+teachers | update | id
+whatsapp_auth_creds | upsert |
+whatsapp_auth_keys | delete | id+type
+whatsapp_auth_keys | select | id+type
