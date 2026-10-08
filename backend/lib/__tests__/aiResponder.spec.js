@@ -30,7 +30,7 @@ describe('aiResponder', () => {
     jest.resetModules();
     jest.mock('../../config/database', () => ({
       supabase: { from: jest.fn() },
-      supabaseAdmin: { from: jest.fn() }
+  supabaseAdmin: { from: jest.fn() }
     }));
     jest.mock('../aiService', () => ({
       generateWithTools: jest.fn(),

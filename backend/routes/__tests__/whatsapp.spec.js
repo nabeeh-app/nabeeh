@@ -1,10 +1,6 @@
 jest.mock('../../config/database', () => ({
-  supabase: {
-    from: jest.fn()
-  },
-  supabaseAdmin: {
-    from: jest.fn()
-  }
+  supabase: { from: jest.fn() },
+  supabaseAdmin: { from: jest.fn() }
 }));
 
 jest.mock('../../lib/logger', () => ({
@@ -15,7 +11,7 @@ jest.mock('../../lib/logger', () => ({
 
 jest.mock('../../middleware/auth', () => ({
   authenticateToken: (req, res, next) => {
-    req.user = { id: 'teacher-1', email: 'test@example.com', role: 'teacher' };
+    req.user = { id: 'aaaaaaaa-bbbb-1ccc-8ddd-eeeeeeeeeeee', email: 'test@example.com', role: 'teacher' };
     next();
   },
   requirePermission: jest.fn().mockReturnValue((req, res, next) => next())
@@ -213,7 +209,7 @@ describe('WhatsApp Routes', () => {
         })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(countChain)
         .mockReturnValueOnce(chainable);
 
@@ -245,7 +241,7 @@ describe('WhatsApp Routes', () => {
         })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(countChain)
         .mockReturnValueOnce(chainable);
 
@@ -277,7 +273,7 @@ describe('WhatsApp Routes', () => {
         })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(countChain)
         .mockReturnValueOnce(chainable);
 
@@ -320,7 +316,7 @@ describe('WhatsApp Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(fetchChain);
+      supabaseAdmin.from.mockReturnValueOnce(fetchChain);
       supabaseAdmin.from.mockReturnValueOnce(updateChain);
 
       const res = await request(app)
@@ -351,7 +347,7 @@ describe('WhatsApp Routes', () => {
         single: jest.fn().mockResolvedValue({ data: null, error: null })
       };
 
-      supabase.from.mockReturnValueOnce(fetchChain);
+      supabaseAdmin.from.mockReturnValueOnce(fetchChain);
 
       const res = await request(app)
         .post('/api/whatsapp/bot/resume')
@@ -371,7 +367,7 @@ describe('WhatsApp Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(fetchChain);
+      supabaseAdmin.from.mockReturnValueOnce(fetchChain);
 
       const res = await request(app)
         .post('/api/whatsapp/bot/resume')
@@ -383,7 +379,7 @@ describe('WhatsApp Routes', () => {
   });
 
   describe('DELETE /api/whatsapp/sessions/:teacherId', () => {
-    const VALID_UUID = 'aaaaaaaa-bbbb-1ccc-8ddd-eeeeeeeeeeee';
+    const VALID_UUID = 'bbbbbbbb-bbbb-2bbb-8bbb-bbbbbbbbbbbb';
 
     it('should reject invalid teacherId UUID format', async () => {
       const res = await request(app)
@@ -394,19 +390,27 @@ describe('WhatsApp Routes', () => {
       expect(res.body.code).toBe('VALIDATION_ERROR');
     });
 
-    it('should disconnect session with valid UUID', async () => {
+    it('should disconnect own session with valid UUID', async () => {
       const sessionManager = require('../../lib/sessionManager');
       sessionManager.destroySession.mockResolvedValueOnce(true);
 
       const res = await request(app)
-        .delete(`/api/whatsapp/sessions/${VALID_UUID}`);
+        .delete('/api/whatsapp/sessions/aaaaaaaa-bbbb-1ccc-8ddd-eeeeeeeeeeee');
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(sessionManager.destroySession).toHaveBeenCalledWith(
-        VALID_UUID,
+        'aaaaaaaa-bbbb-1ccc-8ddd-eeeeeeeeeeee',
         { deleteCredentials: false }
       );
+    });
+
+    it('should return 404 when deleting another teacher session', async () => {
+      const res = await request(app)
+        .delete(`/api/whatsapp/sessions/${VALID_UUID}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.code).toBe('NOT_FOUND');
     });
 
     it('should force logout when ?force=true', async () => {
@@ -414,11 +418,11 @@ describe('WhatsApp Routes', () => {
       sessionManager.destroySession.mockResolvedValueOnce(true);
 
       const res = await request(app)
-        .delete(`/api/whatsapp/sessions/${VALID_UUID}?force=true`);
+        .delete('/api/whatsapp/sessions/aaaaaaaa-bbbb-1ccc-8ddd-eeeeeeeeeeee?force=true');
 
       expect(res.status).toBe(200);
       expect(sessionManager.destroySession).toHaveBeenCalledWith(
-        VALID_UUID,
+        'aaaaaaaa-bbbb-1ccc-8ddd-eeeeeeeeeeee',
         { deleteCredentials: true }
       );
       expect(res.body.message).toBe('Session logged out');
@@ -429,7 +433,7 @@ describe('WhatsApp Routes', () => {
       sessionManager.destroySession.mockRejectedValueOnce(new Error('DB failure'));
 
       const res = await request(app)
-        .delete(`/api/whatsapp/sessions/${VALID_UUID}`);
+        .delete('/api/whatsapp/sessions/aaaaaaaa-bbbb-1ccc-8ddd-eeeeeeeeeeee');
 
       expect(res.status).toBe(500);
       expect(res.body.success).toBe(false);
@@ -556,7 +560,7 @@ describe('WhatsApp Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(sessionManager.destroySession).toHaveBeenCalledWith('teacher-1', { deleteCredentials: true });
+      expect(sessionManager.destroySession).toHaveBeenCalledWith('aaaaaaaa-bbbb-1ccc-8ddd-eeeeeeeeeeee', { deleteCredentials: true });
     });
 
     it('should handle logout when no session exists', async () => {
@@ -572,23 +576,17 @@ describe('WhatsApp Routes', () => {
   });
 
   describe('GET /api/whatsapp/sessions', () => {
-    it('should return all sessions for admin', async () => {
+    it('should return only the caller own session status', async () => {
       const sessionManager = require('../../lib/sessionManager');
-      sessionManager.getStatus.mockReturnValue({
-        totalSessions: 2,
-        maxSessions: 50,
-        sessions: {
-          'teacher-1': { status: 'connected', phone: '+201012345678' },
-          'teacher-2': { status: 'disconnected', phone: null }
-        }
-      });
+      sessionManager.getTeacherStatus.mockReturnValue({ status: 'connected', phone: '+201012345678' });
 
       const res = await request(app)
         .get('/api/whatsapp/sessions');
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.totalSessions).toBe(2);
+      expect(sessionManager.getTeacherStatus).toHaveBeenCalledWith('aaaaaaaa-bbbb-1ccc-8ddd-eeeeeeeeeeee');
+      expect(res.body.data).toEqual({ status: 'connected', phone: '+201012345678' });
     });
   });
 
@@ -618,7 +616,7 @@ describe('WhatsApp Routes', () => {
                   id: 'group-1',
                   offering: {
                     id: 'offering-1',
-                    teacher_id: 'teacher-1'
+                    teacher_id: 'aaaaaaaa-bbbb-1ccc-8ddd-eeeeeeeeeeee'
                   }
                 }
               }]
@@ -639,7 +637,7 @@ describe('WhatsApp Routes', () => {
         eq: jest.fn().mockResolvedValue({ error: null })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(parentChain)
         .mockReturnValueOnce(convChain);
       supabaseAdmin.from
@@ -666,7 +664,7 @@ describe('WhatsApp Routes', () => {
       });
 
       // Parent lookup throws
-      supabase.from.mockImplementation(() => {
+      supabaseAdmin.from.mockImplementation(() => {
         throw new Error('DB error');
       });
 
@@ -694,7 +692,7 @@ describe('WhatsApp Routes', () => {
   describe('GET /api/whatsapp/conversations - error paths', () => {
     it('should return 500 on DB error', async () => {
       const { supabaseAdmin } = require('../../config/database');
-      supabase.from.mockImplementation(() => {
+      supabaseAdmin.from.mockImplementation(() => {
         throw new Error('DB failure');
       });
 
@@ -707,7 +705,7 @@ describe('WhatsApp Routes', () => {
 
     it('should handle empty conversations', async () => {
       const { supabaseAdmin } = require('../../config/database');
-      supabase.from.mockReset();
+      supabaseAdmin.from.mockReset();
 
       const countChain = {
         select: jest.fn().mockReturnThis(),
@@ -725,7 +723,7 @@ describe('WhatsApp Routes', () => {
           resolve({ data: [], error: null });
         })
       };
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(countChain)
         .mockReturnValueOnce(dataChain);
 

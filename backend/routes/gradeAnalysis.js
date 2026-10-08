@@ -1,6 +1,6 @@
 const express = require('express');
 const { z } = require('zod');
-const { supabase } = require('../config/database');
+const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -53,7 +53,7 @@ const getGroupComparison = async (req, res) => {
   if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
 
   // Get groups with their enrollments and grades
-  const { data: groups } = await supabase
+  const { data: groups } = await supabaseAdmin
     .from('groups')
     .select(`
       id,
@@ -105,7 +105,7 @@ const getAtRisk = async (req, res) => {
   if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
 
   // Get all enrollments in this offering with grades and attendance
-  const { data: enrollments } = await supabase
+  const { data: enrollments } = await supabaseAdmin
     .from('enrollments')
     .select(`
       id,
@@ -175,7 +175,7 @@ const getDistribution = async (req, res) => {
   const { assessmentId } = req.validated.params;
 
   // Verify assessment belongs to teacher
-  const { data: assessment } = await supabase
+  const { data: assessment } = await supabaseAdmin
     .from('assessments')
     .select('id, name, max_score, offering:offerings(teacher_id)')
     .eq('id', assessmentId)
@@ -186,7 +186,7 @@ const getDistribution = async (req, res) => {
   }
 
   // Get all grades for this assessment
-  const { data: grades } = await supabase
+  const { data: grades } = await supabaseAdmin
     .from('grades')
     .select('score')
     .eq('assessment_id', assessmentId);
@@ -249,7 +249,7 @@ const getTrends = async (req, res) => {
 
   const enrollmentIds = enrollments.map(e => e.id);
 
-  const { data: grades } = await supabase
+  const { data: grades } = await supabaseAdmin
     .from('grades')
     .select(`
       score,
@@ -281,7 +281,7 @@ const getOverview = async (req, res) => {
   const { offeringId } = req.validated.params;
 
   // Verify offering belongs to teacher
-  const { data: offering } = await supabase
+  const { data: offering } = await supabaseAdmin
     .from('offerings')
     .select('id, subject:subjects(name), grade_level:grade_levels(name)')
     .eq('id', offeringId)
@@ -291,7 +291,7 @@ const getOverview = async (req, res) => {
   if (!offering) return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
 
   // Get all grades in this offering
-  const { data: grades } = await supabase
+  const { data: grades } = await supabaseAdmin
     .from('grades')
     .select(`
       score,
@@ -301,7 +301,7 @@ const getOverview = async (req, res) => {
     .eq('assessment.offerings.id', offeringId);
 
   // Get enrollment count
-  const { count: studentCount } = await supabase
+  const { count: studentCount } = await supabaseAdmin
     .from('enrollments')
     .select('id', { count: 'exact', head: true })
     .eq('group.offering_id', offeringId);

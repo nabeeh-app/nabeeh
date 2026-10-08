@@ -123,7 +123,7 @@ router.post('/link', authenticateToken, requirePermission('manage_students'), va
     return res.status(404).json({ success: false, message: 'Group not found', messageAr: 'لم يتم العثور على المجموعة', code: 'NOT_FOUND' });
   }
 
-  if (group.offering.teacher_id !== req.user.id) {
+  if (group.offering.teacher_id !== getEffectiveTeacherId(req)) {
     return res.status(403).json({ success: false, message: 'Unauthorized for this group', messageAr: 'غير مصرح لهذه المجموعة', code: 'FORBIDDEN' });
   }
 
@@ -135,7 +135,7 @@ router.post('/link', authenticateToken, requirePermission('manage_students'), va
     .insert([{
       token,
       group_id: groupId,
-      teacher_id: req.user.id,
+      teacher_id: getEffectiveTeacherId(req),
       expires_at: expiresAt,
       max_uses: 100,
       use_count: 0
@@ -165,7 +165,7 @@ router.post('/link', authenticateToken, requirePermission('manage_students'), va
         .insert([{
           token,
           group_id: groupId,
-          teacher_id: req.user.id,
+          teacher_id: getEffectiveTeacherId(req),
           expires_at: expiresAt,
           max_uses: 100,
           use_count: 0

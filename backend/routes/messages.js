@@ -1,6 +1,8 @@
 const express = require('express');
 const { z } = require('zod');
-const { supabase } = require('../config/database');
+const { supabaseAdmin } = require('../config/database');
+
+const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const logger = require('../lib/logger');
@@ -19,7 +21,7 @@ const router = express.Router();
 // @route   GET /api/messages/conversations
 // @access  Private
 const getConversations = async (req, res) => {
-  const { data: conversations, error } = await supabase
+  const { data: conversations, error } = await supabaseAdmin
     .from('conversations')
     .select(`
       *,
@@ -30,7 +32,7 @@ const getConversations = async (req, res) => {
         students (name, student_id)
       )
     `)
-    .eq('teacher_id', req.user.id)
+    .eq('teacher_id', getEffectiveTeacherId(req))
     .order('last_message_at', { ascending: false });
 
   if (error) {
@@ -55,11 +57,11 @@ const getConversationMessages = async (req, res) => {
   const { page, limit } = req.validated.query;
   const offset = (page - 1) * limit;
 
-  const { data: conversation } = await supabase
+  const { data: conversation } = await supabaseAdmin
     .from('conversations')
     .select('id')
     .eq('id', req.params.id)
-    .eq('teacher_id', req.user.id)
+    .eq('teacher_id', getEffectiveTeacherId(req))
     .single();
 
   if (!conversation) {
@@ -71,7 +73,7 @@ const getConversationMessages = async (req, res) => {
     });
   }
 
-  const { data: messages, error } = await supabase
+  const { data: messages, error } = await supabaseAdmin
     .from('messages')
     .select('*')
     .eq('conversation_id', req.params.id)
@@ -87,7 +89,7 @@ const getConversationMessages = async (req, res) => {
     });
   }
 
-  const { count: total } = await supabase
+  const { count: total } = await supabaseAdmin
     .from('messages')
     .select('id', { count: 'exact', head: true })
     .eq('conversation_id', req.params.id);
@@ -116,9 +118,9 @@ const getMessageStats = async (req, res) => {
   const startDate = start_date || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const endDate = end_date || new Date().toISOString();
 
-  const { data: statsRow, error: rpcError } = await supabase
+  const { data: statsRow, error: rpcError } = await supabaseAdmin
     .rpc('message_stats', {
-      p_teacher_id: req.user.id,
+      p_teacher_id: getEffectiveTeacherId(req),
       p_start_date: startDate,
       p_end_date: endDate
     })
@@ -130,13 +132,13 @@ const getMessageStats = async (req, res) => {
   const incomingMessages = Number(statsRow.incoming_count) || 0;
   const automatedMessages = Number(statsRow.automated_count) || 0;
 
-  const { data: intents } = await supabase
+  const { data: intents } = await supabaseAdmin
     .from('messages')
     .select(`
       intent,
       conversations!inner (teacher_id)
     `)
-    .eq('conversations.teacher_id', req.user.id)
+    .eq('conversations.teacher_id', getEffectiveTeacherId(req))
     .not('intent', 'is', null)
     .gte('created_at', startDate)
     .lte('created_at', endDate);

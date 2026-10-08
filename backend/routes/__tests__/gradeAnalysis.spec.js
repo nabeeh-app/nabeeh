@@ -1,10 +1,9 @@
 const request = require('supertest');
 const express = require('express');
 
-const mockFrom = jest.fn();
 jest.mock('../../config/database', () => ({
-  supabase: { from: (...args) => mockFrom(...args) },
-  supabaseAdmin: { from: (...args) => mockFrom(...args) }
+  supabase: { from: jest.fn() },
+  supabaseAdmin: { from: jest.fn() }
 }));
 
 jest.mock('../../lib/enrollmentChain', () => ({
@@ -42,6 +41,7 @@ jest.mock('../../lib/logger', () => ({
 }));
 
 const gradeAnalysisRouter = require('../gradeAnalysis');
+const { supabaseAdmin } = require('../../config/database');
 const { verifyOfferingAccess, getStudentEnrollmentsForTeacher } = require('../../lib/enrollmentChain');
 
 const app = express();
@@ -72,7 +72,7 @@ describe('Grade Analysis Routes', () => {
   describe('GET /api/grade-analysis/group-comparison', () => {
     it('should return group comparison data', async () => {
       verifyOfferingAccess.mockResolvedValue({ id: 'o1' });
-      mockFrom
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({
           data: [
             { id: 'g1', name: 'Group A', enrollments: [{ id: 'e1', grades: [{ score: 80, assessment: { max_score: 100 } }] }] },
@@ -103,7 +103,7 @@ describe('Grade Analysis Routes', () => {
 
     it('should handle groups with no enrollments', async () => {
       verifyOfferingAccess.mockResolvedValue({ id: 'o1' });
-      mockFrom
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({ data: [{ id: 'g1', name: 'Empty', enrollments: [] }], error: null }));
 
       const res = await request(app)
@@ -119,7 +119,7 @@ describe('Grade Analysis Routes', () => {
   describe('GET /api/grade-analysis/at-risk', () => {
     it('should return at-risk students', async () => {
       verifyOfferingAccess.mockResolvedValue({ id: 'o1' });
-      mockFrom
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({
           data: [{
             id: 'e1',
@@ -155,7 +155,7 @@ describe('Grade Analysis Routes', () => {
 
     it('should return empty array when no at-risk students', async () => {
       verifyOfferingAccess.mockResolvedValue({ id: 'o1' });
-      mockFrom
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({
           data: [{
             id: 'e1',
@@ -178,7 +178,7 @@ describe('Grade Analysis Routes', () => {
 
     it('should mark as warning when only grade is below threshold', async () => {
       verifyOfferingAccess.mockResolvedValue({ id: 'o1' });
-      mockFrom
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({
           data: [{
             id: 'e1',
@@ -204,7 +204,7 @@ describe('Grade Analysis Routes', () => {
 
   describe('GET /api/grade-analysis/distribution/:assessmentId', () => {
     it('should return grade distribution', async () => {
-      mockFrom
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({
           data: { id: 'a1', name: 'Midterm', max_score: 100, offering: { teacher_id: 'teacher-1' } },
           error: null
@@ -221,7 +221,7 @@ describe('Grade Analysis Routes', () => {
     });
 
     it('should return 404 if assessment not found', async () => {
-      mockFrom.mockReturnValueOnce(createChainable({ data: null, error: null }));
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: null, error: null }));
 
       const res = await request(app).get('/api/grade-analysis/distribution/nonexistent');
 
@@ -229,7 +229,7 @@ describe('Grade Analysis Routes', () => {
     });
 
     it('should return 404 if assessment belongs to another teacher', async () => {
-      mockFrom.mockReturnValueOnce(createChainable({
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({
         data: { id: 'a1', name: 'Midterm', max_score: 100, offering: { teacher_id: 'other-teacher' } },
         error: null
       }));
@@ -243,7 +243,7 @@ describe('Grade Analysis Routes', () => {
   describe('GET /api/grade-analysis/trends/:studentId', () => {
     it('should return grade trends for student', async () => {
       getStudentEnrollmentsForTeacher.mockResolvedValue([{ id: 'e1' }]);
-      mockFrom.mockReturnValueOnce(createChainable({
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({
         data: [
           { score: 70, assessment: { name: 'Quiz 1', date: '2025-01-01', max_score: 100 } },
           { score: 85, assessment: { name: 'Midterm', date: '2025-02-01', max_score: 100 } }
@@ -261,7 +261,7 @@ describe('Grade Analysis Routes', () => {
 
     it('should return empty trends when no grades', async () => {
       getStudentEnrollmentsForTeacher.mockResolvedValue([{ id: 'e1' }]);
-      mockFrom.mockReturnValueOnce(createChainable({ data: [], error: null }));
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: [], error: null }));
 
       const res = await request(app).get('/api/grade-analysis/trends/s1');
 
@@ -281,7 +281,7 @@ describe('Grade Analysis Routes', () => {
 
   describe('GET /api/grade-analysis/overview/:offeringId', () => {
     it('should return offering overview stats', async () => {
-      mockFrom
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({
           data: { id: 'o1', subject: { name: 'Math' }, grade_level: { name: 'Grade 10' } },
           error: null
@@ -310,7 +310,7 @@ describe('Grade Analysis Routes', () => {
     });
 
     it('should return 404 if offering not found', async () => {
-      mockFrom.mockReturnValueOnce(createChainable({ data: null, error: null }));
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: null, error: null }));
 
       const res = await request(app).get('/api/grade-analysis/overview/nonexistent');
 
@@ -318,7 +318,7 @@ describe('Grade Analysis Routes', () => {
     });
 
     it('should return zeros when no grades exist', async () => {
-      mockFrom
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({
           data: { id: 'o1', subject: { name: 'Math' }, grade_level: { name: 'Grade 10' } },
           error: null

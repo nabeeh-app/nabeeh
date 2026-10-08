@@ -5,6 +5,10 @@ jest.mock('../../config/database', () => ({
   supabase: {
     from: jest.fn(),
     rpc: jest.fn()
+  },
+  supabaseAdmin: {
+    from: jest.fn(),
+    rpc: jest.fn()
   }
 }));
 
@@ -31,7 +35,7 @@ jest.mock('../../lib/logger', () => ({
 }));
 
 const teachersRouter = require('../teachers');
-const { supabase } = require('../../config/database');
+const { supabase, supabaseAdmin } = require('../../config/database');
 
 const app = express();
 app.use(express.json());
@@ -60,9 +64,9 @@ describe('Teachers Routes', () => {
 
   describe('GET /api/teachers/profile', () => {
     it('should return teacher profile with student count', async () => {
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({ data: { id: 'teacher-1', name: 'Test Teacher', email: 'test@example.com' }, error: null }));
-      supabase.rpc
+      supabaseAdmin.rpc
         .mockReturnValueOnce(Promise.resolve({ data: 5, error: null }));
 
       const res = await request(app).get('/api/teachers/profile');
@@ -74,9 +78,9 @@ describe('Teachers Routes', () => {
     });
 
     it('should default student count to 0 if null', async () => {
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({ data: { id: 'teacher-1', name: 'Test Teacher' }, error: null }));
-      supabase.rpc
+      supabaseAdmin.rpc
         .mockReturnValueOnce(Promise.resolve({ data: null, error: null }));
 
       const res = await request(app).get('/api/teachers/profile');
@@ -86,7 +90,7 @@ describe('Teachers Routes', () => {
     });
 
     it('should return 500 on database error', async () => {
-      supabase.from.mockReturnValueOnce(createChainable({ data: null, error: { message: 'DB error' } }));
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: null, error: { message: 'DB error' } }));
 
       const res = await request(app).get('/api/teachers/profile');
 
@@ -99,8 +103,8 @@ describe('Teachers Routes', () => {
     it('should return dashboard stats', async () => {
       const statsJson = JSON.stringify({ student_count: 10, parent_count: 5, today_attendance: 3, weekly_messages: 8 });
 
-      supabase.rpc.mockReturnValueOnce(Promise.resolve({ data: statsJson, error: null }));
-      supabase.from
+      supabaseAdmin.rpc.mockReturnValueOnce(Promise.resolve({ data: statsJson, error: null }));
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({ data: [], error: null }))
         .mockReturnValueOnce(createChainable({ data: [], error: null }));
 
@@ -115,8 +119,8 @@ describe('Teachers Routes', () => {
     it('should handle stats returned as object (not string)', async () => {
       const statsJson = { student_count: 5, parent_count: 2, today_attendance: 1, weekly_messages: 3 };
 
-      supabase.rpc.mockReturnValueOnce(Promise.resolve({ data: statsJson, error: null }));
-      supabase.from
+      supabaseAdmin.rpc.mockReturnValueOnce(Promise.resolve({ data: statsJson, error: null }));
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({ data: [], error: null }))
         .mockReturnValueOnce(createChainable({ data: [], error: null }));
 
@@ -129,8 +133,8 @@ describe('Teachers Routes', () => {
     it('should format recent grades', async () => {
       const statsJson = JSON.stringify({ student_count: 0, parent_count: 0 });
 
-      supabase.rpc.mockReturnValueOnce(Promise.resolve({ data: statsJson, error: null }));
-      supabase.from
+      supabaseAdmin.rpc.mockReturnValueOnce(Promise.resolve({ data: statsJson, error: null }));
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({
           data: [{
             score: 90, assessment: { name: 'Midterm', date: '2025-02-01', offering: { teacher_id: 'teacher-1' } },
@@ -149,7 +153,7 @@ describe('Teachers Routes', () => {
 
   describe('GET /api/teachers/settings', () => {
     it('should return teacher settings', async () => {
-      supabase.from.mockReturnValueOnce(createChainable({
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({
         data: { theme: 'dark', language: 'ar', notifications: { attendance: true } },
         error: null
       }));
@@ -162,7 +166,7 @@ describe('Teachers Routes', () => {
     });
 
     it('should return defaults when no settings exist', async () => {
-      supabase.from.mockReturnValueOnce(createChainable({ data: null, error: null }));
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: null, error: null }));
 
       const res = await request(app).get('/api/teachers/settings');
 
@@ -174,7 +178,7 @@ describe('Teachers Routes', () => {
 
   describe('PUT /api/teachers/settings', () => {
     it('should update settings successfully', async () => {
-      supabase.from.mockReturnValueOnce(createChainable({
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({
         data: { theme: 'dark', language: 'ar', notifications: {} },
         error: null
       }));
@@ -189,7 +193,7 @@ describe('Teachers Routes', () => {
     });
 
     it('should return 400 on database error', async () => {
-      supabase.from.mockReturnValueOnce(createChainable({ data: null, error: { message: 'DB error' } }));
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: null, error: { message: 'DB error' } }));
 
       const res = await request(app)
         .put('/api/teachers/settings')
@@ -201,7 +205,7 @@ describe('Teachers Routes', () => {
 
   describe('PUT /api/teachers/notification-preferences', () => {
     it('should update notification preferences', async () => {
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({
           data: { notification_preferences: {} },
           error: null
@@ -221,7 +225,7 @@ describe('Teachers Routes', () => {
     });
 
     it('should merge with existing preferences', async () => {
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({
           data: { notification_preferences: { digest: true } },
           error: null

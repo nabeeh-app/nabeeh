@@ -1,10 +1,10 @@
 const express = require('express');
 const { z } = require('zod');
-const { supabase, supabaseAdmin } = require('../config/database');
+const { supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, markAttendanceSchema, updateAttendanceSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
-const { batchResolveEnrollments } = require('../lib/enrollmentChain');
+const { batchResolveEnrollments, verifyStudentAccess } = require('../lib/enrollmentChain');
 const asyncHandler = require('../middleware/asyncHandler');
 const { logAudit } = require('../lib/auditLog');
 
@@ -22,6 +22,25 @@ const router = express.Router();
 const getActorType = (req) => req.user.role === 'teacher' ? 'teacher' : 'assistant';
 const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
 
+// Confirms both the session and the student belong to the caller. Returns
+// true only when the session's group sits under the caller's offering and the
+// student is enrolled under the caller.
+const verifyLockAccess = async (sessionId, studentId, teacherId) => {
+  const { data: session } = await supabaseAdmin
+    .from('sessions')
+    .select('id, groups!inner(offerings!inner(teacher_id))')
+    .eq('id', sessionId)
+    .eq('groups.offerings.teacher_id', teacherId)
+    .single();
+
+  if (!session) return false;
+
+  const enrollment = await verifyStudentAccess(studentId, teacherId);
+  return !!enrollment;
+};
+
+const lockNotFound = (res) => res.status(404).json({ success: false, message: 'Session or student not found', messageAr: 'لم يتم العثور على الجلسة أو الطالب', code: 'NOT_FOUND' });
+
 // @desc    Get attendance for date range
 // @route   GET /api/attendance
 // @access  Private
@@ -33,7 +52,7 @@ const getAttendance = async (req, res) => {
     group_id
   } = req.validated.query;
 
-  let query = supabase
+  let query = supabaseAdmin
     .from('attendance')
     .select(`
       *,
@@ -52,7 +71,7 @@ const getAttendance = async (req, res) => {
     `)
     .gte('sessions.date', start_date)
     .lte('sessions.date', end_date)
-    .eq('enrollment.teacher_id', req.user.id)
+    .eq('enrollment.teacher_id', getEffectiveTeacherId(req))
     .order('created_at', { ascending: false });
 
   if (student_id) {
@@ -121,7 +140,7 @@ const markAttendance = async (req, res) => {
   const groupIds = [...new Set(attendance_records.map(r => r.group_id))];
   const studentIds = attendance_records.map(r => r.student_id);
 
-  const enrollmentMap = await batchResolveEnrollments(studentIds, groupIds, req.user.id);
+  const enrollmentMap = await batchResolveEnrollments(studentIds, groupIds, getEffectiveTeacherId(req));
 
   const activeRecords = [];
   const missingEnrollments = [];
@@ -177,9 +196,9 @@ const getAttendanceSummary = async (req, res) => {
     end_date = new Date().toISOString().split('T')[0]
   } = req.query;
 
-  const { data: summary, error: rpcError } = await supabase
+  const { data: summary, error: rpcError } = await supabaseAdmin
     .rpc('attendance_summary', {
-      p_teacher_id: req.user.id,
+      p_teacher_id: getEffectiveTeacherId(req),
       p_start_date: start_date,
       p_end_date: end_date
     })
@@ -206,7 +225,7 @@ const getAttendanceSummary = async (req, res) => {
 const updateAttendance = async (req, res) => {
   const { status, notes } = req.validated.body;
 
-  const { data: record, error: fetchError } = await supabase
+  const { data: record, error: fetchError } = await supabaseAdmin
     .from('attendance')
     .select(`
       id,
@@ -221,7 +240,7 @@ const updateAttendance = async (req, res) => {
     return res.status(404).json({ success: false, message: 'Attendance record not found', messageAr: 'لم يتم العثور على سجل الحضور', code: 'NOT_FOUND' });
   }
 
-  if (record.enrollment.teacher_id !== req.user.id) {
+  if (record.enrollment.teacher_id !== getEffectiveTeacherId(req)) {
     return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
   }
 
@@ -334,7 +353,11 @@ router.post('/lock', authenticateToken, requirePermission('manage_attendance'), 
     return res.status(400).json({ success: false, message: 'session_id and student_id are required', messageAr: 'معرّف الجلسة ومعرّف الطالب مطلوبان', code: 'VALIDATION_ERROR' });
   }
 
-  const { data: existingLock } = await supabase
+  if (!(await verifyLockAccess(session_id, student_id, getEffectiveTeacherId(req)))) {
+    return lockNotFound(res);
+  }
+
+  const { data: existingLock } = await supabaseAdmin
     .from('attendance_locks')
     .select('id, locked_by, locked_by_type, locked_at')
     .eq('session_id', session_id)
@@ -439,6 +462,10 @@ router.delete('/lock', authenticateToken, asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'session_id and student_id are required', messageAr: 'معرّف الجلسة ومعرّف الطالب مطلوبان', code: 'VALIDATION_ERROR' });
   }
 
+  if (!(await verifyLockAccess(session_id, student_id, getEffectiveTeacherId(req)))) {
+    return lockNotFound(res);
+  }
+
   const { error } = await supabaseAdmin
     .from('attendance_locks')
     .delete()
@@ -517,7 +544,11 @@ router.delete('/lock', authenticateToken, asyncHandler(async (req, res) => {
 router.get('/lock/:sessionId/:studentId', authenticateToken, asyncHandler(async (req, res) => {
   const { sessionId, studentId } = req.params;
 
-  const { data: lock, error } = await supabase
+  if (!(await verifyLockAccess(sessionId, studentId, getEffectiveTeacherId(req)))) {
+    return lockNotFound(res);
+  }
+
+  const { data: lock, error } = await supabaseAdmin
     .from('attendance_locks')
     .select('id, locked_by, locked_by_type, locked_at, expires_at')
     .eq('session_id', sessionId)

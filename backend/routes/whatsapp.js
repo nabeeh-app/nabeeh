@@ -4,7 +4,7 @@ const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { perTeacherLimiter } = require('../middleware/security');
 const sessionManager = require('../lib/sessionManager');
-const { supabase, supabaseAdmin } = require('../config/database');
+const { supabaseAdmin } = require('../config/database');
 const logger = require('../lib/logger');
 const whatsappQuery = require('../lib/whatsappQuery');
 const messageParser = require('../lib/messageParser');
@@ -15,6 +15,8 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { logAudit } = require('../lib/auditLog');
 
 const router = express.Router();
+
+const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
 
 const sendMessageSchema = z.object({
   phone: z.string().regex(/^\+?[1-9]\d{6,14}$/, 'Invalid phone number format'),
@@ -90,7 +92,7 @@ async function processIncomingMessage(teacherId, phone, messageContent, remoteJi
 
   // Idempotency: skip if we already processed this WhatsApp message
   if (messageId) {
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from('messages')
       .select('id')
       .eq('whatsapp_message_id', messageId)
@@ -132,7 +134,7 @@ async function processIncomingMessage(teacherId, phone, messageContent, remoteJi
       return;
     }
 
-    const { data: teacher } = await supabase
+    const { data: teacher } = await supabaseAdmin
       .from('teachers')
       .select('id, name, business_name, subscription_tier')
       .eq('id', teacherId)
@@ -150,10 +152,12 @@ async function processIncomingMessage(teacherId, phone, messageContent, remoteJi
     });
 
     if (studentsForThisTeacher.length === 0) {
-      logger.info('Parent has no students under this teacher, routing to first student teacher', { parentId: parent.id, sessionTeacherId: teacherId });
+      logger.info('Parent has no students under this teacher, no data returned', { parentId: parent.id, sessionTeacherId: teacherId });
+      endTimer();
+      return;
     }
 
-    const studentsToProcess = studentsForThisTeacher.length > 0 ? studentsForThisTeacher : students;
+    const studentsToProcess = studentsForThisTeacher;
 
     const conversation = await whatsappQuery.findOrCreateConversation(parent.id, teacherId, remoteJid);
     if (!conversation) {
@@ -345,7 +349,7 @@ router.get('/status', (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.set('Pragma', 'no-cache');
   res.set('Expires', '0');
-  res.json(getStatusPayload(req.user.id));
+  res.json(getStatusPayload(getEffectiveTeacherId(req)));
 });
 
 /**
@@ -394,7 +398,7 @@ router.get('/status', (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/pair', perTeacherLimiter(5, 60000), asyncHandler(async (req, res) => {
-  const teacherId = req.user.id;
+  const teacherId = getEffectiveTeacherId(req);
   const client = await sessionManager.getOrCreateSession(teacherId, { autoConnect: false });
   await client.startPairing();
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -479,7 +483,7 @@ router.post('/pair-code', perTeacherLimiter(5, 60000), asyncHandler(async (req, 
     return res.status(400).json({ success: false, message: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' });
   }
 
-  const teacherId = req.user.id;
+  const teacherId = getEffectiveTeacherId(req);
   const { phone } = parsed.data;
   const cleaned = normalizePhoneNumber(phone);
 
@@ -545,7 +549,7 @@ router.post('/pair-code', perTeacherLimiter(5, 60000), asyncHandler(async (req, 
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.get('/qr', (req, res) => {
-  const status = sessionManager.getTeacherStatus(req.user.id);
+  const status = sessionManager.getTeacherStatus(getEffectiveTeacherId(req));
   res.json({ success: true, data: { qr: status?.qr || null } });
 });
 
@@ -584,7 +588,7 @@ router.get('/qr', (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/logout', asyncHandler(async (req, res) => {
-  const success = await sessionManager.destroySession(req.user.id, { deleteCredentials: true });
+  const success = await sessionManager.destroySession(getEffectiveTeacherId(req), { deleteCredentials: true });
   res.json({ success: true, message: success ? 'Logged out successfully' : 'No active session to logout' });
 }));
 
@@ -658,7 +662,7 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), perTeacherLim
     return res.status(400).json({ success: false, message: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' });
   }
 
-  const teacherId = req.user.id;
+  const teacherId = getEffectiveTeacherId(req);
   const { phone, message } = parsed.data;
 
   const client = sessionManager.getSession(teacherId);
@@ -676,7 +680,7 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), perTeacherLim
 
   // Auto-pause bot for this conversation when teacher/assistant sends manual message
   try {
-    const { data: parent } = await supabase
+    const { data: parent } = await supabaseAdmin
       .from('parents')
       .select('id, students(id, enrollments(id, group:groups(id, offering:offerings(id, teacher_id))))')
       .eq('phone', `+${cleaned}`)
@@ -687,7 +691,7 @@ router.post('/send-to-number', requirePermission('send_whatsapp'), perTeacherLim
         (s.enrollments || []).some(e => e?.group?.offering?.teacher_id === teacherId)
       );
       if (belongsToTeacher) {
-        const { data: conversation } = await supabase.from('conversations')
+        const { data: conversation } = await supabaseAdmin.from('conversations')
           .select('id').eq('parent_id', parent.id).eq('teacher_id', teacherId).maybeSingle();
         if (conversation) {
           const pauseHours = 4;
@@ -789,11 +793,11 @@ router.post('/bot/resume', asyncHandler(async (req, res) => {
   }
   const { conversation_id } = parsed.data;
 
-  const { data: conversation, error: fetchError } = await supabase
+  const { data: conversation, error: fetchError } = await supabaseAdmin
     .from('conversations')
     .select('id, teacher_id')
     .eq('id', conversation_id)
-    .eq('teacher_id', req.user.id)
+    .eq('teacher_id', getEffectiveTeacherId(req))
     .single();
 
   if (fetchError || !conversation) {
@@ -873,19 +877,19 @@ router.get('/conversations', validate(getConversationsSchema), asyncHandler(asyn
   const { page, limit } = req.validated.query;
   const offset = (page - 1) * limit;
 
-  const { count } = await supabase
+  const { count } = await supabaseAdmin
     .from('conversations')
     .select('*', { count: 'exact', head: true })
-    .eq('teacher_id', req.user.id);
+    .eq('teacher_id', getEffectiveTeacherId(req));
 
-  const { data: conversations, error } = await supabase
+  const { data: conversations, error } = await supabaseAdmin
     .from('conversations')
     .select(`
       *,
       parents (name, phone, students (name, student_id)),
       messages (id, direction, content, created_at)
     `)
-    .eq('teacher_id', req.user.id)
+    .eq('teacher_id', getEffectiveTeacherId(req))
     .order('last_message_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -913,7 +917,8 @@ router.get('/conversations', validate(getConversationsSchema), asyncHandler(asyn
  *         description: Unauthorized
  */
 router.get('/sessions', requirePermission('manage_settings'), (req, res) => {
-  const status = sessionManager.getStatus();
+  const teacherId = getEffectiveTeacherId(req);
+  const status = sessionManager.getTeacherStatus(teacherId);
   res.json({ success: true, data: status });
 });
 
@@ -946,6 +951,9 @@ router.delete('/sessions/:teacherId', requirePermission('manage_settings'), asyn
   }
 
   const forceLogout = req.query.force === 'true';
+  if (parsed.data.teacherId !== getEffectiveTeacherId(req)) {
+    return res.status(404).json({ success: false, message: 'Session not found', messageAr: 'لم يتم العثور على الجلسة', code: 'NOT_FOUND' });
+  }
   await sessionManager.destroySession(parsed.data.teacherId, { deleteCredentials: forceLogout });
   res.json({ success: true, message: forceLogout ? 'Session logged out' : 'Session disconnected' });
 }));

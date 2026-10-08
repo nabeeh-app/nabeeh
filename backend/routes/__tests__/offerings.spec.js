@@ -2,12 +2,8 @@ const request = require('supertest');
 const express = require('express');
 
 jest.mock('../../config/database', () => ({
-  supabase: {
-    from: jest.fn()
-  },
-  supabaseAdmin: {
-    from: jest.fn()
-  }
+  supabase: { from: jest.fn() },
+  supabaseAdmin: { from: jest.fn() }
 }));
 
 jest.mock('../../middleware/validate', () => ({
@@ -63,7 +59,7 @@ describe('Offerings Routes', () => {
 
   describe('PUT /api/offerings/:offeringId/groups/:groupId', () => {
     it('should update group successfully', async () => {
-      supabase.from.mockReturnValueOnce(createChainable({ data: { id: 'o1' }, error: null }));
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: { id: 'o1' }, error: null }));
       supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: { id: 'g1', name: 'Updated Group' }, error: null }));
 
       const res = await request(app)
@@ -76,7 +72,7 @@ describe('Offerings Routes', () => {
     });
 
     it('should return 403 if offering not found', async () => {
-      supabase.from.mockReturnValueOnce(createChainable({ data: null, error: null }));
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: null, error: null }));
 
       const res = await request(app)
         .put('/api/offerings/o1/groups/g1')
@@ -86,7 +82,7 @@ describe('Offerings Routes', () => {
     });
 
     it('should return 400 if no valid fields', async () => {
-      supabase.from.mockReturnValueOnce(createChainable({ data: { id: 'o1' }, error: null }));
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: { id: 'o1' }, error: null }));
 
       const res = await request(app)
         .put('/api/offerings/o1/groups/g1')

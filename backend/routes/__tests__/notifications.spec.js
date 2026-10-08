@@ -2,12 +2,8 @@ const request = require('supertest');
 const express = require('express');
 
 jest.mock('../../config/database', () => ({
-  supabase: {
-    from: jest.fn()
-  },
-  supabaseAdmin: {
-    from: jest.fn()
-  }
+  supabase: { from: jest.fn() },
+  supabaseAdmin: { from: jest.fn() }
 }));
 
 jest.mock('../../middleware/validate', () => ({
@@ -69,7 +65,7 @@ describe('Notifications Routes', () => {
 
   describe('GET /api/notifications', () => {
     it('should return notifications with pagination', async () => {
-      supabase.from.mockReturnValueOnce(createChainable({
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({
         data: [{ id: 'n1', title: 'Test', is_read: false }],
         error: null,
         count: 1
@@ -87,7 +83,7 @@ describe('Notifications Routes', () => {
     });
 
     it('should use default pagination when no params', async () => {
-      supabase.from.mockReturnValueOnce(createChainable({
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({
         data: [],
         error: null,
         count: 0
@@ -104,7 +100,7 @@ describe('Notifications Routes', () => {
 
   describe('GET /api/notifications/unread-count', () => {
     it('should return unread count', async () => {
-      supabase.from.mockReturnValueOnce(createChainable({ count: 3, error: null }));
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({ count: 3, error: null }));
 
       const res = await request(app).get('/api/notifications/unread-count');
 
@@ -120,7 +116,7 @@ describe('Notifications Routes', () => {
           return Promise.reject(new Error('DB error')).then(onFulfilled, onRejected);
         }
       };
-      supabase.from.mockReturnValueOnce(errorChain);
+      supabaseAdmin.from.mockReturnValueOnce(errorChain);
 
       const res = await request(app).get('/api/notifications/unread-count');
 

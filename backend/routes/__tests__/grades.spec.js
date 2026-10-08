@@ -2,12 +2,8 @@ const request = require('supertest');
 const express = require('express');
 
 jest.mock('../../config/database', () => ({
-  supabase: {
-    from: jest.fn()
-  },
-  supabaseAdmin: {
-    from: jest.fn()
-  }
+  supabase: { from: jest.fn() },
+  supabaseAdmin: { from: jest.fn() }
 }));
 
 jest.mock('../../lib/logger', () => ({
@@ -83,7 +79,7 @@ describe('Grades Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(chainable);
+      supabaseAdmin.from.mockReturnValueOnce(chainable);
 
       const res = await request(app).get('/api/grades');
 
@@ -104,7 +100,7 @@ describe('Grades Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(chainable);
+      supabaseAdmin.from.mockReturnValueOnce(chainable);
 
       const res = await request(app)
         .get('/api/grades')
@@ -127,7 +123,7 @@ describe('Grades Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(chainable);
+      supabaseAdmin.from.mockReturnValueOnce(chainable);
 
       const res = await request(app)
         .get('/api/grades')
@@ -174,7 +170,7 @@ describe('Grades Routes', () => {
         })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(resolveChain)
         .mockReturnValueOnce(assessChain);
       supabaseAdmin.from
@@ -271,7 +267,7 @@ describe('Grades Routes', () => {
         })
       };
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(enrollChain)
         .mockReturnValueOnce(assessLookupChain);
       supabaseAdmin.from
@@ -348,12 +344,11 @@ describe('Grades Routes', () => {
         })
       };
 
-      supabase.from
-        .mockReturnValueOnce(fetchChain)
-        .mockReturnValueOnce(returnChain);
       supabaseAdmin.from
+        .mockReturnValueOnce(fetchChain)
         .mockReturnValueOnce(assessUpdateChain)
-        .mockReturnValueOnce(gradeUpdateChain);
+        .mockReturnValueOnce(gradeUpdateChain)
+        .mockReturnValueOnce(returnChain);
 
       const res = await request(app)
         .put('/api/grades/g1')
@@ -372,7 +367,7 @@ describe('Grades Routes', () => {
         single: jest.fn().mockResolvedValue({ data: null, error: null })
       };
 
-      supabase.from.mockReturnValueOnce(fetchChain);
+      supabaseAdmin.from.mockReturnValueOnce(fetchChain);
 
       const res = await request(app)
         .put('/api/grades/nonexistent')
@@ -407,7 +402,7 @@ describe('Grades Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(chainable);
+      supabaseAdmin.from.mockReturnValueOnce(chainable);
 
       const res = await request(app).get('/api/grades/stats');
 
@@ -443,7 +438,7 @@ describe('Grades Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(findChain);
+      supabaseAdmin.from.mockReturnValueOnce(findChain);
       supabaseAdmin.from.mockReturnValueOnce(deleteChain);
 
       const res = await request(app).delete('/api/grades/g1');
@@ -459,7 +454,7 @@ describe('Grades Routes', () => {
         single: jest.fn().mockResolvedValue({ data: null, error: null })
       };
 
-      supabase.from.mockReturnValueOnce(findChain);
+      supabaseAdmin.from.mockReturnValueOnce(findChain);
 
       const res = await request(app).delete('/api/grades/nonexistent');
 

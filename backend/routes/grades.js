@@ -1,5 +1,5 @@
 const express = require('express');
-const { supabase, supabaseAdmin } = require('../config/database');
+const { supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createGradeSchema, bulkGradeSchema, updateGradeSchema } = require('../middleware/validate');
 const logger = require('../lib/logger');
@@ -25,7 +25,7 @@ const getActorType = (req) => req.user.role === 'teacher' ? 'teacher' : 'assista
 const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
 
 async function verifyGradeOwnership(gradeId, teacherId) {
-  const { data: grade } = await supabase
+  const { data: grade } = await supabaseAdmin
     .from('grades')
     .select('id, assessment_id, assessment:assessments!inner(offering:offerings!inner(teacher_id))')
     .eq('id', gradeId)
@@ -48,7 +48,7 @@ function computeStatsSummary(scores) {
 const resolveEnrollmentAndOffering = async (student_id, subject_name, teacher_id) => {
   // Find enrollment for student in a group belonging to teacher for specific subject
   // We check against name_en, name_ar, or code
-  const { data: enrollments, error } = await supabase
+  const { data: enrollments, error } = await supabaseAdmin
     .from('enrollments')
     .select(`
           id, 
@@ -83,7 +83,7 @@ const getGrades = async (req, res) => {
     end_date
   } = req.validated.query;
 
-  let query = supabase
+  let query = supabaseAdmin
     .from('grades')
     .select(`
       id,
@@ -107,7 +107,7 @@ const getGrades = async (req, res) => {
           )
       )
     `)
-    .eq('assessments.offerings.teacher_id', req.user.id)
+    .eq('assessments.offerings.teacher_id', getEffectiveTeacherId(req))
     .order('date', { foreignTable: 'assessments', ascending: false });
 
   if (student_id) {
@@ -179,7 +179,7 @@ const createGrade = async (req, res) => {
     });
   }
 
-  const resolved = await resolveEnrollmentAndOffering(student_id, subject, req.user.id);
+  const resolved = await resolveEnrollmentAndOffering(student_id, subject, getEffectiveTeacherId(req));
   if (!resolved) {
     return res.status(404).json({ success: false, message: 'Student enrollment not found for this subject', messageAr: 'لم يتم العثور على تسجيل الطالب في هذاالمادة', code: 'NOT_FOUND' });
   }
@@ -187,7 +187,7 @@ const createGrade = async (req, res) => {
 
   const assessmentDate = date || new Date().toISOString().split('T')[0];
 
-  let { data: assessment } = await supabase
+  let { data: assessment } = await supabaseAdmin
     .from('assessments')
     .select('id')
     .eq('offering_id', offering_id)
@@ -249,7 +249,7 @@ const createBulkGrades = async (req, res) => {
 
   const results = [];
   const errors = [];
-  const teacherId = req.user.id;
+  const teacherId = getEffectiveTeacherId(req);
   const defaultDate = new Date().toISOString().split('T')[0];
 
   const uniquePairs = [...new Map(
@@ -315,7 +315,7 @@ const createBulkGrades = async (req, res) => {
   ).values()];
 
   const offeringIds = [...new Set(assessmentKeys.map(k => k.offering_id))];
-  const { data: existingAssessments } = await supabase
+  const { data: existingAssessments } = await supabaseAdmin
     .from('assessments')
     .select('id, offering_id, name, date')
     .in('offering_id', offeringIds);
@@ -414,7 +414,7 @@ const updateGrade = async (req, res) => {
     }
   });
 
-  const currentGrade = await verifyGradeOwnership(req.params.id, req.user.id);
+  const currentGrade = await verifyGradeOwnership(req.params.id, getEffectiveTeacherId(req));
 
   if (!currentGrade) {
     return res.status(404).json({ success: false, message: 'Grade not found or unauthorized', messageAr: 'لم يتم العثور على الدرجة أو غير مصرح', code: 'NOT_FOUND' });
@@ -438,7 +438,7 @@ const updateGrade = async (req, res) => {
     if (gradeUpdateError) throw gradeUpdateError;
   }
 
-  const { data: updatedGrade } = await supabase
+  const { data: updatedGrade } = await supabaseAdmin
     .from('grades')
     .select(`
           id, score, notes,
@@ -475,7 +475,7 @@ const updateGrade = async (req, res) => {
 // @route   DELETE /api/grades/:id
 // @access  Private
 const deleteGrade = async (req, res) => {
-  const grade = await verifyGradeOwnership(req.params.id, req.user.id);
+  const grade = await verifyGradeOwnership(req.params.id, getEffectiveTeacherId(req));
 
   if (!grade) {
     return res.status(404).json({ success: false, message: 'Grade not found or unauthorized', messageAr: 'لم يتم العثور على الدرجة أو غير مصرح', code: 'NOT_FOUND' });
@@ -500,7 +500,7 @@ const deleteGrade = async (req, res) => {
 const getGradeStats = async (req, res) => {
   const { subject, student_id } = req.query;
 
-  let query = supabase
+  let query = supabaseAdmin
     .from('grades')
     .select(`
       score,
@@ -516,7 +516,7 @@ const getGradeStats = async (req, res) => {
           student_id
       )
     `)
-    .eq('assessments.offerings.teacher_id', req.user.id);
+    .eq('assessments.offerings.teacher_id', getEffectiveTeacherId(req));
 
   if (student_id) {
     query = query.eq('enrollments.student_id', student_id);

@@ -2,12 +2,8 @@ const request = require('supertest');
 const express = require('express');
 
 jest.mock('../../config/database', () => ({
-  supabase: {
-    from: jest.fn()
-  },
-  supabaseAdmin: {
-    from: jest.fn()
-  }
+  supabase: { from: jest.fn() },
+  supabaseAdmin: { from: jest.fn() }
 }));
 
 jest.mock('../../lib/logger', () => ({
@@ -146,7 +142,7 @@ describe('Students Routes', () => {
         enrollments: []
       };
 
-      supabase.from.mockReturnValue(createChainable({ data: mockStudent, error: null }));
+      supabaseAdmin.from.mockReturnValue(createChainable({ data: mockStudent, error: null }));
 
       const res = await request(app).get('/api/students/s1');
 
@@ -159,7 +155,7 @@ describe('Students Routes', () => {
 
     it('should use correct select with attendance and grade joins', async () => {
       const chain = createChainable({ data: null, error: { message: 'Not found' } });
-      supabase.from.mockReturnValue(chain);
+      supabaseAdmin.from.mockReturnValue(chain);
 
       await request(app).get('/api/students/s1');
 
@@ -171,7 +167,7 @@ describe('Students Routes', () => {
     });
 
     it('should return 404 for non-existent student', async () => {
-      supabase.from.mockReturnValue(createChainable({ data: null, error: { message: 'Not found' } }));
+      supabaseAdmin.from.mockReturnValue(createChainable({ data: null, error: { message: 'Not found' } }));
 
       const res = await request(app).get('/api/students/nonexistent');
 
@@ -546,7 +542,7 @@ describe('Students Routes', () => {
         error: null
       });
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(attendanceChain)
         .mockReturnValueOnce(gradesChain);
 
@@ -577,7 +573,7 @@ describe('Students Routes', () => {
       const attendanceChain = createChainable({ data: [], error: null });
       const gradesChain = createChainable({ data: [], error: null });
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(attendanceChain)
         .mockReturnValueOnce(gradesChain);
 
@@ -622,7 +618,7 @@ describe('Students Routes', () => {
         error: null
       });
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(attendanceChain)
         .mockReturnValueOnce(gradesChain);
 
@@ -654,7 +650,7 @@ describe('Students Routes', () => {
         error: null
       });
 
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(attendanceChain)
         .mockReturnValueOnce(gradesChain);
 

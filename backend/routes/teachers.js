@@ -1,5 +1,5 @@
 const express = require('express');
-const { supabase } = require('../config/database');
+const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { z } = require('zod');
 const { validate, updateProfileSchema, updateSettingsSchema } = require('../middleware/validate');
@@ -12,7 +12,7 @@ const router = express.Router();
 // @route   GET /api/teachers/profile
 // @access  Private
 const getProfile = async (req, res) => {
-  const { data: teacher, error } = await supabase
+  const { data: teacher, error } = await supabaseAdmin
     .from('teachers')
     .select('id, email, name, phone, business_name, bio, subjects, address, city, country, timezone, whatsapp_number, telegram_username, preferred_language, role, is_active, created_at, updated_at')
     .eq('id', req.user.id)
@@ -20,7 +20,7 @@ const getProfile = async (req, res) => {
 
   if (error) throw error;
 
-  const { data: studentCount } = await supabase
+  const { data: studentCount } = await supabaseAdmin
     .rpc('teacher_student_count', { p_teacher_id: req.user.id });
 
   const teacherProfile = {
@@ -40,14 +40,14 @@ const getProfile = async (req, res) => {
 const getDashboardStats = async (req, res) => {
   const teacherId = req.user.id;
 
-  const { data: statsJson, error: rpcError } = await supabase
+  const { data: statsJson, error: rpcError } = await supabaseAdmin
     .rpc('dashboard_stats', { p_teacher_id: teacherId });
 
   if (rpcError) throw rpcError;
 
   const stats = typeof statsJson === 'string' ? JSON.parse(statsJson) : statsJson;
 
-  const { data: recentGrades } = await supabase
+  const { data: recentGrades } = await supabaseAdmin
     .from('grades')
     .select(`
       score,
@@ -64,7 +64,7 @@ const getDashboardStats = async (req, res) => {
     .order('assessments.date', { ascending: false })
     .limit(5);
 
-  const { data: recentMessages } = await supabase
+  const { data: recentMessages } = await supabaseAdmin
     .from('messages')
     .select(`
       *,
@@ -103,7 +103,7 @@ const getDashboardStats = async (req, res) => {
 // @route   GET /api/teachers/settings
 // @access  Private
 const getSettings = async (req, res) => {
-  const { data: settings, error } = await supabase
+  const { data: settings, error } = await supabaseAdmin
     .from('teacher_settings')
     .select('notifications, theme, language')
     .eq('teacher_id', req.user.id)
@@ -138,7 +138,7 @@ const updateSettings = async (req, res) => {
     return res.status(400).json({ success: false, message: 'No settings provided', messageAr: 'لم يتم تقديم إعدادات', code: 'VALIDATION_ERROR' });
   }
 
-  const { data: updatedSettings, error } = await supabase
+  const { data: updatedSettings, error } = await supabaseAdmin
     .from('teacher_settings')
     .upsert({
       teacher_id: teacherId,
@@ -179,7 +179,7 @@ const updateNotificationPreferences = async (req, res) => {
   const teacherId = req.user.id;
   const prefs = req.validated.body;
 
-  const { data: existing } = await supabase
+  const { data: existing } = await supabaseAdmin
     .from('teacher_settings')
     .select('notification_preferences')
     .eq('teacher_id', teacherId)
@@ -188,7 +188,7 @@ const updateNotificationPreferences = async (req, res) => {
   const currentPrefs = existing?.notification_preferences || {};
   const updatedPrefs = { ...currentPrefs, ...prefs };
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('teacher_settings')
     .upsert({
       teacher_id: teacherId,

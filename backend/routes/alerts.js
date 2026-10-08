@@ -1,6 +1,6 @@
 const express = require('express');
 const { z } = require('zod');
-const { supabase, supabaseAdmin } = require('../config/database');
+const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -40,7 +40,7 @@ const getAlertsSchema = z.object({
 
 const getRules = async (req, res) => {
   const teacherId = req.user.teacherId || req.user.id;
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('alert_rules')
     .select('*')
     .eq('teacher_id', teacherId)
@@ -91,7 +91,7 @@ const deleteRule = async (req, res) => {
 const toggleRule = async (req, res) => {
   const teacherId = req.user.teacherId || req.user.id;
   const { id } = req.validated.params;
-  const { data: rule } = await supabase
+  const { data: rule } = await supabaseAdmin
     .from('alert_rules').select('is_enabled')
     .eq('id', id).eq('teacher_id', teacherId).single();
   if (!rule) return res.status(404).json({ success: false, message: 'Alert rule not found', messageAr: 'لم يتم العثور على قاعدة التنبيه', code: 'NOT_FOUND' });
@@ -107,7 +107,7 @@ const getAlerts = async (req, res) => {
   const teacherId = req.user.teacherId || req.user.id;
   const { page, limit, severity, alert_type, unread_only } = req.validated.query;
   const offset = (page - 1) * limit;
-  let query = supabase
+  let query = supabaseAdmin
     .from('alerts')
     .select('*, students(name, student_id)', { count: 'exact' })
     .eq('teacher_id', teacherId);

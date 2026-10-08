@@ -2,12 +2,8 @@ const request = require('supertest');
 const express = require('express');
 
 jest.mock('../../config/database', () => ({
-  supabase: {
-    from: jest.fn()
-  },
-  supabaseAdmin: {
-    from: jest.fn()
-  }
+  supabase: { from: jest.fn() },
+  supabaseAdmin: { from: jest.fn() }
 }));
 
 jest.mock('../../middleware/validate', () => ({
@@ -40,7 +36,7 @@ jest.mock('../../lib/aiService', () => ({
 
 jest.mock('../../lib/jobQueue', () => ({
   createJob: jest.fn().mockReturnValue('job-123'),
-  getJob: jest.fn().mockReturnValue({ id: 'job-123', status: 'completed' })
+  getJob: jest.fn().mockReturnValue({ id: 'job-123', status: 'completed', payload: { teacherId: 'teacher-1' } })
 }));
 
 jest.mock('../../lib/whatsappQuery', () => ({
@@ -90,7 +86,7 @@ describe('Reports Routes', () => {
   describe('POST /api/reports/generate-comment', () => {
     it('should generate a comment successfully', async () => {
       verifyStudentAccess.mockResolvedValue({ id: 'e1', student_id: 's1', group_id: 'g1', status: 'active' });
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({ data: { id: 's1', name: 'Ahmed' }, error: null }))
         .mockReturnValueOnce(createChainable({ data: { name: 'Teacher', business_name: 'School', preferred_language: 'en' }, error: null }));
       supabaseAdmin.from
@@ -108,7 +104,7 @@ describe('Reports Routes', () => {
 
   describe('GET /api/reports/drafts', () => {
     it('should return drafts list', async () => {
-      supabase.from.mockReturnValueOnce(createChainable({
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({
         data: [{ id: 'd1', draft_text: 'Test draft', students: { name: 'Ahmed' } }],
         error: null,
         count: 1
@@ -140,7 +136,7 @@ describe('Reports Routes', () => {
 
   describe('POST /api/reports/drafts/:id/approve', () => {
     it('should approve and send draft', async () => {
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({ data: { id: 'd1', draft_text: 'Report', student_id: 's1', students: { name: 'Ahmed', id: 's1' } }, error: null }))
         .mockReturnValueOnce(createChainable({ data: [{ parents: { id: 'p1', name: 'Father' } }], error: null }));
       supabaseAdmin.from
@@ -183,7 +179,7 @@ describe('Reports Routes', () => {
     it('should return latest digest', async () => {
       const chain = createChainable({ data: { id: 'd1', week_start: '2025-01-01' }, error: null });
       chain.limit = jest.fn().mockReturnValue(chain);
-      supabase.from.mockReturnValueOnce(chain);
+      supabaseAdmin.from.mockReturnValueOnce(chain);
 
       const res = await request(app).get('/api/reports/weekly-digest');
 
@@ -194,7 +190,7 @@ describe('Reports Routes', () => {
 
   describe('GET /api/reports/weekly-digest/:weekStart', () => {
     it('should return digest by week', async () => {
-      supabase.from.mockReturnValueOnce(createChainable({ data: { id: 'd1', week_start: '2025-01-01' }, error: null }));
+      supabaseAdmin.from.mockReturnValueOnce(createChainable({ data: { id: 'd1', week_start: '2025-01-01' }, error: null }));
 
       const res = await request(app).get('/api/reports/weekly-digest/2025-01-01');
 

@@ -1,8 +1,8 @@
 const express = require('express');
 const { z } = require('zod');
 const crypto = require('crypto');
-const { supabase, supabaseAdmin } = require('../config/database');
-const { authenticateToken } = require('../middleware/auth');
+const { supabaseAdmin } = require('../config/database');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
 const { logAudit } = require('../lib/auditLog');
@@ -74,7 +74,7 @@ const leaveTeacherSchema = z.object({
 // --- Helpers ---
 
 async function getTeacherTier(teacherId) {
-  const { data } = await supabase
+  const { data } = await supabaseAdmin
     .from('teachers')
     .select('subscription_tier')
     .eq('id', teacherId)
@@ -83,7 +83,7 @@ async function getTeacherTier(teacherId) {
 }
 
 async function countPendingInvites(teacherId) {
-  const { count } = await supabase
+  const { count } = await supabaseAdmin
     .from('assistant_invites')
     .select('id', { count: 'exact', head: true })
     .eq('teacher_id', teacherId)
@@ -92,7 +92,7 @@ async function countPendingInvites(teacherId) {
 }
 
 async function getAssistantLink(id, teacherId) {
-  const { data: link, error: fetchError } = await supabase
+  const { data: link, error: fetchError } = await supabaseAdmin
     .from('teacher_assistants')
     .select('id, teacher_id')
     .eq('id', id)
@@ -106,8 +106,8 @@ async function checkInviteLimits(teacherId, email) {
   const [tier, pendingCount, existingInvite, existingUser] = await Promise.all([
     getTeacherTier(teacherId),
     countPendingInvites(teacherId),
-    email ? supabase.from('assistant_invites').select('id').eq('teacher_id', teacherId).eq('email', email.toLowerCase()).eq('status', 'pending').maybeSingle().then(r => r.data) : null,
-    email ? supabase.from('teachers').select('id').eq('email', email.toLowerCase()).maybeSingle().then(r => r.data) : null,
+    email ? supabaseAdmin.from('assistant_invites').select('id').eq('teacher_id', teacherId).eq('email', email.toLowerCase()).eq('status', 'pending').maybeSingle().then(r => r.data) : null,
+    email ? supabaseAdmin.from('teachers').select('id').eq('email', email.toLowerCase()).maybeSingle().then(r => r.data) : null,
   ]);
 
   const limit = INVITE_LIMITS[tier] || 0;
@@ -116,7 +116,7 @@ async function checkInviteLimits(teacherId, email) {
   if (existingInvite) return { error: true, status: 409, code: 'INVITE_EXISTS', messageKey: 'inviteExists' };
 
   if (existingUser) {
-    const { data: existingLink } = await supabase
+    const { data: existingLink } = await supabaseAdmin
       .from('teacher_assistants').select('id')
       .eq('teacher_id', teacherId).eq('assistant_id', existingUser.id).eq('status', 'active')
       .maybeSingle();
@@ -183,7 +183,8 @@ const inviteAssistant = async (req, res) => {
   if (inviteError) throw inviteError;
 
   // Deliver via email/WhatsApp
-  const teacherName = (await supabaseAdmin.from('teachers').select('name').eq('id', teacherId).single().catch(() => ({ data: null })))?.data?.name || 'Your teacher';
+  const { data: teacherRow } = await supabaseAdmin.from('teachers').select('name').eq('id', teacherId).maybeSingle();
+  const teacherName = teacherRow?.name || 'Your teacher';
   const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invite/${token}`;
   await deliverInvite(deliveryMethod, email, phone, teacherId, inviteLink, teacherName, invite.id);
 
@@ -207,7 +208,7 @@ const inviteAssistant = async (req, res) => {
 const listInvites = async (req, res) => {
   const teacherId = req.user.id;
 
-  const { data: invites, error } = await supabase
+  const { data: invites, error } = await supabaseAdmin
     .from('assistant_invites')
     .select('id, email, permissions, status, created_at, expires_at')
     .eq('teacher_id', teacherId)
@@ -225,7 +226,7 @@ const acceptInvite = async (req, res) => {
   const assistantId = req.user.id;
 
   // Find valid invite
-  const { data: invite, error: inviteError } = await supabase
+  const { data: invite, error: inviteError } = await supabaseAdmin
     .from('assistant_invites')
     .select('*')
     .eq('token', token)
@@ -234,6 +235,11 @@ const acceptInvite = async (req, res) => {
 
   if (inviteError || !invite) {
     return res.status(404).json({ success: false, message: 'Invalid or expired invitation.', messageAr: 'دعوة غير صالحة أو منتهية الصلاحية.', code: 'INVALID_INVITE' });
+  }
+
+  // The invite is bound to one email. A different logged-in user cannot take it.
+  if (invite.email && req.user.email && invite.email.toLowerCase() !== req.user.email.toLowerCase()) {
+    return res.status(403).json({ success: false, message: 'This invitation was sent to a different email address.', messageAr: 'تم إرسال هذه الدعوة إلى بريد إلكتروني آخر.', code: 'INVITE_EMAIL_MISMATCH' });
   }
 
   // Check expiry
@@ -247,7 +253,7 @@ const acceptInvite = async (req, res) => {
   }
 
   // Check if already an active assistant for this teacher
-  const { data: existingLink } = await supabase
+  const { data: existingLink } = await supabaseAdmin
     .from('teacher_assistants')
     .select('id')
     .eq('teacher_id', invite.teacher_id)
@@ -301,7 +307,7 @@ const acceptInvite = async (req, res) => {
 const listAssistants = async (req, res) => {
   const teacherId = req.user.id;
 
-  const { data: assistants, error } = await supabase
+  const { data: assistants, error } = await supabaseAdmin
     .from('teacher_assistants')
     .select('id, status, permissions, assistant_id, created_at, updated_at')
     .eq('teacher_id', teacherId)
@@ -312,7 +318,7 @@ const listAssistants = async (req, res) => {
   const assistantIds = assistants.map(a => a.assistant_id);
   let teacherMap = {};
   if (assistantIds.length > 0) {
-    const { data: teachers } = await supabase
+    const { data: teachers } = await supabaseAdmin
       .from('teachers')
       .select('id, name, email')
       .in('id', assistantIds);
@@ -451,7 +457,7 @@ const leaveTeacher = async (req, res) => {
 
   const assistantId = req.user.id;
 
-  const { data: link, error: fetchError } = await supabase
+  const { data: link, error: fetchError } = await supabaseAdmin
     .from('teacher_assistants')
     .select('id, assistant_id')
     .eq('teacher_id', teacher_id)
@@ -492,7 +498,7 @@ const leaveTeacher = async (req, res) => {
 const getInviteByToken = async (req, res) => {
   const { token } = req.params;
 
-  const { data: invite, error } = await supabase
+  const { data: invite, error } = await supabaseAdmin
     .from('assistant_invites')
     .select('id, email, phone, permissions, status, expires_at, created_at')
     .eq('token', token)
@@ -511,7 +517,7 @@ const getInviteByToken = async (req, res) => {
   }
 
   // Get teacher name
-  const { data: teacher } = await supabase
+  const { data: teacher } = await supabaseAdmin
     .from('teachers')
     .select('name')
     .eq('id', invite.teacher_id)
@@ -617,7 +623,7 @@ const getInviteByToken = async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.post('/invite', authenticateToken, validate(inviteSchema), asyncHandler(inviteAssistant));
+router.post('/invite', authenticateToken, requireRole('teacher'), validate(inviteSchema), asyncHandler(inviteAssistant));
 /**
  * @openapi
  * /api/assistants/invites:
@@ -655,7 +661,7 @@ router.post('/invite', authenticateToken, validate(inviteSchema), asyncHandler(i
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/invites', authenticateToken, asyncHandler(listInvites));
+router.get('/invites', authenticateToken, requireRole('teacher'), asyncHandler(listInvites));
 /**
  * @openapi
  * /api/assistants/invites/{token}:
@@ -829,7 +835,7 @@ router.post('/accept', authenticateToken, validate(acceptSchema), asyncHandler(a
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.get('/', authenticateToken, asyncHandler(listAssistants));
+router.get('/', authenticateToken, requireRole('teacher'), asyncHandler(listAssistants));
 /**
  * @openapi
  * /api/assistants/{id}/permissions:
@@ -905,7 +911,7 @@ router.get('/', authenticateToken, asyncHandler(listAssistants));
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/:id/permissions', authenticateToken, validate(updatePermissionsSchema), asyncHandler(updatePermissions));
+router.put('/:id/permissions', authenticateToken, requireRole('teacher'), validate(updatePermissionsSchema), asyncHandler(updatePermissions));
 /**
  * @openapi
  * /api/assistants/{id}/status:
@@ -980,7 +986,7 @@ router.put('/:id/permissions', authenticateToken, validate(updatePermissionsSche
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.put('/:id/status', authenticateToken, validate(updateStatusSchema), asyncHandler(updateStatus));
+router.put('/:id/status', authenticateToken, requireRole('teacher'), validate(updateStatusSchema), asyncHandler(updateStatus));
 /**
  * @openapi
  * /api/assistants/{id}:
@@ -1030,7 +1036,7 @@ router.put('/:id/status', authenticateToken, validate(updateStatusSchema), async
  *             schema:
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
-router.delete('/:id', authenticateToken, validate(removeParamsSchema), asyncHandler(removeAssistant));
+router.delete('/:id', authenticateToken, requireRole('teacher'), validate(removeParamsSchema), asyncHandler(removeAssistant));
 /**
  * @openapi
  * /api/assistants/leave:

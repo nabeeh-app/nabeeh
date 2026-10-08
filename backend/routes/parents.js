@@ -1,5 +1,7 @@
 const express = require('express');
-const { supabase, supabaseAdmin } = require('../config/database');
+const { supabaseAdmin } = require('../config/database');
+
+const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
 const { authenticateToken } = require('../middleware/auth');
 const { validate, createParentSchema, updateParentSchema } = require('../middleware/validate');
 const { verifyStudentAccess, getTeacherEnrollments } = require('../lib/enrollmentChain');
@@ -13,7 +15,7 @@ const router = express.Router();
 // @access  Private
 const getParents = async (req, res) => {
   const { student_id, search } = req.query;
-  const teacher_id = req.user.id;
+  const teacher_id = getEffectiveTeacherId(req);
 
   const enrollments = await getTeacherEnrollments(teacher_id);
   const studentIds = new Set(enrollments.map(e => e.student_id));
@@ -22,7 +24,7 @@ const getParents = async (req, res) => {
     return res.status(200).json({ success: true, data: [] });
   }
 
-  let parentQuery = supabase
+  let parentQuery = supabaseAdmin
     .from('parents')
     .select(`
           *,
@@ -62,7 +64,7 @@ const getParents = async (req, res) => {
 // @route   GET /api/parents/:id
 // @access  Private
 const getParent = async (req, res) => {
-  const { data: parent, error } = await supabase
+  const { data: parent, error } = await supabaseAdmin
     .from('parents')
     .select(`
       *,
@@ -75,7 +77,7 @@ const getParent = async (req, res) => {
     return res.status(404).json({ success: false, message: 'Parent not found', messageAr: 'لم يتم العثور على ولي الأمر', code: 'NOT_FOUND' });
   }
 
-  const enrollment = await verifyStudentAccess(parent.student_id, req.user.id);
+  const enrollment = await verifyStudentAccess(parent.student_id, getEffectiveTeacherId(req));
   if (!enrollment) {
     return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
   }
@@ -106,7 +108,7 @@ const createParent = async (req, res) => {
     });
   }
 
-  const enrollment = await verifyStudentAccess(student_id, req.user.id);
+  const enrollment = await verifyStudentAccess(student_id, getEffectiveTeacherId(req));
   if (!enrollment) {
     return res.status(404).json({
       success: false,
@@ -165,7 +167,7 @@ const updateParent = async (req, res) => {
     }
   });
 
-  const { data: accessCheck } = await supabase
+  const { data: accessCheck } = await supabaseAdmin
     .from('parents')
     .select('student_id')
     .eq('id', req.params.id)
@@ -175,7 +177,7 @@ const updateParent = async (req, res) => {
     return res.status(404).json({ success: false, message: 'Parent not found', messageAr: 'لم يتم العثور على ولي الأمر', code: 'NOT_FOUND' });
   }
 
-  const enrollment = await verifyStudentAccess(accessCheck.student_id, req.user.id);
+  const enrollment = await verifyStudentAccess(accessCheck.student_id, getEffectiveTeacherId(req));
   if (!enrollment) {
     return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
   }
@@ -209,7 +211,7 @@ const updateParent = async (req, res) => {
 // @route   DELETE /api/parents/:id
 // @access  Private
 const deleteParent = async (req, res) => {
-  const { data: parent } = await supabase
+  const { data: parent } = await supabaseAdmin
     .from('parents')
     .select('student_id')
     .eq('id', req.params.id)
@@ -224,7 +226,7 @@ const deleteParent = async (req, res) => {
     });
   }
 
-  const enrollment = await verifyStudentAccess(parent.student_id, req.user.id);
+  const enrollment = await verifyStudentAccess(parent.student_id, getEffectiveTeacherId(req));
   if (!enrollment) {
     return res.status(403).json({
       success: false,

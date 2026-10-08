@@ -84,7 +84,7 @@ describe('Attendance Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(chainable);
+      supabaseAdmin.from.mockReturnValueOnce(chainable);
 
       const res = await request(app)
         .get('/api/attendance')
@@ -108,7 +108,7 @@ describe('Attendance Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(chainable);
+      supabaseAdmin.from.mockReturnValueOnce(chainable);
 
       const res = await request(app)
         .get('/api/attendance')
@@ -149,7 +149,7 @@ describe('Attendance Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(enrollChain);
+      supabaseAdmin.from.mockReturnValueOnce(enrollChain);
       supabaseAdmin.from.mockReturnValueOnce(upsertChain);
 
       const res = await request(app)
@@ -186,7 +186,7 @@ describe('Attendance Routes', () => {
 
   describe('GET /api/attendance/summary', () => {
     it('should calculate attendance_rate as present/total', async () => {
-      supabase.rpc.mockReturnValueOnce({
+      supabaseAdmin.rpc.mockReturnValueOnce({
         single: jest.fn().mockResolvedValue({
           data: {
             total_sessions: 4,
@@ -215,7 +215,7 @@ describe('Attendance Routes', () => {
     });
 
     it('should return 0 attendance_rate when no records', async () => {
-      supabase.rpc.mockReturnValueOnce({
+      supabaseAdmin.rpc.mockReturnValueOnce({
         single: jest.fn().mockResolvedValue({
           data: {
             total_sessions: 0,
@@ -265,7 +265,7 @@ describe('Attendance Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(fetchChain);
+      supabaseAdmin.from.mockReturnValueOnce(fetchChain);
       supabaseAdmin.from.mockReturnValueOnce(updateChain);
 
       const res = await request(app)
@@ -284,7 +284,7 @@ describe('Attendance Routes', () => {
         single: jest.fn().mockResolvedValue({ data: null, error: null })
       };
 
-      supabase.from.mockReturnValueOnce(fetchChain);
+      supabaseAdmin.from.mockReturnValueOnce(fetchChain);
 
       const res = await request(app)
         .patch('/api/attendance/nonexistent')
@@ -307,7 +307,7 @@ describe('Attendance Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(fetchChain);
+      supabaseAdmin.from.mockReturnValueOnce(fetchChain);
 
       const res = await request(app)
         .patch('/api/attendance/a1')
@@ -317,6 +317,23 @@ describe('Attendance Routes', () => {
       expect(res.body.success).toBe(false);
     });
   });
+
+function mockLockOwnership() {
+  const sessionChain = {
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    single: jest.fn().mockResolvedValue({ data: { id: 'sess-1' }, error: null })
+  };
+  const enrollmentStub = {
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    maybeSingle: jest.fn().mockResolvedValue({ data: { id: 'enr-1' }, error: null })
+  };
+  supabaseAdmin.from.mockReturnValueOnce(sessionChain);
+  supabaseAdmin.from.mockReturnValueOnce(enrollmentStub);
+}
+
 
   describe('POST /api/attendance/lock', () => {
     it('should acquire a lock when no existing lock', async () => {
@@ -346,7 +363,8 @@ describe('Attendance Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(noLockChain);
+      mockLockOwnership();
+      supabaseAdmin.from.mockReturnValueOnce(noLockChain);
       supabaseAdmin.from.mockReturnValueOnce(insertChain);
 
       const res = await request(app)
@@ -373,7 +391,8 @@ describe('Attendance Routes', () => {
         single: jest.fn().mockResolvedValue({ data: existingLock, error: null })
       };
 
-      supabase.from.mockReturnValueOnce(lockChain);
+      mockLockOwnership();
+      supabaseAdmin.from.mockReturnValueOnce(lockChain);
 
       const res = await request(app)
         .post('/api/attendance/lock')
@@ -426,7 +445,8 @@ describe('Attendance Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(lockCheckChain);
+      mockLockOwnership();
+      supabaseAdmin.from.mockReturnValueOnce(lockCheckChain);
       supabaseAdmin.from
         .mockReturnValueOnce(deleteChain)
         .mockReturnValueOnce(insertChain);
@@ -471,6 +491,7 @@ describe('Attendance Routes', () => {
         })
       };
 
+      mockLockOwnership();
       supabaseAdmin.from.mockReturnValueOnce(deleteChain);
 
       const res = await request(app)
@@ -500,7 +521,8 @@ describe('Attendance Routes', () => {
         single: jest.fn().mockResolvedValue({ data: null, error: null })
       };
 
-      supabase.from.mockReturnValueOnce(chain);
+      mockLockOwnership();
+      supabaseAdmin.from.mockReturnValueOnce(chain);
 
       const res = await request(app)
         .get('/api/attendance/lock/sess-1/stu-1');
@@ -525,7 +547,8 @@ describe('Attendance Routes', () => {
         single: jest.fn().mockResolvedValue({ data: activeLock, error: null })
       };
 
-      supabase.from.mockReturnValueOnce(chain);
+      mockLockOwnership();
+      supabaseAdmin.from.mockReturnValueOnce(chain);
 
       const res = await request(app)
         .get('/api/attendance/lock/sess-1/stu-1');
@@ -557,7 +580,8 @@ describe('Attendance Routes', () => {
         })
       };
 
-      supabase.from.mockReturnValueOnce(fetchChain);
+      mockLockOwnership();
+      supabaseAdmin.from.mockReturnValueOnce(fetchChain);
       supabaseAdmin.from.mockReturnValueOnce(deleteChain);
 
       const res = await request(app)

@@ -2,12 +2,8 @@ const request = require('supertest');
 const express = require('express');
 
 jest.mock('../../config/database', () => ({
-  supabase: {
-    from: jest.fn()
-  },
-  supabaseAdmin: {
-    from: jest.fn()
-  }
+  supabase: { from: jest.fn() },
+  supabaseAdmin: { from: jest.fn() }
 }));
 
 jest.mock('../../lib/logger', () => ({
@@ -64,7 +60,7 @@ describe('Alerts Routes', () => {
         { id: 'r1', alert_type: 'attendance_threshold', threshold_value: 70, comparison: 'lt', notification_method: 'in_app' }
       ];
 
-      supabase.from.mockReturnValue(createChainable({ data: mockRules, error: null }));
+      supabaseAdmin.from.mockReturnValue(createChainable({ data: mockRules, error: null }));
 
       const res = await request(app).get('/api/alerts/rules');
 
@@ -74,7 +70,7 @@ describe('Alerts Routes', () => {
     });
 
     it('should return empty array when no rules', async () => {
-      supabase.from.mockReturnValue(createChainable({ data: [], error: null }));
+      supabaseAdmin.from.mockReturnValue(createChainable({ data: [], error: null }));
 
       const res = await request(app).get('/api/alerts/rules');
 
@@ -83,7 +79,7 @@ describe('Alerts Routes', () => {
     });
 
     it('should return 500 on database error', async () => {
-      supabase.from.mockReturnValue(createChainable({ data: null, error: { message: 'DB error' } }));
+      supabaseAdmin.from.mockReturnValue(createChainable({ data: null, error: { message: 'DB error' } }));
 
       const res = await request(app).get('/api/alerts/rules');
 
@@ -209,7 +205,7 @@ describe('Alerts Routes', () => {
 
   describe('PUT /api/alerts/rules/:id/toggle', () => {
     it('should toggle alert rule enabled state', async () => {
-      supabase.from.mockReturnValueOnce({
+      supabaseAdmin.from.mockReturnValueOnce({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: { is_enabled: true }, error: null })
@@ -232,7 +228,7 @@ describe('Alerts Routes', () => {
     });
 
     it('should toggle from disabled to enabled', async () => {
-      supabase.from.mockReturnValueOnce({
+      supabaseAdmin.from.mockReturnValueOnce({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: { is_enabled: false }, error: null })
@@ -254,7 +250,7 @@ describe('Alerts Routes', () => {
     });
 
     it('should return 404 if rule not found', async () => {
-      supabase.from.mockReturnValueOnce({
+      supabaseAdmin.from.mockReturnValueOnce({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: null, error: null })
@@ -272,7 +268,7 @@ describe('Alerts Routes', () => {
         { id: 'a1', severity: 'high', alert_type: 'attendance_threshold', is_read: false, students: { name: 'Ahmed', student_id: 'ST-001' } }
       ];
 
-      supabase.from.mockReturnValue({
+      supabaseAdmin.from.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
@@ -297,7 +293,7 @@ describe('Alerts Routes', () => {
         range: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => resolve({ data: [], error: null, count: 0 }))
       };
-      supabase.from.mockReturnValue(chain);
+      supabaseAdmin.from.mockReturnValue(chain);
 
       await request(app).get('/api/alerts').query({ severity: 'high' });
 
@@ -312,7 +308,7 @@ describe('Alerts Routes', () => {
         range: jest.fn().mockReturnThis(),
         then: jest.fn().mockImplementation((resolve) => resolve({ data: [], error: null, count: 0 }))
       };
-      supabase.from.mockReturnValue(chain);
+      supabaseAdmin.from.mockReturnValue(chain);
 
       await request(app).get('/api/alerts').query({ unread_only: 'true' });
 
@@ -324,7 +320,7 @@ describe('Alerts Routes', () => {
         { id: 'a1', severity: 'high', students: { name: 'Ahmed', student_id: 'ST-001' } }
       ];
 
-      supabase.from.mockReturnValue({
+      supabaseAdmin.from.mockReturnValue({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),

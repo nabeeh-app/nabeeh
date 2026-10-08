@@ -2,12 +2,8 @@ const request = require('supertest');
 const express = require('express');
 
 jest.mock('../../config/database', () => ({
-  supabase: {
-    from: jest.fn()
-  },
-  supabaseAdmin: {
-    from: jest.fn()
-  }
+  supabase: { from: jest.fn() },
+  supabaseAdmin: { from: jest.fn() }
 }));
 
 jest.mock('../../middleware/validate', () => ({
@@ -21,7 +17,8 @@ jest.mock('../../middleware/auth', () => ({
   authenticateToken: (req, res, next) => {
     req.user = { id: 'teacher-1', email: 'test@example.com', role: 'teacher' };
     next();
-  }
+  },
+  requireRole: () => (req, res, next) => next()
 }));
 
 jest.mock('../../lib/logger', () => ({
@@ -79,7 +76,7 @@ describe('Assistants Routes', () => {
 
   describe('POST /api/assistants/invite', () => {
     it('should return 403 if tier is unsupported', async () => {
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({ data: { subscription_tier: 'enterprise' }, error: null }))
         .mockReturnValueOnce(createChainable({ count: 0, error: null }))
         .mockReturnValueOnce(createChainable({ data: null }))
@@ -95,7 +92,7 @@ describe('Assistants Routes', () => {
     });
 
     it('should return 403 if invite limit reached', async () => {
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({ data: { subscription_tier: 'basic' }, error: null }))
         .mockReturnValueOnce(createChainable({ count: 5, error: null }))
         .mockReturnValueOnce(createChainable({ data: null }))
@@ -111,7 +108,7 @@ describe('Assistants Routes', () => {
     });
 
     it('should return 409 if pending invite already exists', async () => {
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({ data: { subscription_tier: 'basic' }, error: null }))
         .mockReturnValueOnce(createChainable({ count: 0, error: null }))
         .mockReturnValueOnce(createChainable({ data: { id: 'existing' } }))
@@ -126,7 +123,7 @@ describe('Assistants Routes', () => {
     });
 
     it('should return 409 if user is already an assistant', async () => {
-      supabase.from
+      supabaseAdmin.from
         .mockReturnValueOnce(createChainable({ data: { subscription_tier: 'basic' }, error: null }))
         .mockReturnValueOnce(createChainable({ count: 0, error: null }))
         .mockReturnValueOnce(createChainable({ data: null }))

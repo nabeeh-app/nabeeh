@@ -1,6 +1,6 @@
 const express = require('express');
 const { z } = require('zod');
-const { supabase, supabaseAdmin } = require('../config/database');
+const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -48,7 +48,7 @@ const generateComment = async (req, res) => {
   const teacherId = getTeacherId(req);
   const { student_id, group_id } = req.validated.body;
 
-  const { data: student } = await supabase
+  const { data: student } = await supabaseAdmin
     .from('students').select('id, name').eq('id', student_id).single();
   if (!student) return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
 
@@ -57,7 +57,7 @@ const generateComment = async (req, res) => {
     return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
   }
 
-  const { data: teacher } = await supabase
+  const { data: teacher } = await supabaseAdmin
     .from('teachers').select('name, business_name, preferred_language').eq('id', teacherId).single();
 
   const gradesResult = await whatsappQuery.getStudentGrades(student_id);
@@ -105,7 +105,7 @@ const getDrafts = async (req, res) => {
   const { page, limit, status } = req.validated.query;
   const offset = (page - 1) * limit;
 
-  let query = supabase
+  let query = supabaseAdmin
     .from('report_drafts')
     .select('*, students(name, student_id)', { count: 'exact' })
     .eq('teacher_id', teacherId);
@@ -153,7 +153,7 @@ const approveDraft = async (req, res) => {
   const teacherId = getTeacherId(req);
   const { id } = req.validated.params;
 
-  const { data: draft } = await supabase
+  const { data: draft } = await supabaseAdmin
     .from('report_drafts')
     .select('*, students(name, id)')
     .eq('id', id).eq('teacher_id', teacherId).single();
@@ -163,7 +163,7 @@ const approveDraft = async (req, res) => {
   const finalText = draft.edited_text || draft.draft_text;
 
   // Find student's parent
-  const { data: parentLink } = await supabase
+  const { data: parentLink } = await supabaseAdmin
     .from('student_parents')
     .select('parents(id, name, phone)')
     .eq('student_id', draft.student_id)
@@ -238,7 +238,7 @@ const bulkGenerate = async (req, res) => {
 
 const getLatestDigest = async (req, res) => {
   const teacherId = getTeacherId(req);
-  const { data } = await supabase
+  const { data } = await supabaseAdmin
     .from('weekly_digests')
     .select('*')
     .eq('teacher_id', teacherId)
@@ -252,7 +252,7 @@ const getLatestDigest = async (req, res) => {
 const getDigestByWeek = async (req, res) => {
   const teacherId = getTeacherId(req);
   const { weekStart } = req.params;
-  const { data } = await supabase
+  const { data } = await supabaseAdmin
     .from('weekly_digests')
     .select('*')
     .eq('teacher_id', teacherId)
@@ -771,7 +771,7 @@ router.get('/weekly-digest/:weekStart', authenticateToken, asyncHandler(getDiges
  */
 router.get('/jobs/:jobId', authenticateToken, (req, res) => {
   const job = getJob(req.params.jobId);
-  if (!job) return res.status(404).json({ success: false, message: 'Job not found', messageAr: 'لم يتم العثور على المهمة', code: 'NOT_FOUND' });
+  if (!job || job.payload?.teacherId !== getTeacherId(req)) return res.status(404).json({ success: false, message: 'Job not found', messageAr: 'لم يتم العثور على المهمة', code: 'NOT_FOUND' });
   res.json({ success: true, data: job });
 });
 

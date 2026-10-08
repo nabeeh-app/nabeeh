@@ -1,6 +1,6 @@
 const express = require('express');
 const { z } = require('zod');
-const { supabase, supabaseAdmin } = require('../config/database');
+const { supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createStudentSchema, updateStudentSchema } = require('../middleware/validate');
 const { createStudentsQuery, verifyStudentAccess, verifyGroupAccess, getStudentEnrollmentsForTeacher } = require('../lib/enrollmentChain');
@@ -37,7 +37,7 @@ const getStudents = async (req, res) => {
 
   // Filter by Teacher's Offerings
   // We select students who have an enrollment in a group belonging to an offering owned by the teacher
-  let query = createStudentsQuery(req.user.id);
+  let query = createStudentsQuery(getEffectiveTeacherId(req));
 
   // Optional: Filter by specific Group
   if (req.validated.query.group_id) {
@@ -86,7 +86,7 @@ const getStudents = async (req, res) => {
 // @access  Private
 const getStudent = async (req, res) => {
   // Verify access via Enrollment check
-  const { data: student, error } = await supabase
+  const { data: student, error } = await supabaseAdmin
     .from('students')
     .select(`
       *,
@@ -110,7 +110,7 @@ const getStudent = async (req, res) => {
       )
     `)
     .eq('id', req.params.id)
-    .eq('enrollments.teacher_id', req.user.id)
+    .eq('enrollments.teacher_id', getEffectiveTeacherId(req))
     .single();
 
   if (error || !student) {
@@ -152,7 +152,7 @@ const createStudent = async (req, res) => {
   }
 
   // Verify Group Ownership (Security)
-  const groupAccess = await verifyGroupAccess(group_id, req.user.id);
+  const groupAccess = await verifyGroupAccess(group_id, getEffectiveTeacherId(req));
   if (!groupAccess) {
     return res.status(403).json({ success: false, message: 'Unauthorized to add to this group', messageAr: 'غير مصرح بالإضافة إلى هذه المجموعة', code: 'FORBIDDEN' });
   }
@@ -161,7 +161,7 @@ const createStudent = async (req, res) => {
   const { data: student, error: studentError } = await supabaseAdmin
     .from('students')
     .insert([{
-      teacher_id: req.user.id,
+      teacher_id: getEffectiveTeacherId(req),
       student_code: student_id || `ST-${Date.now()}`,
       name,
       phone
@@ -177,7 +177,7 @@ const createStudent = async (req, res) => {
     .insert({
       student_id: student.id,
       group_id: group_id,
-      teacher_id: req.user.id,
+      teacher_id: getEffectiveTeacherId(req),
       status: 'active'
     });
 
@@ -220,7 +220,7 @@ const updateStudent = async (req, res) => {
   // Check ownership via finding ANY enrollment with this teacher
   // For simplicity, we assume if you can getStudent() you can update.
   // But strict check:
-  const enrollment = await verifyStudentAccess(req.params.id, req.user.id);
+  const enrollment = await verifyStudentAccess(req.params.id, getEffectiveTeacherId(req));
   if (!enrollment) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
   const { data: student, error } = await supabaseAdmin
@@ -254,7 +254,7 @@ const deleteStudent = async (req, res) => {
     .from('enrollments')
     .select('id, teacher_id')
     .eq('student_id', req.params.id)
-    .eq('teacher_id', req.user.id);
+    .eq('teacher_id', getEffectiveTeacherId(req));
 
   if (!enrollments || enrollments.length === 0) {
     return res.status(404).json({ success: false, message: 'Student not found in your classes', messageAr: 'لم يتم العثور على الطالب في فصولك', code: 'NOT_FOUND' });
@@ -286,7 +286,7 @@ const getStudentStats = async (req, res) => {
   const { id } = req.params;
 
     // Verify access via all enrollments for this student under this teacher
-    const enrollments = await getStudentEnrollmentsForTeacher(id, req.user.id);
+    const enrollments = await getStudentEnrollmentsForTeacher(id, getEffectiveTeacherId(req));
     if (!enrollments || enrollments.length === 0) {
       return res.status(404).json({ success: false, message: 'Student not found or unauthorized', messageAr: 'لم يتم العثور على الطالب أو غير مصرح', code: 'NOT_FOUND' });
     }
@@ -294,7 +294,7 @@ const getStudentStats = async (req, res) => {
     const enrollmentIds = enrollments.map(e => e.id);
 
     // 1. Attendance Stats
-    const { data: attendance } = await supabase
+    const { data: attendance } = await supabaseAdmin
       .from('attendance')
       .select('status')
       .in('enrollment_id', enrollmentIds);
@@ -324,7 +324,7 @@ const getStudentStats = async (req, res) => {
 
     // 2. Academic Stats (Grades)
     // Get average score across all assessments?
-    const { data: grades } = await supabase
+    const { data: grades } = await supabaseAdmin
       .from('grades')
       .select(`
             score,
@@ -377,18 +377,18 @@ const createStudentWithAudit = async (req, res) => {
 
     // Auto-remove demo data when first real student is added
     try {
-      const { data: hasRealStudents } = await supabase
+      const { data: hasRealStudents } = await supabaseAdmin
         .from('students')
         .select('id', { count: 'exact', head: true })
-        .eq('teacher_id', req.user.id)
+        .eq('teacher_id', getEffectiveTeacherId(req))
         .eq('is_demo', false);
 
       if (hasRealStudents === 1) {
-        await removeDemoData(req.user.id);
-        logger.info('Auto-removed demo data after first real student', { teacherId: req.user.id });
+        await removeDemoData(getEffectiveTeacherId(req));
+        logger.info('Auto-removed demo data after first real student', { teacherId: getEffectiveTeacherId(req) });
       }
     } catch (demoError) {
-      logger.error('Failed to auto-remove demo data', { error: demoError.message, teacherId: req.user.id });
+      logger.error('Failed to auto-remove demo data', { error: demoError.message, teacherId: getEffectiveTeacherId(req) });
     }
   }
 };

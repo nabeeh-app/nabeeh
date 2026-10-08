@@ -1,13 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const { z } = require('zod');
-const { supabase, supabaseAdmin } = require('../config/database');
+const { supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const { validate, createOfferingSchema, createGroupSchema, updateGroupSchema } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
+const { verifyStudentAccess } = require('../lib/enrollmentChain');
+
+const getEffectiveTeacherId = (req) => req.user.teacherId || req.user.id;
 
 async function verifyOfferingAccess(offeringId, teacherId) {
-  const { data: offering } = await supabase
+  const { data: offering } = await supabaseAdmin
     .from('offerings')
     .select('id')
     .eq('id', offeringId)
@@ -53,7 +56,7 @@ async function verifyOfferingAccess(offeringId, teacherId) {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.get('/', authenticateToken, asyncHandler(async (req, res) => {
-    const { data: offerings, error } = await supabase
+    const { data: offerings, error } = await supabaseAdmin
         .from('offerings')
         .select(`
             id,
@@ -67,7 +70,7 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
                 enrollments:enrollments(count)
             )
         `)
-        .eq('teacher_id', req.user.id)
+        .eq('teacher_id', getEffectiveTeacherId(req))
         .eq('is_active', true)
         .order('grade_level(order)');
 
@@ -136,7 +139,7 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
-    const { data: offering, error } = await supabase
+    const { data: offering, error } = await supabaseAdmin
         .from('offerings')
         .select(`
             id,
@@ -156,7 +159,7 @@ router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
             )
         `)
         .eq('id', req.params.id)
-        .eq('teacher_id', req.user.id)
+        .eq('teacher_id', getEffectiveTeacherId(req))
         .single();
 
     if (error || !offering) {
@@ -255,7 +258,7 @@ router.post('/', authenticateToken, requirePermission('manage_offerings'), valid
     const { data: offering, error } = await supabaseAdmin
         .from('offerings')
         .insert({
-            teacher_id: req.user.id,
+            teacher_id: getEffectiveTeacherId(req),
             subject_id,
             grade_level_id,
             academic_year
@@ -322,7 +325,7 @@ router.post('/', authenticateToken, requirePermission('manage_offerings'), valid
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.delete('/:id', authenticateToken, requirePermission('manage_offerings'), asyncHandler(async (req, res) => {
-    const offering = await verifyOfferingAccess(req.params.id, req.user.id);
+    const offering = await verifyOfferingAccess(req.params.id, getEffectiveTeacherId(req));
 
     if (!offering) {
         return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
@@ -388,13 +391,13 @@ router.delete('/:id', authenticateToken, requirePermission('manage_offerings'), 
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.get('/:offeringId/groups', authenticateToken, asyncHandler(async (req, res) => {
-    const offering = await verifyOfferingAccess(req.params.offeringId, req.user.id);
+    const offering = await verifyOfferingAccess(req.params.offeringId, getEffectiveTeacherId(req));
 
     if (!offering) {
         return res.status(404).json({ success: false, message: 'Offering not found', messageAr: 'لم يتم العثور على المقرّر', code: 'NOT_FOUND' });
     }
 
-    const { data: groups, error } = await supabase
+    const { data: groups, error } = await supabaseAdmin
         .from('groups')
         .select(`
             id, name, max_capacity, schedule_description,
@@ -493,7 +496,7 @@ router.post('/:offeringId/groups', authenticateToken, requirePermission('manage_
     const { name, max_capacity, schedule_description } = req.validated.body;
     const { offeringId } = req.params;
 
-    const offering = await verifyOfferingAccess(offeringId, req.user.id);
+    const offering = await verifyOfferingAccess(offeringId, getEffectiveTeacherId(req));
 
     if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
@@ -592,7 +595,7 @@ router.post('/:offeringId/groups', authenticateToken, requirePermission('manage_
 router.put('/:offeringId/groups/:groupId', authenticateToken, requirePermission('manage_offerings'), validate(updateGroupSchema), asyncHandler(async (req, res) => {
     const { offeringId, groupId } = req.params;
 
-    const offering = await verifyOfferingAccess(offeringId, req.user.id);
+    const offering = await verifyOfferingAccess(offeringId, getEffectiveTeacherId(req));
 
     if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
@@ -710,12 +713,17 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
     const { student_id } = req.validated.body;
 
     // Verify ownership
-    const offering = await verifyOfferingAccess(offeringId, req.user.id);
+    const offering = await verifyOfferingAccess(offeringId, getEffectiveTeacherId(req));
 
     if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
 
+    // Verify the student belongs to the caller. Stops cross-tenant enrollment.
+    const studentAccess = await verifyStudentAccess(student_id, getEffectiveTeacherId(req));
+
+    if (!studentAccess) return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
+
     // Check group exists and belongs to offering
-    const { data: group } = await supabase
+    const { data: group } = await supabaseAdmin
         .from('groups')
         .select('id, max_capacity')
         .eq('id', groupId)
@@ -726,7 +734,7 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
 
     // Check capacity
     if (group.max_capacity) {
-        const { count } = await supabase
+        const { count } = await supabaseAdmin
             .from('enrollments')
             .select('id', { count: 'exact', head: true })
             .eq('group_id', groupId)
@@ -738,7 +746,7 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
     }
 
     // Check if already enrolled
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
         .from('enrollments')
             .select('id, status')
             .eq('student_id', student_id)
@@ -842,9 +850,13 @@ router.post('/:offeringId/groups/:groupId/enroll', authenticateToken, requirePer
 router.delete('/:offeringId/groups/:groupId/enroll/:studentId', authenticateToken, requirePermission('manage_offerings'), validate(unenrollStudentSchema), asyncHandler(async (req, res) => {
     const { offeringId, groupId, studentId } = req.validated.params;
 
-    const offering = await verifyOfferingAccess(offeringId, req.user.id);
+    const offering = await verifyOfferingAccess(offeringId, getEffectiveTeacherId(req));
 
     if (!offering) return res.status(403).json({ success: false, message: 'Unauthorized', messageAr: 'غير مصرح', code: 'FORBIDDEN' });
+
+    const studentAccess = await verifyStudentAccess(studentId, getEffectiveTeacherId(req));
+
+    if (!studentAccess) return res.status(404).json({ success: false, message: 'Student not found', messageAr: 'لم يتم العثور على الطالب', code: 'NOT_FOUND' });
 
     const { error } = await supabaseAdmin
         .from('enrollments')

@@ -4,7 +4,7 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const Papa = require('papaparse');
 const { v4: uuidv4 } = require('uuid');
-const { supabase, supabaseAdmin } = require('../config/database');
+const { supabaseAdmin } = require('../config/database');
 const { authenticateToken, requirePermission } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const { detectColumnType, validateImportData, HEADER_MAPPINGS } = require('../lib/importValidation');
@@ -406,13 +406,13 @@ router.post('/validate', authenticateToken, requirePermission('manage_students')
 router.post('/execute', authenticateToken, requirePermission('manage_students'), validate(executeImportSchema), asyncHandler(async (req, res) => {
   const { fieldMapping, rows, groupId, skipErrors = true } = req.validated.body;
 
-  const { data: groupCheck } = await supabase
+  const { data: groupCheck } = await supabaseAdmin
     .from('groups')
     .select('id, offering:offerings(teacher_id, id)')
     .eq('id', groupId)
     .single();
 
-  if (!groupCheck || groupCheck.offering.teacher_id !== req.user.id) {
+  if (!groupCheck || groupCheck.offering.teacher_id !== getEffectiveTeacherId(req)) {
     return res.status(403).json({ success: false, message: 'Unauthorized for this group', messageAr: 'غير مصرح لهذه المجموعة', code: 'FORBIDDEN' });
   }
 
@@ -429,7 +429,7 @@ router.post('/execute', authenticateToken, requirePermission('manage_students'),
   for (const row of toImport) {
     try {
       const studentData = {
-        teacher_id: req.user.id,
+        teacher_id: getEffectiveTeacherId(req),
         student_code: row.data.student_code || `ST-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         name: row.data.name,
         phone: row.data.phone || null,
@@ -452,7 +452,7 @@ router.post('/execute', authenticateToken, requirePermission('manage_students'),
         .insert({
           student_id: student.id,
           group_id: groupId,
-          teacher_id: req.user.id,
+          teacher_id: getEffectiveTeacherId(req),
           status: 'active'
         });
 
@@ -633,7 +633,7 @@ router.post('/paste', authenticateToken, requirePermission('manage_students'), v
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/demo/seed', authenticateToken, requirePermission('manage_students'), asyncHandler(async (req, res) => {
-  const result = await seedDemoData(req.user.id);
+  const result = await seedDemoData(getEffectiveTeacherId(req));
   res.json({ success: true, data: result });
 }));
 
@@ -673,7 +673,7 @@ router.post('/demo/seed', authenticateToken, requirePermission('manage_students'
  *               $ref: '#/components/schemas/ErrorEnvelope'
  */
 router.post('/demo/remove', authenticateToken, requirePermission('manage_students'), asyncHandler(async (req, res) => {
-  const result = await removeDemoData(req.user.id);
+  const result = await removeDemoData(getEffectiveTeacherId(req));
   res.json({ success: true, data: result });
 }));
 
