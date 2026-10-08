@@ -75,7 +75,7 @@ END $$;
 
 -- ============================================================
 -- 2. Enable RLS on the uniform set, the select-only set, the
--- no-policy set, and teachers (36 tables total)
+-- no-policy set, and teachers (34 tables total)
 -- ============================================================
 ALTER TABLE students ENABLE ROW LEVEL SECURITY;
 ALTER TABLE parents ENABLE ROW LEVEL SECURITY;
