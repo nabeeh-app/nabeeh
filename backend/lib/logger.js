@@ -1,4 +1,12 @@
+const fs = require('fs');
+const path = require('path');
 const winston = require('winston');
+
+// Render Free has an ephemeral filesystem and may start without logs/.
+// Ensure the dir exists so File transports never crash the boot.
+try {
+  fs.mkdirSync(path.join(__dirname, '..', 'logs'), { recursive: true });
+} catch { /* console transport still works */ }
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',

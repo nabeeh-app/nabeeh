@@ -428,7 +428,7 @@ describe('Concurrent Multi-Session', () => {
   });
 
   describe('health check', () => {
-    test('detects and evicts stale sessions', async () => {
+    test('keeps connected sessions despite API idleness (UptimeRobot pings carry no per-teacher activity)', async () => {
       const c1 = await sessionManager.getOrCreateSession('teacher-stale');
       const c2 = await sessionManager.getOrCreateSession('teacher-fresh');
 
@@ -440,8 +440,24 @@ describe('Concurrent Multi-Session', () => {
 
       await sessionManager._runHealthCheck();
 
-      expect(sessionManager.sessions.has('teacher-stale')).toBe(false);
+      expect(sessionManager.sessions.has('teacher-stale')).toBe(true);
       expect(sessionManager.sessions.has('teacher-fresh')).toBe(true);
+    });
+
+    test('reaps long-idle disconnected sessions to free RAM', async () => {
+      const c1 = await sessionManager.getOrCreateSession('teacher-gone');
+
+      c1.sock.ev.emit('connection.update', { connection: 'open' });
+      await new Promise(r => setTimeout(r, 10));
+
+      // Simulate a dead socket that already went disconnected long ago.
+      sessionManager.sessions.get('teacher-gone').client.status = 'disconnected';
+      sessionManager.sessions.get('teacher-gone').lastActive =
+        Date.now() - sessionManager.STALE_SESSION_THRESHOLD - 1000;
+
+      await sessionManager._runHealthCheck();
+
+      expect(sessionManager.sessions.has('teacher-gone')).toBe(false);
     });
 
     test('detects and evicts failed sessions', async () => {

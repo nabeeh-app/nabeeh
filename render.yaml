@@ -1,0 +1,52 @@
+# Render Blueprint for Nabeeh backend (Free-tier tuned, no card required).
+# Frontends (nabeeh/frontend, nabeeh-admin) go to Vercel, not here.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: nabeeh-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: USE_MOCK_DB
+        value: false
+      # Render Free = 512MB RAM (~80-100MB per Baileys socket). Keep low.
+      - key: WHATSAPP_MAX_SESSIONS
+        value: 3
+      # Lazy mode: don't mass auto-connect on cold boot (saves RAM + 2-5s
+      # per socket). Sessions connect on first use instead. Set to true
+      # only on hosts with enough RAM.
+      - key: WHATSAPP_AUTOCONNECT
+        value: false
+      # --- Fill in dashboard (sync: false = set manually, never commit) ---
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+        # Generate: openssl rand -hex 32
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        value: Nabeeh <noreply@nabeeh.app>
+      # Comma-separated, no spaces. Must include your Vercel frontend URLs.
+      # Example: https://nabeeh.vercel.app,https://nabeeh-admin.vercel.app
+      - key: CORS_ORIGIN
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

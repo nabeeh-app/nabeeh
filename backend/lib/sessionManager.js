@@ -20,12 +20,22 @@ class WhatsAppSessionManager extends EventEmitter {
     super();
     /** @type {Map<string, { client: BaileysClient, status: string, lastActive: number, createdAt: number }>} */
     this.sessions = new Map();
-    this.maxSessions = parseInt(process.env.WHATSAPP_MAX_SESSIONS || '50', 10);
+    // Render Free has 512MB RAM (~80-100MB per Baileys socket).
+    // Default 5 is safe; raise via WHATSAPP_MAX_SESSIONS only on bigger hosts.
+    this.maxSessions = parseInt(process.env.WHATSAPP_MAX_SESSIONS || '5', 10);
     this._started = false;
     this._pendingResolvers = new Map();
     this._healthCheckInterval = null;
     this.HEALTH_CHECK_INTERVAL = 5 * 60 * 1000;
-    this.STALE_SESSION_THRESHOLD = 15 * 60 * 1000;
+    // Don't evict healthy connected sessions for mere API idleness:
+    // UptimeRobot pings /api/health (no per-teacher activity), so a 15min
+    // threshold would kill live WhatsApp sockets right before Render sleeps.
+    // Only disconnected sockets idle this long are reaped; connected sockets
+    // are kept (Baileys watchdog already handles truly deaf sockets).
+    this.STALE_SESSION_THRESHOLD = parseInt(
+      process.env.WHATSAPP_STALE_THRESHOLD_MS || String(12 * 60 * 60 * 1000),
+      10
+    );
   }
 
   /**
@@ -227,6 +237,13 @@ class WhatsAppSessionManager extends EventEmitter {
    * Connect all sessions from database on startup
    */
   async connectAll() {
+    // Lazy mode for Render Free cold starts: skip mass auto-connect on boot
+    // (each socket costs RAM + 2-5s). Sessions connect on first use instead.
+    // Set WHATSAPP_AUTOCONNECT=true on hosts with enough RAM to restore all.
+    if (String(process.env.WHATSAPP_AUTOCONNECT || 'true').toLowerCase() === 'false') {
+      logger.info('Skipping session auto-connect (WHATSAPP_AUTOCONNECT=false, lazy mode)');
+      return;
+    }
     const { data: dbSessions, error } = await supabaseAdmin
       .from('whatsapp_sessions')
       .select('teacher_id, status')
@@ -380,13 +397,16 @@ class WhatsAppSessionManager extends EventEmitter {
       const clientStatus = session.client.getStatus();
       const inMemoryStatus = clientStatus.status;
 
-      if (inMemoryStatus === 'connected' && now - session.lastActive > this.STALE_SESSION_THRESHOLD) {
-        logger.warn('Stale session detected by health check', { teacherId, lastActive: session.lastActive, staleMs: now - session.lastActive });
-        staleSessions.push(teacherId);
-      }
-
       if (inMemoryStatus === 'failed') {
         logger.warn('Failed session detected by health check, removing', { teacherId });
+        staleSessions.push(teacherId);
+        continue;
+      }
+
+      // Reap only long-idle DISCONNECTED sockets to free RAM.
+      // Never evict merely-idle CONNECTED sockets (normal for WhatsApp).
+      if (inMemoryStatus === 'disconnected' && now - session.lastActive > this.STALE_SESSION_THRESHOLD) {
+        logger.info('Reaping long-idle disconnected session', { teacherId, idleMs: now - session.lastActive });
         staleSessions.push(teacherId);
       }
     }

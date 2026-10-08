@@ -273,35 +273,30 @@ describe('baileysAuthState', () => {
   });
 
   describe('saveCreds', () => {
-    it('should debounce credential saves', async () => {
-      jest.useFakeTimers();
-
+    it('should persist immediately on each call (Render-safe, no debounce window)', async () => {
       const chain = makeChain({ error: null });
       supabaseAdmin.from.mockReturnValue(chain);
 
       const { state, saveCreds } = await useSupabaseAuthState('teacher-1');
 
+      // Count only creds-table upserts (init load also hits whatsapp_auth_creds
+      // via select, but upsert only happens on save).
+      const credsUpserts = () =>
+        chain.upsert.mock.calls.filter(([record]) => record && 'creds' in record).length;
+
       await saveCreds();
       await saveCreds();
       await saveCreds();
 
-      expect(chain.upsert).not.toHaveBeenCalled();
-
-      jest.advanceTimersByTime(3000);
-
-      expect(chain.upsert).toHaveBeenCalledTimes(1);
-      jest.useRealTimers();
+      expect(credsUpserts()).toBe(3);
     });
 
     it('should persist credentials with correct structure', async () => {
-      jest.useFakeTimers();
-
       const chain = makeChain({ error: null });
       supabaseAdmin.from.mockReturnValue(chain);
 
       const { state, saveCreds } = await useSupabaseAuthState('teacher-1');
       await saveCreds();
-      jest.advanceTimersByTime(3000);
 
       expect(chain.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -312,18 +307,14 @@ describe('baileysAuthState', () => {
         }),
         { onConflict: 'id' }
       );
-      jest.useRealTimers();
     });
 
     it('should use id=default when no teacherId', async () => {
-      jest.useFakeTimers();
-
       const chain = makeChain({ error: null });
       supabaseAdmin.from.mockReturnValue(chain);
 
       const { state, saveCreds } = await useSupabaseAuthState();
       await saveCreds();
-      jest.advanceTimersByTime(3000);
 
       expect(chain.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -332,28 +323,22 @@ describe('baileysAuthState', () => {
           updated_at: expect.any(String)
         })
       );
-      jest.useRealTimers();
     });
   });
 
   describe('flushPendingSave', () => {
-    it('should immediately persist and clear timer', async () => {
-      jest.useFakeTimers();
-
+    it('should be a safe no-op after immediate saves (compat for shutdown)', async () => {
       const chain = makeChain({ error: null });
       supabaseAdmin.from.mockReturnValue(chain);
 
       const { state, saveCreds, flushPendingSave } = await useSupabaseAuthState('teacher-1');
 
       await saveCreds();
+      const afterSave = chain.upsert.mock.calls.length;
       await flushPendingSave();
 
-      expect(chain.upsert).toHaveBeenCalledTimes(1);
-
-      jest.advanceTimersByTime(3000);
-
-      expect(chain.upsert).toHaveBeenCalledTimes(1);
-      jest.useRealTimers();
+      // Flush waits for in-flight work only; it must not write twice.
+      expect(chain.upsert.mock.calls.length).toBe(afterSave);
     });
 
     it('should do nothing when no pending save', async () => {
@@ -368,21 +353,16 @@ describe('baileysAuthState', () => {
   });
 
   describe('cancelPendingSave', () => {
-    it('should clear timer without persisting', async () => {
-      jest.useFakeTimers();
-
+    it('should be a safe no-op (nothing buffered with immediate persist)', async () => {
       const chain = makeChain({ error: null });
       supabaseAdmin.from.mockReturnValue(chain);
 
-      const { state, saveCreds, cancelPendingSave } = await useSupabaseAuthState('teacher-1');
+      const { state, cancelPendingSave } = await useSupabaseAuthState('teacher-1');
 
-      await saveCreds();
+      // Nothing saved yet, nothing to cancel.
       cancelPendingSave();
 
-      jest.advanceTimersByTime(5000);
-
       expect(chain.upsert).not.toHaveBeenCalled();
-      jest.useRealTimers();
     });
   });
 

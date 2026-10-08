@@ -45,8 +45,23 @@ async function useSupabaseAuthState(teacherId) {
     ? JSON.parse(JSON.stringify(credsRow.creds), BufferJSON.reviver)
     : initAuthCreds();
 
-  let saveCredsTimer = null;
+  // Render-free safe: persist immediately. The old 3s debounce could lose
+  // creds if the free instance sleeps (SIGSTOP, no graceful flush) inside
+  // the window. creds.update fires infrequently (connection/key rotation),
+  // so immediate writes are cheap. An in-flight guard avoids stampedes.
+  let persistInFlight = null;
 
+  async function _persistCredsImmediate() {
+    if (persistInFlight) {
+      try { await persistInFlight; } catch { /* ignore, retry below */ }
+    }
+    persistInFlight = _persistCreds();
+    try {
+      await persistInFlight;
+    } finally {
+      persistInFlight = null;
+    }
+  }
   async function _persistCreds() {
     try {
       const serialized = JSON.parse(JSON.stringify(creds, BufferJSON.replacer));
@@ -186,26 +201,16 @@ async function useSupabaseAuthState(teacherId) {
       }
     },
     saveCreds: async () => {
-      // Debounce: coalesce rapid updates, only persist the last one within 3s
-      if (saveCredsTimer) clearTimeout(saveCredsTimer);
-      saveCredsTimer = setTimeout(async () => {
-        saveCredsTimer = null;
-        await _persistCreds();
-      }, 3000);
+      // Immediate persist (Render-safe). Kept async for Baileys compat.
+      await _persistCredsImmediate();
     },
     flushPendingSave: async () => {
-      if (saveCredsTimer) {
-        clearTimeout(saveCredsTimer);
-        saveCredsTimer = null;
-        await _persistCreds();
+      // No-op kept for graceful-shutdown compat (nothing buffered anymore).
+      if (persistInFlight) {
+        try { await persistInFlight; } catch { /* logged in _persistCreds */ }
       }
     },
-    cancelPendingSave: () => {
-      if (saveCredsTimer) {
-        clearTimeout(saveCredsTimer);
-        saveCredsTimer = null;
-      }
-    }
+    cancelPendingSave: () => {}
   };
 }
 
