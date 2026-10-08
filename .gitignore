@@ -324,3 +324,6 @@ jwt-secret.txt
 *.sw?
 # Phase 2 tenancy backups (prod data, never commit)
 .backups/
+
+# Supabase CLI local state
+supabase/.temp/
