@@ -3,7 +3,7 @@
 import { useTranslations, useLocale } from 'next-intl';
 import { useAuth, usePermissions } from '@/hooks/useAuth';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
-import { Link } from '@/i18n/routing';
+import Link from 'next/link';
 import { Users, BarChart3, FileText, MessageSquare, GraduationCap, User, Users2, Zap, ClipboardList, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { getVisibleNavigation } from '@/config/navigation';
